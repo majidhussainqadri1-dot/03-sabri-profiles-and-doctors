@@ -1,9 +1,10 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-class SPD_Helpers {
-	const META = '_spd_';
-
+/**
+ * Public compatibility facade. It reads canonical authorities and never approves users or mutates roles.
+ */
+final class SPD_Helpers {
 	public static function fields() {
 		return array(
 			'account_type'       => 'Account type',
@@ -12,6 +13,7 @@ class SPD_Helpers {
 			'clinic'             => 'Clinic',
 			'qualification'      => 'Qualification',
 			'licence_number'     => 'Licence / registration number',
+			'licensing_authority'=> 'Licensing authority',
 			'experience_years'   => 'Years of experience',
 			'specialty'          => 'Specialty',
 			'languages'          => 'Languages',
@@ -24,15 +26,7 @@ class SPD_Helpers {
 	}
 
 	public static function get( $user_id, $key, $default = '' ) {
-		$value = get_user_meta( absint( $user_id ), self::META . $key, true );
-		if ( '' === $value && in_array( $key, array( 'account_type', 'phone', 'country', 'city' ), true ) ) {
-			$value = get_user_meta( absint( $user_id ), '_sa_' . $key, true );
-		}
-		if ( '' === $value && 'bio' === $key ) {
-			$user  = get_userdata( absint( $user_id ) );
-			$value = $user ? $user->description : '';
-		}
-		return '' === $value ? $default : $value;
+		return SPD_Membership_Adapter::field( $user_id, $key, $default );
 	}
 
 	public static function clean_phone( $value ) {
@@ -47,76 +41,67 @@ class SPD_Helpers {
 	}
 
 	public static function verification_status( $user_id ) {
-		$status  = self::get( $user_id, 'verification_status', 'pending' );
-		$allowed = array( 'pending', 'under_review', 'verified', 'more_info', 'rejected', 'suspended' );
-		return in_array( $status, $allowed, true ) ? $status : 'pending';
+		return SPD_Verification_Adapter::status( $user_id );
 	}
 
 	public static function status_label( $status ) {
-		$labels = array(
-			'pending'      => 'Pending',
-			'under_review' => 'Under review',
-			'verified'     => 'Verified',
-			'more_info'    => 'More information required',
-			'rejected'     => 'Not approved',
-			'suspended'    => 'Suspended',
-		);
-		return isset( $labels[ $status ] ) ? $labels[ $status ] : $labels['pending'];
+		return SPD_Verification_Adapter::status_label( $status );
 	}
 
 	public static function is_doctor( $user_id ) {
-		$user = get_userdata( $user_id );
-		if ( ! $user ) {
-			return false;
-		}
-		return 'doctor' === self::get( $user_id, 'account_type' ) || array_intersect( array( 'sabri_doctor_pending', 'sabri_doctor_verified' ), (array) $user->roles );
+		return SPD_Membership_Adapter::is_doctor( $user_id );
 	}
 
 	public static function can_show_contact( $user_id, $founder = false ) {
-		return $founder || self::is_doctor( $user_id ) || '1' === self::get( $user_id, 'public_contact', '0' );
+		return ( $founder && SPD_Membership_Adapter::is_founder( $user_id ) )
+			|| '1' === (string) get_user_meta( absint( $user_id ), '_spd_public_contact', true );
 	}
 
 	public static function profile_url( $user_id ) {
-		$pages = get_option( 'spd_page_map', array() );
-		$base  = ! empty( $pages['profile'] ) ? get_permalink( $pages['profile'] ) : home_url( '/' );
-		$user  = get_userdata( $user_id );
+		$pages = (array) get_option( 'spd_page_map', array() );
+		$base  = ! empty( $pages['profile'] ) ? get_permalink( absint( $pages['profile'] ) ) : home_url( '/' );
+		$user  = get_userdata( absint( $user_id ) );
 		return add_query_arg( 'user', $user ? $user->user_nicename : absint( $user_id ), $base );
 	}
 
 	public static function founder() {
-		$defaults = array(
-			'name'         => 'Dr. Allama Majid Hussain Sabri',
+		$founder_id = SPD_Membership_Adapter::founder_id();
+		$user       = $founder_id ? get_userdata( $founder_id ) : false;
+		$profile    = (array) get_option( 'spd_founder_profile', array() );
+		$defaults   = array(
+			'name'         => $user ? $user->display_name : '',
 			'title'        => 'Founder — Sabri Social Homeopathy Platform',
-			'location'     => 'Gujrat, Punjab, Pakistan',
-			'phone'        => '+923494143244',
-			'whatsapp'     => '+923494143244',
-			'introduction' => 'Holistic medicine practitioner, homeopathy researcher, author, teacher and founder working across classical homeopathy, nutrition, health education and Islamic spiritual wellbeing.',
-			'mission'      => 'To organize reliable learning, professional connection and responsible public education in one accessible global platform.',
-			'vision'       => 'A multilingual knowledge community where students, practitioners and the public can learn, connect and make informed health decisions.',
-			'objectives'    => 'To support doctors and students with structured knowledge, encourage ethical professional collaboration, make educational books readable online and help the public find transparent practitioner information.',
-			'methodology'   => 'An individualized framework centered on careful symptom observation, classical homeopathic study, nutrition, hygiene and spiritual wellbeing. Appropriate medical testing, urgent care and qualified clinical referral remain important whenever needed.',
-			'experience'   => 'Fifteen years of clinical observation, teaching, writing and independent research beginning in Gujrat and Phalia, Pakistan.',
-			'research'     => 'Classical homeopathy, materia medica, repertory, nutrition, pathology, clinical observation and responsible digital health education.',
-			'publications' => "Sabri Materia Medica (Third Expanded Edition)\nSabri Nutrition Science\nQawaneen-e-Sabri for Hygiene and Dietary Reform\nSabri Anwar-e-Shifa: Islamic and Spiritual Healing\nPhilosophy of Sabri Homeopathy\nComprehensive Sabri Clinical Pathology and Experienced Homeopathic Medicines\nManhaj-e-Sabri Homeopathic Repertory and Key to Use\nDastoor-e-Daulat-o-Kamyabi",
-			'photo_id'     => 0,
-			'cover_id'     => 0,
+			'location'     => $founder_id ? trim( self::get( $founder_id, 'city' ) . ', ' . self::get( $founder_id, 'country' ), ', ' ) : '',
+			'phone'        => $founder_id ? self::get( $founder_id, 'phone' ) : '',
+			'whatsapp'     => $founder_id ? self::get( $founder_id, 'whatsapp' ) : '',
+			'introduction' => '',
+			'mission'      => '',
+			'vision'       => '',
+			'objectives'   => '',
+			'methodology'  => '',
+			'experience'   => '',
+			'research'     => '',
+			'publications' => '',
+			'photo_id'     => $founder_id ? absint( get_user_meta( $founder_id, '_spd_profile_photo_id', true ) ) : 0,
+			'cover_id'     => $founder_id ? absint( get_user_meta( $founder_id, '_spd_cover_photo_id', true ) ) : 0,
 		);
-		return wp_parse_args( (array) get_option( 'spd_founder_profile', array() ), $defaults );
+		$merged = wp_parse_args( $profile, $defaults );
+		// Canonical identity and contact can never be overridden by legacy File 03 options.
+		foreach ( array( 'name', 'location', 'phone', 'whatsapp', 'photo_id', 'cover_id' ) as $key ) {
+			$merged[ $key ] = $defaults[ $key ];
+		}
+		return $merged;
 	}
 
 	public static function audit( $target, $old, $new, $reason = '' ) {
-		global $wpdb;
-		$wpdb->insert(
-			$wpdb->prefix . 'spd_audit_log',
-			array(
-				'actor_id'      => get_current_user_id(),
-				'target_user_id'=> absint( $target ),
-				'old_status'    => sanitize_key( $old ),
-				'new_status'    => sanitize_key( $new ),
-				'reason'        => sanitize_textarea_field( $reason ),
-				'created_at'    => current_time( 'mysql', true ),
-			),
-			array( '%d', '%d', '%s', '%s', '%s', '%s' )
-		);
+		if ( class_exists( 'SMC_Security' ) && is_callable( array( 'SMC_Security', 'audit' ) ) ) {
+			SMC_Security::audit(
+				'spd_projection_event',
+				absint( $target ),
+				'profile_projection',
+				0,
+				array( 'old' => sanitize_key( $old ), 'new' => sanitize_key( $new ), 'reason' => sanitize_textarea_field( $reason ) )
+			);
+		}
 	}
 }

@@ -1,48 +1,57 @@
 === Sabri Profiles and Doctors ===
 Contributors: sabrihomeopathy
-Tags: profiles, doctors, directory, whatsapp, founder
+Tags: profiles, doctors, directory, privacy, founder
 Requires at least: 6.0
-Tested up to: 6.8
+Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv2 or later
 
-Founder profile, member profiles, verified doctor directory and contact foundation for the Sabri Social Homeopathy Platform.
+Privacy-controlled profile and verified-doctor directory projection for the Sabri Social Homeopathy Platform.
 
 == Description ==
 
-File 03 builds the first 25 percent of the profile and doctor system while providing a complete Founder profile foundation.
+File 03 is a projection layer. It does not create membership roles, approve doctors, or own identity records.
 
-Features:
-* Public Founder profile with mission, vision, experience, research, publications, posts, Call and WhatsApp.
-* Member, patient, student and doctor profile fields.
-* Profile and cover images restricted to JPG, PNG and WebP, maximum 5 MB.
-* Doctor directory with search, country and specialty filters.
-* Admin-only doctor review statuses and audit history.
-* Public phone and WhatsApp for Founder and doctors; opt-in visibility for other accounts.
-* Privacy export and erase support.
-* Accessible responsive design using the platform's bright orange color.
+Authority boundaries:
+* File 00 — Sabri Membership Core owns identity, account type, roles, membership approval, and canonical profile data.
+* File 09 — Global Doctor Onboarding and Verification owns credential evidence and doctor-verification decisions.
+* File 20 — Unified Application Shell may consume File 03 navigation destinations.
+* File 03 displays approved snapshots, public profile visibility, public contact consent, and presentation media.
 
-Professional identity document uploads are intentionally not included. A later encrypted private-document module should handle those files.
+A doctor appears in the directory only when File 00 approves doctor identity, File 09 records a verified decision with reviewer evidence, an approved snapshot exists, the snapshot still matches current material data, and profile visibility is Public.
 
 == Installation ==
 
-1. Keep Sabri Platform Foundation and Sabri Authentication and Accounts active.
-2. Upload this ZIP from WordPress Admin > Plugins > Add New > Upload Plugin.
-3. Activate Sabri Profiles and Doctors.
-4. Open Sabri Profiles > Founder Profile and review all public details.
-5. Open Sabri Profiles > Doctor Verification to review doctor accounts.
+1. Activate File 00 — Sabri Membership Core.
+2. Upload and activate File 03.
+3. Activate File 09 before expecting verified doctors in the public directory.
+4. The canonical Founder account must carry File 00's `_smc_official_founder` marker.
+5. Review profile visibility and public-contact consent in Edit Profile Presentation.
 
 == Privacy ==
 
-Profiles store professional and contact details in WordPress user metadata. General users control public display of contact numbers. Doctor professional contact is public. Verification changes are recorded in an audit table. Administrators should publish a suitable privacy policy and limit dashboard access.
+General profiles default to the visibility supplied by File 00 and are never assumed public. File 03 stores only presentation visibility, contact consent, and plugin-owned profile/cover attachment references. Its privacy eraser deletes plugin-owned media when ownership can be proven. Identity, credentials, verification decisions, and audit records remain under Files 00 and 09.
 
-== Medical notice ==
+== Security and governance ==
 
-This plugin provides profiles and educational directory information. It does not diagnose, prescribe, guarantee treatment outcomes or replace emergency and qualified medical care.
+* No role or verification-status mutation.
+* No File 01 page-map dependency.
+* Exact managed-page ownership.
+* Private account pages receive noindex/noarchive/no-store/private headers.
+* Verified doctor material changes invalidate the approved projection until re-review.
+* Destructive uninstall requires `SPD_ALLOW_DESTRUCTIVE_UNINSTALL` and `spd_purge_on_uninstall`.
 
 == Changelog ==
 
-= 0.1.0 =
-* Initial modular release.
+= 0.2.0 =
+* Made File 00 the mandatory identity and role authority.
+* Made File 09 the doctor-verification authority and fail-closed when unavailable.
+* Removed File 03 doctor-approval actions and role creation.
+* Added approved projection snapshots and change invalidation.
+* Bound Founder presentation to the canonical Founder account.
+* Removed hardcoded personal Founder contact and biography defaults.
+* Added exact page ownership, visibility controls, private headers, media lifecycle cleanup, and controlled purge.
 
+= 0.1.0 =
+* Original baseline release preserved on the baseline branch.

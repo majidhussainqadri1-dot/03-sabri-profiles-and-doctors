@@ -1,0 +1,201 @@
+name: Corrective Integrity
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - audit/**
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/audit/')) ||
+      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'audit/'))
+    name: Corrected source integrity and architecture
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout immutable action
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify baseline ancestry and corrected release
+        env:
+          BASELINE_COMMIT: e2165a9286e6c3106430aab431d9d44da707cf51
+          BASELINE_LOCK_SHA256: 5c178339045ebdf13f6977042141b4e78e378d293a302020eb49841835617571
+          RELEASE_LOCK_SHA256: 822dcfd334c09e0792a555d6c81fa3d0c05f2e59820b53121c5b531ee0c14aed
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$BASELINE_COMMIT" HEAD
+          test "$(git show "$BASELINE_COMMIT:BASELINE-LOCK.json" | sha256sum | awk '{print $1}')" = "$BASELINE_LOCK_SHA256"
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import re
+          import subprocess
+          import sys
+
+          root = pathlib.Path('.')
+          lock_path = root / 'RELEASE-LOCK.json'
+          inventory_path = root / 'RELEASE-INVENTORY.tsv'
+          checksums_path = root / 'RELEASE-CHECKSUMS.sha256'
+
+          def fail(message):
+              print(f'ERROR: {message}', file=sys.stderr)
+              raise SystemExit(1)
+
+          lock_bytes = lock_path.read_bytes()
+          if hashlib.sha256(lock_bytes).hexdigest() != '822dcfd334c09e0792a555d6c81fa3d0c05f2e59820b53121c5b531ee0c14aed':
+              fail('RELEASE-LOCK.json SHA-256 mismatch')
+          lock = json.loads(lock_bytes.decode('utf-8'))
+          if lock.get('production_authorized') is not False or lock.get('staging_authorized') is not False:
+              fail('release lock must not authorize staging or production')
+
+          lines = inventory_path.read_text(encoding='utf-8').splitlines()
+          if not lines or lines[0] != 'sha256\tsize\tpath':
+              fail('RELEASE-INVENTORY.tsv header is invalid')
+          rows = []
+          for line in lines[1:]:
+              if line:
+                  digest, size_text, path = line.split('\t', 2)
+                  rows.append((path, int(size_text), digest))
+          paths = [r[0] for r in rows]
+          if paths != sorted(paths) or len(paths) != len(set(paths)):
+              fail('release inventory must be sorted and unique')
+          if len(rows) != lock['source_file_count']:
+              fail('source file count mismatch')
+
+          governance = {
+              '.github/workflows/baseline-integrity.yml',
+              '.github/workflows/corrective-integrity.yml',
+              'BASELINE-LOCK.json', 'CHECKSUMS.sha256', 'MANIFEST.md',
+              'SOURCE-INVENTORY.tsv', 'SOURCE-PROVENANCE.md',
+              'README.md', 'STATUS.md', 'CORRECTIVE-PROVENANCE.md',
+              'CORRECTIVE-REVIEW.md', 'MIGRATION.md',
+              'RELEASE-CHECKSUMS.sha256', 'RELEASE-INVENTORY.tsv',
+              'RELEASE-LOCK.json', 'RELEASE-MANIFEST.md',
+              'STAGING-ACCEPTANCE.md', 'tests/architecture-check.py',
+              'tests/security-unit.php',
+          }
+          all_files = {
+              p.as_posix() for p in root.rglob('*')
+              if p.is_file() and '.git' not in p.parts
+          }
+          missing_governance = sorted(governance - all_files)
+          if missing_governance:
+              fail('missing governance files: ' + ', '.join(missing_governance))
+          expected = set(paths) | governance
+          missing = sorted(expected - all_files)
+          unexpected = sorted(all_files - expected)
+          if missing:
+              fail('missing files: ' + ', '.join(missing))
+          if unexpected:
+              fail('unexpected files: ' + ', '.join(unexpected))
+
+          forbidden_suffixes = ('.zip', '.tar', '.tgz', '.gz', '.7z', '.rar', '.sql')
+          forbidden = sorted(p for p in all_files if p.lower().endswith(forbidden_suffixes))
+          if forbidden:
+              fail('archive or database files committed: ' + ', '.join(forbidden))
+          for path in all_files:
+              name = pathlib.PurePosixPath(path).name.lower()
+              if name.startswith('.env') or name in {'wp-config.php','credentials.json','service-account.json','id_rsa','id_dsa','id_ecdsa','id_ed25519'}:
+                  fail(f'forbidden credential filename committed: {path}')
+
+          canonical = []
+          checksum_lines = []
+          total_size = 0
+          php_count = 0
+          for path, expected_size, expected_sha in rows:
+              data = (root / path).read_bytes()
+              actual_size = len(data)
+              actual_sha = hashlib.sha256(data).hexdigest()
+              if actual_size != expected_size:
+                  fail(f'size mismatch for {path}: {actual_size}')
+              if actual_sha != expected_sha:
+                  fail(f'SHA-256 mismatch for {path}: {actual_sha}')
+              canonical.append(f'{actual_sha}  {actual_size}  {path}')
+              checksum_lines.append(f'{actual_sha}  {path}')
+              total_size += actual_size
+              php_count += int(path.endswith('.php'))
+          tree_text = '\n'.join(canonical) + '\n'
+          tree_sha = hashlib.sha256(tree_text.encode('utf-8')).hexdigest()
+          if tree_sha != lock['source_tree_sha256'] or total_size != lock['source_size'] or php_count != lock['php_file_count']:
+              fail('release source tree/count/size does not match lock')
+          if checksums_path.read_text(encoding='utf-8') != '\n'.join(checksum_lines) + '\n':
+              fail('release checksums do not match inventory')
+
+          main = (root / 'sabri-profiles-doctors.php').read_text(encoding='utf-8')
+          readme = (root / 'readme.txt').read_text(encoding='utf-8')
+          version = lock['release_version']
+          if f'Version: {version}' not in main or f"define( 'SPD_VERSION', '{version}' );" not in main or f'Stable tag: {version}' not in readme:
+              fail('release version mismatch')
+
+          secret_patterns = {
+              'private key': rb'-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----',
+              'Google API key': rb'\bAIza[0-9A-Za-z_-]{35}\b',
+              'GitHub token': rb'\bgh[pousr]_[A-Za-z0-9]{20,}\b',
+              'AWS access key': rb'\bAKIA[0-9A-Z]{16}\b',
+              'JWT-like token': rb'\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b',
+              'hardcoded Pakistan mobile': rb'\+923[0-9]{9}\b',
+              'generic live secret': rb'(?i)(?:client_secret|api_key|access_token|db_password|authorization)\s*[:=]\s*["\'][^"\']{12,}["\']',
+          }
+          for path in sorted(all_files):
+              data = (root / path).read_bytes()
+              for label, pattern in secret_patterns.items():
+                  if re.search(pattern, data):
+                      fail(f'possible {label} in {path}')
+
+          workflow_text = '\n'.join((root / p).read_text(encoding='utf-8') for p in ('.github/workflows/baseline-integrity.yml','.github/workflows/corrective-integrity.yml'))
+          required_pins = (
+              'actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5',
+              'shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240',
+          )
+          for pin in required_pins:
+              if pin not in workflow_text:
+                  fail(f'workflow action pin missing: {pin}')
+          if re.search(r'uses:\s+[^\s]+@(v\d+|main|master)\b', workflow_text):
+              fail('mutable GitHub Action tag detected')
+
+          subprocess.run([sys.executable, 'tests/architecture-check.py'], check=True)
+          print('Corrective release integrity passed.')
+          print(f'Source files: {len(rows)}')
+          print(f'PHP files: {php_count}')
+          print(f'Source bytes: {total_size}')
+          print(f'Source-tree SHA-256: {tree_sha}')
+          PY
+
+  php-lint:
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/audit/')) ||
+      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'audit/'))
+    name: PHP lint (${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.3']
+    steps:
+      - name: Checkout immutable action
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Set up PHP from immutable action
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: none
+          ini-file: production
+      - name: Lint corrected PHP and run unit checks
+        run: |
+          set -euo pipefail
+          mapfile -t php_files < <(awk -F '\t' 'NR > 1 && $3 ~ /\.php$/ { print $3 }' RELEASE-INVENTORY.tsv)
+          test "${#php_files[@]}" -eq 11
+          for file in "${php_files[@]}"; do php -l "$file"; done
+          php -l tests/security-unit.php
+          php tests/security-unit.php

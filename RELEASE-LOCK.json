@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "file_number": "03",
+  "module": "Sabri Profiles and Doctors",
+  "release_version": "0.2.0",
+  "baseline_commit": "e2165a9286e6c3106430aab431d9d44da707cf51",
+  "baseline_lock_sha256": "5c178339045ebdf13f6977042141b4e78e378d293a302020eb49841835617571",
+  "original_archive": "03-sabri-profiles-and-doctors-0.1.0.zip",
+  "original_archive_sha256": "5d4d251faab2879e2894c29ce29b3cf50615898ca065fc1502832805231518ee",
+  "source_file_count": 15,
+  "php_file_count": 11,
+  "source_size": 61362,
+  "source_tree_sha256": "ecd472508698687b578d5d7daaf8e481dbdc868d8bc64d5dd2298cd6021cb857",
+  "inventory_file": "RELEASE-INVENTORY.tsv",
+  "checksums_file": "RELEASE-CHECKSUMS.sha256",
+  "tests": [
+    "tests/architecture-check.py",
+    "tests/security-unit.php"
+  ],
+  "production_authorized": false,
+  "staging_authorized": false
+}
