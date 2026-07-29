@@ -1,0 +1,1 @@
+document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.spd-form input[type="file"]').forEach(function(input){input.addEventListener('change',function(){if(this.files[0]&&this.files[0].size>5*1024*1024){window.alert('Please choose an image smaller than 5 MB.');this.value='';}});});});
