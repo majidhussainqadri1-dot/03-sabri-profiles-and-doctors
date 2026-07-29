@@ -1,20 +1,28 @@
 # File 03 — Sabri Profiles and Doctors
 
-This branch preserves the exact extracted source baseline for **File 03: Sabri Profiles and Doctors** of the Sabri Social Homeopathy Platform.
+Corrective release `0.2.0` for the Sabri Social Homeopathy Platform.
 
-## Baseline package
+## Authority boundaries
 
-- Original archive: `03-sabri-profiles-and-doctors-0.1.0.zip`
-- Archive SHA-256: `5d4d251faab2879e2894c29ce29b3cf50615898ca065fc1502832805231518ee`
-- Declared plugin version: `0.1.0`
-- Exact source files: `12`
-- Exact PHP files: `8`
-- Extracted source size: `46,004` bytes
-- Canonical source-tree SHA-256: `02166d3b61cd75ab7ca90cdcde402990d41d87ccb4f7f44e27544d998a3ca0fa`
-- Baseline status: source custody and reproducible syntax evidence only
-- Staging approval: **No**
-- Production approval: **No**
+- **File 00 — Sabri Membership Core:** canonical identity, account type, roles, membership approval, and canonical profile records.
+- **File 09 — Global Doctor Onboarding and Verification:** credential evidence and doctor-verification decisions.
+- **File 20 — Unified Application Shell:** optional application-shell navigation.
+- **File 03:** public/member profile projection, visibility consent, public-contact consent, presentation media, Founder presentation, and verified-doctor directory rendering.
 
-The original ZIP is deliberately not committed. The extracted source is preserved at repository root with exact paths, byte sizes, SHA-256 checksums, and an automated integrity workflow.
+File 03 does not create roles, approve doctors, change verification decisions, or own identity records.
 
-Security, privacy, identity authority, doctor verification, profile visibility, File 00/File 09/File 20 integration, WordPress runtime, staging, and production approval require separate review.
+## Corrective branch
+
+`audit/file-03-source-review`
+
+## Original baseline
+
+The original `0.1.0` source remains preserved at commit:
+
+`e2165a9286e6c3106430aab431d9d44da707cf51`
+
+Do not rewrite the baseline branch.
+
+## Current gate
+
+Source correction and automated QA may pass on this branch, but merge, staging, production, and live installation remain prohibited until independent review and the staging acceptance matrix are complete.

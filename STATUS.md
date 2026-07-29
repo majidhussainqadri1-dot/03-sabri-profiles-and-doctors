@@ -1,38 +1,22 @@
-# Status
+# File 03 Status
 
-## Current state
+## Corrective release
 
-**Exact File 03 source baseline imported — independent audit pending**
+- Version: `0.2.0`
+- Branch: `audit/file-03-source-review`
+- Original baseline preserved: **yes**
+- Source architecture correction: **implemented**
+- Local PHP 8.4 syntax lint: **pass**
+- Local architecture test: **pass**
+- Local security unit test: **pass**
+- GitHub corrective workflow: **pending until pushed**
+- Independent post-correction review: **pending**
+- WordPress staging runtime: **pending**
+- File 00 integration acceptance: **pending**
+- File 09 integration acceptance: **pending**
+- File 20 integration acceptance: **pending**
+- Merge authorization: **no**
+- Production authorization: **no**
+- Live installation authorization: **no**
 
-## Complete
-
-- Original archive identified and hashed.
-- ZIP integrity test passed locally.
-- Exact 12-file source inventory generated.
-- Exact per-file sizes and SHA-256 hashes recorded.
-- Extracted source prepared without the ZIP archive.
-- Local PHP syntax lint passed for all 8 PHP files.
-- Automated baseline integrity and PHP lint workflow prepared.
-- Controlled Draft Pull Request required for review.
-
-## Not complete
-
-- Security and privacy review.
-- Founder ownership and activation review.
-- Profile visibility and contact-consent review.
-- Role and capability authority review against File 00.
-- Doctor onboarding and verification authority review against File 09.
-- Application-shell integration review against File 20.
-- Image upload, MIME, size, ownership, and deletion review.
-- Directory search and metadata-exposure review.
-- WordPress runtime testing.
-- Staging installation and regression testing.
-- Production approval.
-
-## Authorization
-
-- Baseline custody candidate: **Yes**
-- Development candidate: **No**
-- Staging candidate: **No**
-- Production release: **No**
-- Live installation authorized: **No**
+The next platform file must not proceed until discovered File 03 defects are corrected, retested, and accepted under the project QA rule.
