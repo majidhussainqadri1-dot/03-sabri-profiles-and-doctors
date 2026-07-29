@@ -10,8 +10,8 @@
 6. Removed hardcoded personal Founder contact, location, biography, and publication defaults from the corrected source.
 7. Removed the legacy File 01 `spf_page_map` dependency and added exact File 03 page ownership.
 8. Added explicit private/member/public profile visibility and explicit public-contact consent.
-9. Added private-page `noindex`, `nofollow`, `noarchive`, `no-store`, private-cache, referrer, frame, MIME, and permissions headers.
-10. Added image MIME/dimension/size validation, plugin media ownership, replacement cleanup, and physical media erasure when ownership is proven.
+9. Added private-page `noindex`, `nofollow`, `noarchive`, `no-store`, private-cache, referrer, frame, MIME, and permissions headers, including authorized members-only views and personalized owner/reviewer views.
+10. Added image MIME/dimension/size validation, plugin media ownership, replacement cleanup, and physical media erasure when ownership is proven; privacy erasure also removes File 03 snapshots and forces the remaining projection private with contact disabled.
 11. Stopped File 03 from editing professional identity and credential fields.
 12. Routed projection audit events into File 00's canonical audit system.
 13. Added legacy File 03 audit anonymization after 180 days and deletion after 365 days.

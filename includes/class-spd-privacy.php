@@ -19,8 +19,10 @@ final class SPD_Privacy {
 
 	public function erase($email,$page=1){$user=get_user_by('email',$email);if(!$user||$page>1){return array('items_removed'=>false,'items_retained'=>false,'messages'=>array(),'done'=>true);} $removed=false;$retained=false;$messages=array();
 		foreach(array('profile_photo_id'=>'profile','cover_photo_id'=>'cover')as$key=>$purpose){$id=absint(get_user_meta($user->ID,'_spd_'.$key,true));if($id){if(SPD_Media::delete_owned($id,$user->ID,$purpose)){$removed=true;}else{$retained=true;$messages[]='A referenced media item was not deleted because File 03 could not prove ownership.';}}$removed=delete_user_meta($user->ID,'_spd_'.$key)||$removed;}
-		foreach(array('_spd_profile_visibility','_spd_public_contact')as$key){$removed=delete_user_meta($user->ID,$key)||$removed;}
-		if(SPD_Membership_Adapter::is_doctor($user->ID)){$retained=true;$messages[]='Identity, credentials, verification decisions, approved snapshots, and audit records are retained by Files 00 and 09 and must be handled through their privacy procedures.';}
+		$removed=delete_user_meta($user->ID,SPD_Verification_Adapter::SNAPSHOT_META)||$removed;
+		update_user_meta($user->ID,'_spd_profile_visibility','private');$removed=true;
+		update_user_meta($user->ID,'_spd_public_contact','0');$removed=true;
+		if(SPD_Membership_Adapter::is_doctor($user->ID)){$retained=true;$messages[]='Identity, credentials, doctor-verification decisions, and canonical audit records are retained by Files 00 and 09 and must be handled through their privacy procedures. File 03 has removed its public projection snapshot.';}
 		if(SPD_Membership_Adapter::is_founder($user->ID)){$retained=true;$messages[]='Official Founder institutional content is retained until an authorized governance decision removes it.';}
 		return array('items_removed'=>$removed,'items_retained'=>$retained,'messages'=>array_values(array_unique($messages)),'done'=>true);
 	}

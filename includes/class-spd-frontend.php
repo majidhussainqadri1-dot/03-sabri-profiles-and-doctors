@@ -140,7 +140,14 @@ final class SPD_Frontend {
 	private function is_private_request() {
 		$map=(array)get_option('spd_page_map',array());
 		if(!empty($map['edit'])&&is_page(absint($map['edit']))){return true;}
-		if(!empty($map['profile'])&&is_page(absint($map['profile']))){$u=$this->requested_user();return !$u||!$this->can_view($u->ID)||get_current_user_id()===$u->ID;}
+		if(!empty($map['profile'])&&is_page(absint($map['profile']))){
+			$u=$this->requested_user();
+			if(!$u){return true;}
+			if(get_current_user_id()===$u->ID||current_user_can('smc_manage_membership')){return true;}
+			if(SPD_Membership_Adapter::is_founder($u->ID)){return false;}
+			if(SPD_Membership_Adapter::is_doctor($u->ID)){return !SPD_Verification_Adapter::directory_eligible($u->ID);}
+			return 'public'!==SPD_Membership_Adapter::public_visibility($u->ID);
+		}
 		return false;
 	}
 

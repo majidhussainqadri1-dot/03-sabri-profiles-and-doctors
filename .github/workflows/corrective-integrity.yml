@@ -27,7 +27,7 @@ jobs:
         env:
           BASELINE_COMMIT: e2165a9286e6c3106430aab431d9d44da707cf51
           BASELINE_LOCK_SHA256: 5c178339045ebdf13f6977042141b4e78e378d293a302020eb49841835617571
-          RELEASE_LOCK_SHA256: 822dcfd334c09e0792a555d6c81fa3d0c05f2e59820b53121c5b531ee0c14aed
+          RELEASE_LOCK_SHA256: 7b421b181dcf9bfa356762c19326e982c0d5cc25178e467eea58a987114c2111
         run: |
           set -euo pipefail
           git merge-base --is-ancestor "$BASELINE_COMMIT" HEAD
@@ -50,7 +50,7 @@ jobs:
               raise SystemExit(1)
 
           lock_bytes = lock_path.read_bytes()
-          if hashlib.sha256(lock_bytes).hexdigest() != '822dcfd334c09e0792a555d6c81fa3d0c05f2e59820b53121c5b531ee0c14aed':
+          if hashlib.sha256(lock_bytes).hexdigest() != '7b421b181dcf9bfa356762c19326e982c0d5cc25178e467eea58a987114c2111':
               fail('RELEASE-LOCK.json SHA-256 mismatch')
           lock = json.loads(lock_bytes.decode('utf-8'))
           if lock.get('production_authorized') is not False or lock.get('staging_authorized') is not False:
