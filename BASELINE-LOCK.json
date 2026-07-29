@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "file_number": "03",
+  "module": "Sabri Profiles and Doctors",
+  "plugin_version": "0.1.0",
+  "original_archive": "03-sabri-profiles-and-doctors-0.1.0.zip",
+  "archive_sha256": "5d4d251faab2879e2894c29ce29b3cf50615898ca065fc1502832805231518ee",
+  "archive_size": 19341,
+  "archive_entries": 17,
+  "archive_committed": false,
+  "source_file_count": 12,
+  "php_file_count": 8,
+  "source_size": 46004,
+  "source_tree_sha256": "02166d3b61cd75ab7ca90cdcde402990d41d87ccb4f7f44e27544d998a3ca0fa",
+  "inventory_file": "SOURCE-INVENTORY.tsv",
+  "checksums_file": "CHECKSUMS.sha256",
+  "baseline_branch": "baseline/file-03-original-import"
+}
