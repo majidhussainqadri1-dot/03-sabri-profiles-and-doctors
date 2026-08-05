@@ -1,0 +1,47 @@
+name: Apply File 03 v2 source final
+
+on:
+  push:
+    branches: [codex/file-03-plan-completion-v2]
+
+permissions:
+  contents: write
+  issues: read
+
+jobs:
+  apply:
+    if: github.actor == 'majidhussainqadri1-dot'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+      - name: Apply checksum-locked source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request
+          req=urllib.request.Request(f"https://api.github.com/repos/{os.environ['REPO']}/issues/4/comments?per_page=100",headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}","Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"})
+          chunks={}
+          for c in json.load(urllib.request.urlopen(req)):
+              b=c.get('body','')
+              if b.startswith('FILE03V2:'):
+                  _,n,d=b.split(':',2); chunks[n]=d.strip()
+          order=['00','01','02','03','04','05','06a','06b','06c','06d','06e','06f','07','08','09','10a','10b','11a','11b']
+          missing=[n for n in order if n not in chunks]
+          if missing: raise SystemExit(f'Missing chunks: {missing}')
+          if chunks['10a'].endswith('islav'): chunks['10a']=chunks['10a'][:-5]
+          open('/tmp/file03.b64','w',encoding='ascii').write(''.join(chunks[n] for n in order))
+          PY
+          base64 -d /tmp/file03.b64 > /tmp/file03.tar.gz
+          echo "72518f166c10cf89a123e100741301a17953eb3cc981069e275ff3e4623da9aa  /tmp/file03.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/file03.tar.gz -C .
+          git checkout HEAD -- .github/workflows
+          git config user.name "majidhussainqadri1-dot"
+          git config user.email "majidhussainqadri1@gmail.com"
+          git add -A
+          git commit -m "Complete File 03 three-plan source implementation v2"
+          git push origin HEAD:codex/file-03-plan-completion-v2
