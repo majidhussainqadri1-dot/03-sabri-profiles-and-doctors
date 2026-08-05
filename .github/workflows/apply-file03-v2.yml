@@ -1,0 +1,69 @@
+name: Apply File 03 v2 source
+
+on:
+  push:
+    branches:
+      - codex/file-03-plan-completion-v2
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: read
+
+jobs:
+  apply:
+    if: github.actor == 'majidhussainqadri1-dot'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout immutable action
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+      - name: Fetch, verify and apply File 03 v2 payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          request = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['REPO']}/issues/4/comments?per_page=100",
+              headers={
+                  "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+              },
+          )
+          comments = json.load(urllib.request.urlopen(request))
+          chunks = {}
+          for comment in comments:
+              body = comment.get("body", "")
+              if body.startswith("FILE03V2:"):
+                  _, number, data = body.split(":", 2)
+                  chunks[number] = data.strip()
+
+          expected = [f"{index:02d}" for index in range(12)]
+          missing = [number for number in expected if number not in chunks]
+          if missing:
+              raise SystemExit(f"Missing payload chunks: {missing}")
+
+          payload = "".join(chunks[number] for number in expected)
+          with open("/tmp/file03.b64", "w", encoding="ascii") as handle:
+              handle.write(payload)
+          PY
+          base64 -d /tmp/file03.b64 > /tmp/file03.tar.gz
+          echo "72518f166c10cf89a123e100741301a17953eb3cc981069e275ff3e4623da9aa  /tmp/file03.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/file03.tar.gz -C .
+          rm -f .github/workflows/apply-file03-v2.yml \
+                .github/workflows/plan-completion.yml \
+                .github/workflows/corrective-integrity.yml \
+                .github/workflows/baseline-integrity.yml
+          git config user.name "majidhussainqadri1-dot"
+          git config user.email "majidhussainqadri1@gmail.com"
+          git add -A
+          git commit -m "Complete File 03 three-plan source implementation v2"
+          git push origin HEAD:codex/file-03-plan-completion-v2
