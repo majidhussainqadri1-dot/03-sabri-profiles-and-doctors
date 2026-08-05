@@ -40,6 +40,7 @@ jobs:
           echo "72518f166c10cf89a123e100741301a17953eb3cc981069e275ff3e4623da9aa  /tmp/file03.tar.gz" | sha256sum -c -
           tar -xzf /tmp/file03.tar.gz -C .
           git checkout HEAD -- .github/workflows
+          rm -f .github/workflows/plan-completion-v2.yml
           git config user.name "majidhussainqadri1-dot"
           git config user.email "majidhussainqadri1@gmail.com"
           git add -A
