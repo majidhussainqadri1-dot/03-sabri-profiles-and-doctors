@@ -17,13 +17,18 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
-      - name: Diagnose reconstructed patch
+      - name: Reconstruct, verify, apply and commit
         run: |
           set -euo pipefail
-          sha256sum .patchparts/part*
           cat .patchparts/part* > /tmp/file03.patch.b64
-          wc -c /tmp/file03.patch.b64
-          sha256sum /tmp/file03.patch.b64
+          test "$(sha256sum /tmp/file03.patch.b64 | awk '{print $1}')" = "a0b702689d547159f05e599fea63e89274e1986261d8df3af5b85f11506d4185"
           base64 -d /tmp/file03.patch.b64 > /tmp/file03.patch.gz
-          sha256sum /tmp/file03.patch.gz
-          gzip -t /tmp/file03.patch.gz
+          test "$(sha256sum /tmp/file03.patch.gz | awk '{print $1}')" = "6da4b695be2a9b17a3b0e69d132ba1d2ec7df3d3b5111f27ee038ddb14dade97"
+          gzip -dc /tmp/file03.patch.gz > /tmp/file03.patch
+          test "$(sha256sum /tmp/file03.patch | awk '{print $1}')" = "4107f9f83dd5f3a75b2bd7055fcc6662079dd6901daf92a0058428e9bb73cf3c"
+          git apply --index /tmp/file03.patch
+          git rm -r .patchparts .github/workflows/apply-forty-round-review.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Complete File 03 forty-round review and corrections'
+          git push origin HEAD:codex/file-03-forty-round-review
