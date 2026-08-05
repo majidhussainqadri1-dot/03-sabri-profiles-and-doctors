@@ -47,7 +47,7 @@ jobs:
                   _, number, data = body.split(":", 2)
                   chunks[number] = data.strip()
 
-          order = [f"{index:02d}" for index in range(10)] + ["10a", "10b", "11a", "11b"]
+          order = ["00", "01", "02", "03", "04", "05", "06a", "06b", "06c", "06d", "06e", "06f", "07", "08", "09", "10a", "10b", "11a", "11b"]
           missing = [number for number in order if number not in chunks]
           if missing:
               raise SystemExit(f"Missing payload chunks: {missing}")
@@ -62,7 +62,12 @@ jobs:
               "03": (7000, "77c2167bef84b52d921e1b7d7c86ed2e4582592192f87c426050ef0b84c9ab3a"),
               "04": (7000, "a7d794480970a5a9b405620151f7fcb9b706e1f89c2d2d7ffe58d7c6b5eb1d56"),
               "05": (9000, "6441654100dfdf98e917dd79f365d604a9ccdae15e4aaf4a5f638fe4d582d4ec"),
-              "06": (9000, "60634cd772ddadaa607f6bdb38ac8f48c271cecbf4b063bce736af298ff64cf3"),
+              "06a": (1500, "7ee74ecb6d5f8a5023b3a5b2ceadf42b0c55e93aa85b9c390aae9f6d8b6a4c5c"),
+              "06b": (1500, "f601404e96e156a2e825c152574913e68eb40b4db6a858df82d65336b6c57cd0"),
+              "06c": (1500, "6a76796699f92f25f246836a934e51f810ff19f960927b805cff0859569f6543"),
+              "06d": (1500, "6ac4f17a9e97723f2066046a28459f4ae491afa3141d6337b79bc76b6c67f619"),
+              "06e": (1500, "492a9f13e7387a0919550ae763f54e2307e779692bf6c37f1e8488bdeffbd641"),
+              "06f": (1500, "25c973ec7991e48ee6a9ddf1dbe8cb8fa6a69d63f6c87dae81c062d2da41e2de"),
               "07": (9000, "40941f134f4fefa4c8be4f6a9b53555d6192bc1ad4f71daeccc3b07f5eae72fd"),
               "08": (9000, "ad1e841bcb19b7b692503d6e0bc4aea13c6dd3a50e4d20b7aa64b7c0594e5325"),
               "09": (9000, "eda916418eb1f5e61055c579587ad749bedc310fe7ffda0c8430d0afb318f0c2"),
@@ -77,10 +82,7 @@ jobs:
               actual_length = len(data)
               actual_sha = hashlib.sha256(data.encode("ascii")).hexdigest()
               expected_length, expected_sha = expected[number]
-              print(
-                  f"CHUNK {number} len={actual_length} sha256={actual_sha} "
-                  f"expected_len={expected_length} expected_sha={expected_sha}"
-              )
+              print(f"CHUNK {number} len={actual_length} sha256={actual_sha} expected_len={expected_length} expected_sha={expected_sha}")
               if actual_length != expected_length or actual_sha != expected_sha:
                   bad.append(number)
           if bad:
