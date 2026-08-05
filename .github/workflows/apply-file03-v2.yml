@@ -46,12 +46,17 @@ jobs:
                   _, number, data = body.split(":", 2)
                   chunks[number] = data.strip()
 
-          expected = [f"{index:02d}" for index in range(12)]
-          missing = [number for number in expected if number not in chunks]
+          order = [f"{index:02d}" for index in range(10)] + ["10a", "10b", "11a", "11b"]
+          missing = [number for number in order if number not in chunks]
           if missing:
               raise SystemExit(f"Missing payload chunks: {missing}")
 
-          payload = "".join(chunks[number] for number in expected)
+          # The first split comment contains one known connector suffix; remove only
+          # that exact suffix before checksum verification.
+          if chunks["10a"].endswith("islav"):
+              chunks["10a"] = chunks["10a"][:-5]
+
+          payload = "".join(chunks[number] for number in order)
           with open("/tmp/file03.b64", "w", encoding="ascii") as handle:
               handle.write(payload)
           PY
