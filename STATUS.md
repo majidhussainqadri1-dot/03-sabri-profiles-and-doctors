@@ -11,8 +11,8 @@
 - Local architecture boundary test: pass
 - Local FR/NFR coverage test: pass
 - Local security/state-machine unit test: pass
-- Review/Fix Round 1: completed
-- Fresh Adversarial Review/Fix Round 2: completed
+- Review/Fix Rounds 1–4: completed
+- Fresh adversarial, bootstrap-composition and CI-evidence reviews: completed
 - Post-fix regression retest: pass locally
 - GitHub Actions on branch/PR: pending until pushed
 - Deterministic package artifact: produced by CI; pending

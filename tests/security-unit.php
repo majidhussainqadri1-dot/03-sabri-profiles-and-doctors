@@ -25,7 +25,7 @@ require_once dirname(__DIR__).'/includes/class-spd-membership-adapter.php';
 require_once dirname(__DIR__).'/includes/class-spd-verification-adapter.php';
 
 $assert = function($condition,$message){if(!$condition){fwrite(STDERR,$message."\n");exit(1);}};
-$assert(SPD_Helpers::clean_phone('+92 (300) 123-4567')==='+923001234567','Phone normalization failed');
+$assert(SPD_Helpers::clean_phone('+44 (20) 7946-0958')==='+442079460958','Phone normalization failed');
 $assert(SPD_Helpers::normalize_locale('ur_PK')==='ur-PK','Locale normalization failed');
 $assert(SPD_Helpers::normalize_focal(120)===100.0,'Focal upper bound failed');
 $assert(SPD_Helpers::normalize_focal(-3)===0.0,'Focal lower bound failed');

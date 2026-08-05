@@ -42,3 +42,7 @@ The complete local regression suite passed again after these corrections. Hostin
 ## Round 3 — bootstrap/runtime composition review
 
 A final composition-focused review discovered that the refactored repository and frontend classes declared PHP traits before those trait files were required by the plugin bootstrap. Syntax-only testing could not detect this load-order fatal. The plugin loader now requires every trait before the classes that use it, the architecture test asserts key trait filenames, and a dedicated minimal WordPress bootstrap smoke test verifies all principal classes and traits load without a fatal error. The full lint, architecture, plan coverage, bootstrap and security/state-machine suites then passed again.
+
+## Round 4 — CI evidence review and false-positive correction
+
+The first exact-head GitHub Actions run passed PHP 8.1/8.3/8.4 lint, architecture, plan coverage, bootstrap and unit checks, but the secret scan correctly blocked the workflow because a security-unit example contained a Pakistan-format telephone number. Although synthetic, it was indistinguishable from committed personal contact data. The fixture was replaced with a non-project generic UK-format example; no production or Founder contact appears in source or tests. The complete local suite and package build passed again before the corrective commit.

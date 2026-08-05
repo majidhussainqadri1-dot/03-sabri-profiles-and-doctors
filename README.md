@@ -50,7 +50,7 @@ File 03 owns canonical public-profile identity, profile presentation fields, fie
 - Architecture boundary scan.
 - Full File 03 FR/NFR token-to-implementation coverage scan.
 - Security/state-machine unit checks.
-- Two fresh review/fix cycles recorded in `REVIEW-CYCLES.md`.
+- Four review/fix cycles, including exact-head CI evidence review, recorded in `REVIEW-CYCLES.md`.
 
 ## Remaining release gates
 
