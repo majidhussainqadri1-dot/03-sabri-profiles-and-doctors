@@ -1,32 +1,17 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-/**
- * Public compatibility facade. It reads canonical authorities and never approves users or mutates roles.
- */
 final class SPD_Helpers {
-	public static function fields() {
-		return array(
-			'account_type'       => 'Account type',
-			'country'            => 'Country',
-			'city'               => 'City',
-			'clinic'             => 'Clinic',
-			'qualification'      => 'Qualification',
-			'licence_number'     => 'Licence / registration number',
-			'licensing_authority'=> 'Licensing authority',
-			'experience_years'   => 'Years of experience',
-			'specialty'          => 'Specialty',
-			'languages'          => 'Languages',
-			'studied_books'      => 'Classical books studied',
-			'consultation_modes' => 'Consultation modes',
-			'phone'              => 'Phone number',
-			'whatsapp'           => 'WhatsApp number',
-			'bio'                => 'Professional introduction',
-		);
+	public static function now() {
+		return current_time( 'mysql', true );
 	}
 
-	public static function get( $user_id, $key, $default = '' ) {
-		return SPD_Membership_Adapter::field( $user_id, $key, $default );
+	public static function public_id() {
+		return wp_generate_uuid4();
+	}
+
+	public static function trace_id() {
+		return 'spd-' . str_replace( '-', '', wp_generate_uuid4() );
 	}
 
 	public static function clean_phone( $value ) {
@@ -37,71 +22,117 @@ final class SPD_Helpers {
 
 	public static function whatsapp_url( $number ) {
 		$digits = preg_replace( '/\D+/', '', (string) $number );
-		return $digits ? 'https://wa.me/' . $digits : '';
+		return $digits ? 'https://wa.me/' . rawurlencode( $digits ) : '';
 	}
 
-	public static function verification_status( $user_id ) {
-		return SPD_Verification_Adapter::status( $user_id );
+	public static function same_origin_url( $url ) {
+		if ( ! $url ) { return false; }
+		$home = wp_parse_url( home_url( '/' ) );
+		$target = wp_parse_url( (string) $url );
+		return is_array( $target ) && ! empty( $target['host'] ) && isset( $home['host'] )
+			&& strtolower( $target['host'] ) === strtolower( $home['host'] )
+			&& in_array( strtolower( $target['scheme'] ?? '' ), array( 'http', 'https' ), true );
 	}
 
-	public static function status_label( $status ) {
-		return SPD_Verification_Adapter::status_label( $status );
+	public static function sanitize_multiline( $value, $max = 4000 ) {
+		$value = sanitize_textarea_field( (string) $value );
+		return function_exists( 'mb_substr' ) ? mb_substr( $value, 0, $max ) : substr( $value, 0, $max );
 	}
 
-	public static function is_doctor( $user_id ) {
-		return SPD_Membership_Adapter::is_doctor( $user_id );
+	public static function normalize_locale( $locale ) {
+		$locale = str_replace( '_', '-', sanitize_text_field( (string) $locale ) );
+		return preg_match( '/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/', $locale ) ? $locale : 'en-US';
 	}
 
-	public static function can_show_contact( $user_id, $founder = false ) {
-		return ( $founder && SPD_Membership_Adapter::is_founder( $user_id ) )
-			|| '1' === (string) get_user_meta( absint( $user_id ), '_spd_public_contact', true );
+	public static function normalize_focal( $value ) {
+		$value = is_numeric( $value ) ? (float) $value : 50.0;
+		return max( 0.0, min( 100.0, $value ) );
 	}
 
-	public static function profile_url( $user_id ) {
-		$pages = (array) get_option( 'spd_page_map', array() );
-		$base  = ! empty( $pages['profile'] ) ? get_permalink( absint( $pages['profile'] ) ) : home_url( '/' );
-		$user  = get_userdata( absint( $user_id ) );
-		return add_query_arg( 'user', $user ? $user->user_nicename : absint( $user_id ), $base );
+	public static function current_contract_claim( $claim, $minimum_contract = '1.0.0', $maximum_age = 600 ) {
+		if ( ! is_array( $claim ) ) { return false; }
+		$contract = sanitize_text_field( (string) ( $claim['contract_version'] ?? '' ) );
+		$generated = strtotime( (string) ( $claim['generated_at'] ?? '' ) );
+		$valid_until = strtotime( (string) ( $claim['valid_until'] ?? '' ) );
+		$now = time();
+		return $contract && version_compare( $contract, (string) $minimum_contract, '>=' )
+			&& false !== $generated && false !== $valid_until
+			&& $generated <= $now + 300 && ( $now - $generated ) <= max( 60, absint( $maximum_age ) )
+			&& $valid_until > $now && $valid_until > $generated;
 	}
 
-	public static function founder() {
-		$founder_id = SPD_Membership_Adapter::founder_id();
-		$user       = $founder_id ? get_userdata( $founder_id ) : false;
-		$profile    = (array) get_option( 'spd_founder_profile', array() );
-		$defaults   = array(
-			'name'         => $user ? $user->display_name : '',
-			'title'        => 'Founder — Sabri Social Homeopathy Platform',
-			'location'     => $founder_id ? trim( self::get( $founder_id, 'city' ) . ', ' . self::get( $founder_id, 'country' ), ', ' ) : '',
-			'phone'        => $founder_id ? self::get( $founder_id, 'phone' ) : '',
-			'whatsapp'     => $founder_id ? self::get( $founder_id, 'whatsapp' ) : '',
-			'introduction' => '',
-			'mission'      => '',
-			'vision'       => '',
-			'objectives'   => '',
-			'methodology'  => '',
-			'experience'   => '',
-			'research'     => '',
-			'publications' => '',
-			'photo_id'     => $founder_id ? absint( get_user_meta( $founder_id, '_spd_profile_photo_id', true ) ) : 0,
-			'cover_id'     => $founder_id ? absint( get_user_meta( $founder_id, '_spd_cover_photo_id', true ) ) : 0,
+	public static function slug_base( $display_name, $user_id ) {
+		$base = sanitize_title( remove_accents( (string) $display_name ) );
+		if ( '' === $base ) {
+			$base = 'profile-' . absint( $user_id );
+		}
+		return substr( $base, 0, 160 );
+	}
+
+	public static function canonical_profile_url( $public_id ) {
+		return home_url( user_trailingslashit( 'profile/' . rawurlencode( (string) $public_id ) ) );
+	}
+
+	public static function timeline_url( $public_id ) {
+		return home_url( user_trailingslashit( 'profile/' . rawurlencode( (string) $public_id ) . '/timeline' ) );
+	}
+
+	public static function report_url( $public_id ) {
+		return home_url( user_trailingslashit( 'profile/' . rawurlencode( (string) $public_id ) . '/report' ) );
+	}
+
+	public static function initials( $name ) {
+		$parts = preg_split( '/\s+/u', trim( (string) $name ) );
+		$out = '';
+		foreach ( array_slice( array_filter( $parts ), 0, 2 ) as $part ) {
+			$out .= function_exists( 'mb_substr' ) ? mb_substr( $part, 0, 1 ) : substr( $part, 0, 1 );
+		}
+		return function_exists( 'mb_strtoupper' ) ? mb_strtoupper( $out ) : strtoupper( $out );
+	}
+
+	public static function state_transition_allowed( $from, $to, $object = 'profile' ) {
+		$maps = array(
+			'profile' => array(
+				'incomplete' => array( 'active', 'limited', 'suspended', 'archived', 'tombstoned' ),
+				'active'     => array( 'limited', 'suspended', 'archived', 'tombstoned' ),
+				'limited'    => array( 'active', 'suspended', 'archived', 'tombstoned' ),
+				'suspended'  => array( 'limited', 'active', 'archived', 'tombstoned' ),
+				'archived'   => array( 'active', 'tombstoned' ),
+				'tombstoned' => array(),
+			),
+			'professional_field' => array(
+				'draft'          => array( 'pending_review', 'superseded' ),
+				'pending_review' => array( 'approved', 'rejected', 'superseded' ),
+				'approved'       => array( 'superseded' ),
+				'rejected'       => array( 'draft', 'superseded' ),
+				'superseded'     => array(),
+			),
+			'media' => array(
+				'pending_scan' => array( 'active', 'rejected', 'removed' ),
+				'active'       => array( 'rejected', 'removed' ),
+				'rejected'     => array( 'removed' ),
+				'removed'      => array(),
+			),
 		);
-		$merged = wp_parse_args( $profile, $defaults );
-		// Canonical identity and contact can never be overridden by legacy File 03 options.
-		foreach ( array( 'name', 'location', 'phone', 'whatsapp', 'photo_id', 'cover_id' ) as $key ) {
-			$merged[ $key ] = $defaults[ $key ];
-		}
-		return $merged;
+		$object = sanitize_key( $object );
+		$from = sanitize_key( $from );
+		$to = sanitize_key( $to );
+		return isset( $maps[ $object ][ $from ] ) && in_array( $to, $maps[ $object ][ $from ], true );
 	}
 
-	public static function audit( $target, $old, $new, $reason = '' ) {
-		if ( class_exists( 'SMC_Security' ) && is_callable( array( 'SMC_Security', 'audit' ) ) ) {
-			SMC_Security::audit(
-				'spd_projection_event',
-				absint( $target ),
-				'profile_projection',
-				0,
-				array( 'old' => sanitize_key( $old ), 'new' => sanitize_key( $new ), 'reason' => sanitize_textarea_field( $reason ) )
-			);
-		}
+	public static function safe_error( $code, $message, $status = 400, $trace_id = '' ) {
+		$trace_id = $trace_id ?: self::trace_id();
+		return new WP_Error(
+			sanitize_key( $code ),
+			$message,
+			array(
+				'status'   => absint( $status ),
+				'trace_id' => $trace_id,
+			)
+		);
+	}
+
+	public static function json_encode( $value ) {
+		return wp_json_encode( $value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
 	}
 }

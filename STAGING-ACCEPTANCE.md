@@ -1,48 +1,25 @@
-# File 03 Staging Acceptance Matrix
+# Hostinger Staging Acceptance — Mandatory
 
-All tests must pass before merge or deployment.
+## Installation and migration
 
-## Dependencies and activation
+- Verified database/files backup and restore rehearsal.
+- Fresh install with compatible File 00.
+- Upgrade from `0.2.0` and prior `1.0.0-rc1` candidate using representative data.
+- UUID, slug history, field audiences, media references, reports, events and professional proposals reconcile by counts/checksums.
+- Retry/dead migration records are zero or formally quarantined and unresolved release blockers.
 
-- File 03 fails closed when File 00 is absent.
-- File 03 activates when File 00 is available.
-- Missing File 09 produces no verified public doctor listings.
-- File 20 navigation resolves Founder and Doctors without duplicate pages.
+## Real integrations
 
-## Identity and authorization
+- File 00 current assertions, age/guardian and contact projections.
+- File 09 validated current verification projection; until present, badges remain hidden.
+- File 20 routes/layouts and File 25 components/icons/tokens.
+- File 21/10/11/05 timeline providers and outage/degraded behavior.
+- File 07/26 provider and reindex reconciliation; File 08 clinic; File 17 contact/message; File 24 assurance/report events.
 
-- File 03 creates no role and grants no role capability.
-- File 03 cannot approve, reject, suspend, or verify a doctor.
-- Only the unique canonical File 00 Founder account can edit Founder presentation.
-- A second administrator cannot edit Founder presentation by default.
+## Representative journeys
 
-## Doctor projection
+Founder, adult member, verified doctor, minor, guardian, moderator and suspended/rejected/expired accounts; public, members, contacts and private fields; concurrent edit/replay; report lifecycle; privacy export/erasure; media scan/replacement/privacy revocation/deletion; provider outage and recovery.
 
-- File 00-approved plus File 09-verified doctor with reviewer evidence can receive a snapshot.
-- A doctor without both authorities is excluded.
-- A material professional-field change causes snapshot mismatch and removes directory eligibility.
-- File 09 re-review refreshes the snapshot and restores eligibility.
-- Public directory displays only approved snapshot data, never unreviewed current data.
+## Quality and resilience
 
-## Privacy
-
-- General profiles default to private/member visibility rather than public.
-- Private and owner profile requests are noindex/noarchive/no-store/private.
-- Public contact remains hidden without explicit consent.
-- User-nicename enumeration does not expose a private profile.
-- Privacy export reports all File 03 presentation data.
-- Privacy erasure deletes File 03-owned media bytes and metadata.
-- Non-owned media is retained with an explicit message rather than falsely reported deleted.
-
-## Media and page safety
-
-- Invalid MIME, oversized, decompression-bomb-sized, and upload-error files are rejected.
-- Replacing a File 03-owned image deletes the old image.
-- An unrelated page using a different Sabri shortcode is never overwritten.
-- Exact File 03-managed pages update safely and preserve ownership metadata.
-
-## Retention and uninstall
-
-- Legacy audit identifiers anonymize after 180 days and rows delete after 365 days.
-- Normal uninstall preserves data.
-- Destructive uninstall runs only with both required opt-ins and removes only proven File 03-owned data.
+Desktop/tablet/mobile; Chrome/Firefox/Safari/Edge; Urdu/Arabic RTL and English LTR; keyboard/screen reader/zoom/reduced motion/forced colors; WCAG 2.2 AA; cache leakage tests; queue concurrency; restore, rollback and post-rollback reconciliation; Founder visual and functional sign-off.

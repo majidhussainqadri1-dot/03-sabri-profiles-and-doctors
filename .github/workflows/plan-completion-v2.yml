@@ -1,0 +1,121 @@
+name: File 03 Plan Completion v2
+
+on:
+  push:
+    branches:
+      - 'codex/file-03-plan-completion-v2'
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-behavior:
+    name: PHP ${{ matrix.php }} — source, contracts and behavior
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.3', '8.4']
+    steps:
+      - name: Checkout immutable action
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Set up PHP from immutable action
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: none
+          ini-file: production
+      - name: PHP syntax lint
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do php -l "$file"; done < <(find . -name '*.php' -type f -print0)
+      - name: Architecture, security, schema and plan traceability
+        run: |
+          set -euo pipefail
+          python3 tests/architecture-check.py
+          python3 tests/source-security-regression.py
+          python3 tests/schema-check.py
+          python3 tests/plan-coverage.py
+      - name: Full plugin bootstrap composition
+        run: php tests/bootstrap-load.php
+      - name: Authorization behavior
+        run: php tests/authorization-runtime.php
+      - name: Verification behavior
+        run: php tests/verification-runtime.php
+      - name: State and current-contract behavior
+        run: php tests/state-runtime.php
+      - name: Federated timeline behavior
+        run: php tests/timeline-runtime.php
+      - name: Secret, archive and unsafe-file scan
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,re
+          root=pathlib.Path('.')
+          forbidden_suffixes={'.zip','.tar','.tgz','.gz','.7z','.rar','.sql'}
+          patterns={
+            'private key':rb'-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----',
+            'Google API key':rb'\bAIza[0-9A-Za-z_-]{35}\b',
+            'GitHub token':rb'\bgh[pousr]_[A-Za-z0-9]{20,}\b',
+            'AWS access key':rb'\bAKIA[0-9A-Z]{16}\b',
+            'Pakistan mobile':rb'\+923[0-9]{9}\b',
+          }
+          for p in root.rglob('*'):
+            if not p.is_file() or '.git' in p.parts:
+              continue
+            if p.suffix.lower() in forbidden_suffixes:
+              raise SystemExit(f'Forbidden archive/database committed: {p}')
+            data=p.read_bytes()
+            for label,pattern in patterns.items():
+              if re.search(pattern,data):
+                raise SystemExit(f'Possible {label} in {p}')
+          print('Secret and unsafe-file scan passed.')
+          PY
+
+  deterministic-package:
+    name: Deterministic package, SBOM and source parity
+    runs-on: ubuntu-latest
+    needs: source-and-behavior
+    steps:
+      - name: Checkout immutable action
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Build package twice
+        run: |
+          set -euo pipefail
+          ./build-package.sh "$RUNNER_TEMP/build-a"
+          ./build-package.sh "$RUNNER_TEMP/build-b"
+      - name: Verify determinism, identity and parity
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's/^ \* Version: \(.*\)$/\1/p' sabri-profiles-doctors.php | head -1)"
+          A="$RUNNER_TEMP/build-a/03-sabri-profiles-and-doctors-$VERSION.zip"
+          B="$RUNNER_TEMP/build-b/03-sabri-profiles-and-doctors-$VERSION.zip"
+          cmp "$A" "$B"
+          (
+            cd "$(dirname "$A")"
+            sha256sum -c "$(basename "$A").sha256"
+          )
+          unzip -q "$A" -d "$RUNNER_TEMP/extract"
+          diff -ru --strip-trailing-cr sabri-profiles-doctors.php "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/sabri-profiles-doctors.php"
+          diff -ru --strip-trailing-cr includes "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/includes"
+          diff -ru --strip-trailing-cr assets "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/assets"
+          diff -u uninstall.php "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/uninstall.php"
+          diff -u readme.txt "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/readme.txt"
+          test -s "$RUNNER_TEMP/build-a/SBOM.json"
+      - name: Upload deterministic candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: file03-plan-completion-v2-candidate
+          path: |
+            ${{ runner.temp }}/build-a/*.zip
+            ${{ runner.temp }}/build-a/*.sha256
+            ${{ runner.temp }}/build-a/SBOM.json
+          if-no-files-found: error
+          retention-days: 14

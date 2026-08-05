@@ -1,28 +1,29 @@
-# File 03 — Sabri Profiles and Doctors
+# File 03 — Profiles and Doctors
 
-Corrective release `0.2.0` for the Sabri Social Homeopathy Platform.
+Canonical profile-domain source candidate for the Sabri Social Homeopathy Platform.
 
-## Authority boundaries
+## Governing scope
 
-- **File 00 — Sabri Membership Core:** canonical identity, account type, roles, membership approval, and canonical profile records.
-- **File 09 — Global Doctor Onboarding and Verification:** credential evidence and doctor-verification decisions.
-- **File 20 — Unified Application Shell:** optional application-shell navigation.
-- **File 03:** public/member profile projection, visibility consent, public-contact consent, presentation media, Founder presentation, and verified-doctor directory rendering.
+This repository implements the profile-owned requirements of:
 
-File 03 does not create roles, approve doctors, change verification decisions, or own identity records.
+1. Definitive Integrated Master Plan v3.0;
+2. File 03 — Profiles and Doctors Complete Master Plan 2026 v1.0;
+3. Consolidated All-Chats Recovered Directive Register v2.1.
 
-## Corrective branch
+File 03 owns stable public profile identity, profile fields and audiences, Founder official profile, member/doctor presentation records, slug history, profile-media references and deletion ledger, profile reports, private professional proposals, profile timeline federation, privacy export/erasure and operational evidence. It does not own membership truth, doctor verification decisions, doctor search/ranking, clinic truth, publication records, communication graph, global shell or final visual-system ownership.
 
-`audit/file-03-source-review`
+## Release identity
 
-## Original baseline
+- Plugin: `1.0.0-rc2`
+- Database schema: `1.2.0`
+- Contract: `1.2.0`
+- Minimum File 00 plugin: `1.2.11`
+- Minimum File 00 contract: `1.2.0`
+- PHP: `8.1`, `8.3`, `8.4`
+- WordPress: `7.0+`
 
-The original `0.1.0` source remains preserved at commit:
+## Truthful status
 
-`e2165a9286e6c3106430aab431d9d44da707cf51`
+Source, deterministic package and repository-based automated QA are candidate-complete after corrective reviews. Production authorization is **not** granted. Hostinger staging, real File 09/20/21/25 and other provider integration, representative role journeys, browser/device and Urdu/Arabic RTL, WCAG 2.2 AA, backup/restore, migration/rollback rehearsal and Founder acceptance remain mandatory.
 
-Do not rewrite the baseline branch.
-
-## Current gate
-
-Source correction and automated QA may pass on this branch, but merge, staging, production, and live installation remain prohibited until independent review and the staging acceptance matrix are complete.
+File 09 currently has no accepted runtime projection in its repository. Consequently, verified-doctor badges and approved professional projections intentionally fail closed until that versioned provider exists.

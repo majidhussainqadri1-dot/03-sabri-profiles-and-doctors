@@ -1,135 +1,78 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-/**
- * Read-only projection of File 00 and File 09 verification state.
- */
+/** Read-only, current and versioned projection of File 09 doctor-verification truth. */
 final class SPD_Verification_Adapter {
-	const SNAPSHOT_META = '_spd_approved_projection_snapshot';
+	const MIN_VERSION = '1.0.0';
+	const MIN_CONTRACT_VERSION = '1.0.0';
 
-	public static function gdo_available() {
-		return defined( 'GDO_VERSION' ) || class_exists( 'GDO_Helpers', false );
+	public static function available() { return has_filter( 'sabri_doctor_verification_public_projection_v1' ) && function_exists( 'gdo_validate_public_projection' ); }
+	public static function health() {
+		if ( ! self::available() ) { return array( 'status' => 'missing', 'version' => '', 'reason' => 'file09_versioned_projection_missing' ); }
+		return array( 'status' => 'available', 'version' => 'contract-v1', 'reason' => '' );
 	}
 
-	public static function gdo_status( $user_id ) {
-		$status  = sanitize_key( (string) get_user_meta( absint( $user_id ), '_spd_verification_status', true ) );
-		$allowed = array( 'pending', 'under_review', 'verified', 'more_info', 'rejected', 'suspended' );
-		return in_array( $status, $allowed, true ) ? $status : 'pending';
-	}
-
-	public static function has_review_evidence( $user_id ) {
-		return (bool) get_user_meta( absint( $user_id ), '_gdo_reviewed_at', true )
-			&& absint( get_user_meta( absint( $user_id ), '_gdo_reviewer_id', true ) ) > 0;
-	}
-
-	public static function material_fields() {
-		return array(
-			'display_name', 'country', 'city', 'clinic', 'qualification', 'licence_number',
-			'licensing_authority', 'experience_years', 'specialty', 'languages', 'studied_books',
-			'consultation_modes', 'phone', 'whatsapp', 'bio', 'profile_photo_id', 'cover_photo_id',
-		);
-	}
-
-	public static function current_projection( $user_id ) {
-		$data = array();
-		foreach ( self::material_fields() as $key ) {
-			if ( 'profile_photo_id' === $key || 'cover_photo_id' === $key ) {
-				$data[ $key ] = absint( get_user_meta( absint( $user_id ), '_spd_' . $key, true ) );
-			} else {
-				$data[ $key ] = (string) SPD_Membership_Adapter::field( $user_id, $key, '' );
-			}
-		}
-		return $data;
-	}
-
-	public static function fingerprint( array $data ) {
-		ksort( $data );
-		return hash( 'sha256', wp_json_encode( $data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) );
-	}
-
-	public static function snapshot( $user_id ) {
-		$value = get_user_meta( absint( $user_id ), self::SNAPSHOT_META, true );
-		return is_array( $value ) ? $value : array();
-	}
-
-	public static function capture_snapshot( $user_id ) {
+	public static function projection( $user_id ) {
 		$user_id = absint( $user_id );
-		if ( ! SPD_Membership_Adapter::is_doctor_identity_approved( $user_id ) || 'verified' !== self::gdo_status( $user_id ) || ! self::has_review_evidence( $user_id ) ) {
-			return false;
+		if ( ! $user_id || ! self::available() ) { return array(); }
+		$data = apply_filters( 'sabri_doctor_verification_public_projection_v1', null, $user_id, SPD_CONTRACT_VERSION );
+		if ( ! is_array( $data ) || true !== gdo_validate_public_projection( $data, $user_id, SPD_CONTRACT_VERSION ) ) { return array(); }
+		$normalized = self::normalize( $data, $user_id );
+		return self::is_current_projection( $normalized, $user_id ) ? $normalized : array();
+	}
+
+	private static function normalize( array $data, $user_id ) {
+		$fields = isset( $data['approved_fields'] ) && is_array( $data['approved_fields'] ) ? $data['approved_fields'] : array();
+		$allowed = array( 'professional_title', 'qualification', 'licence_number', 'licensing_authority', 'experience_years', 'specialty', 'languages', 'studied_books', 'consultation_modes', 'clinic_name', 'clinic_url', 'country', 'city', 'bio', 'profile_photo_id', 'cover_photo_id' );
+		$clean = array();
+		foreach ( $allowed as $key ) {
+			if ( ! array_key_exists( $key, $fields ) ) { continue; }
+			$clean[ $key ] = in_array( $key, array( 'profile_photo_id', 'cover_photo_id', 'experience_years' ), true ) ? absint( $fields[ $key ] ) : sanitize_textarea_field( (string) $fields[ $key ] );
 		}
-		$data = self::current_projection( $user_id );
-		$snapshot = array(
-			'schema'      => 1,
-			'fields'      => $data,
-			'fingerprint' => self::fingerprint( $data ),
-			'reviewed_at' => sanitize_text_field( (string) get_user_meta( $user_id, '_gdo_reviewed_at', true ) ),
-			'reviewer_id' => absint( get_user_meta( $user_id, '_gdo_reviewer_id', true ) ),
-			'captured_at' => current_time( 'mysql', true ),
+		$status = sanitize_key( (string) ( $data['status'] ?? 'pending' ) );
+		if ( ! in_array( $status, array( 'pending', 'under_review', 'verified', 'more_info', 'rejected', 'suspended', 'expired' ), true ) ) { $status = 'pending'; }
+		return array(
+			'user_id'          => absint( $data['user_id'] ?? $user_id ),
+			'status'           => $status,
+			'approved_fields'  => $clean,
+			'reviewer_id'      => absint( $data['reviewer_id'] ?? 0 ),
+			'reviewed_at'      => sanitize_text_field( (string) ( $data['reviewed_at'] ?? '' ) ),
+			'generated_at'     => sanitize_text_field( (string) ( $data['generated_at'] ?? '' ) ),
+			'valid_until'      => sanitize_text_field( (string) ( $data['valid_until'] ?? '' ) ),
+			'claim_version'    => sanitize_text_field( (string) ( $data['claim_version'] ?? $data['version'] ?? '' ) ),
+			'contract_version' => sanitize_text_field( (string) ( $data['contract_version'] ?? '' ) ),
+			'issuer'           => sanitize_key( (string) ( $data['issuer'] ?? 'file09' ) ),
+			'trusted_contract' => true,
 		);
-		update_user_meta( $user_id, self::SNAPSHOT_META, $snapshot );
+	}
+
+	private static function is_current_projection( array $projection, $user_id ) {
+		if ( absint( $projection['user_id'] ?? 0 ) !== absint( $user_id ) ) { return false; }
+		if ( empty( $projection['contract_version'] ) || version_compare( $projection['contract_version'], self::MIN_CONTRACT_VERSION, '<' ) ) { return false; }
+		$reviewed_at = strtotime( (string) $projection['reviewed_at'] );
+		$generated_at = strtotime( (string) ( $projection['generated_at'] ?? '' ) );
+		$valid_until = strtotime( (string) ( $projection['valid_until'] ?? '' ) );
+		if ( empty( $projection['claim_version'] ) || empty( $projection['reviewer_id'] ) || false === $reviewed_at || false === $generated_at || false === $valid_until ) { return false; }
+		if ( $reviewed_at > time() + 300 || abs( time() - $generated_at ) > 600 || $valid_until <= time() || $valid_until <= $reviewed_at ) { return false; }
 		return true;
 	}
 
-	public static function snapshot_matches( $user_id ) {
-		$snapshot = self::snapshot( $user_id );
-		return ! empty( $snapshot['fingerprint'] )
-			&& hash_equals( (string) $snapshot['fingerprint'], self::fingerprint( self::current_projection( $user_id ) ) );
-	}
-
-	public static function approved_fields( $user_id ) {
-		$snapshot = self::snapshot( $user_id );
-		return ! empty( $snapshot['fields'] ) && is_array( $snapshot['fields'] ) ? $snapshot['fields'] : array();
-	}
-
-	public static function is_verified( $user_id ) {
-		return SPD_Membership_Adapter::is_doctor_identity_approved( $user_id )
-			&& self::gdo_available()
-			&& 'verified' === self::gdo_status( $user_id )
-			&& self::has_review_evidence( $user_id )
-			&& self::snapshot_matches( $user_id );
-	}
-
+	public static function fingerprint( array $fields ) { ksort( $fields ); return hash( 'sha256', wp_json_encode( $fields, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) ); }
 	public static function status( $user_id ) {
-		$user_id = absint( $user_id );
-		$smc     = SPD_Membership_Adapter::status( $user_id );
-		$gdo     = self::gdo_status( $user_id );
-		if ( in_array( $smc, array( 'suspended', 'rejected' ), true ) || in_array( $gdo, array( 'suspended', 'rejected' ), true ) ) {
-			return 'suspended' === $smc || 'suspended' === $gdo ? 'suspended' : 'rejected';
-		}
-		if ( ! SPD_Membership_Adapter::is_doctor_identity_approved( $user_id ) ) {
-			return in_array( $smc, array( 'under_review', 'submitted', 'resubmitted', 'more_information' ), true ) ? 'under_review' : 'pending';
-		}
-		if ( ! self::gdo_available() ) {
-			return 'verification_unavailable';
-		}
-		if ( 'verified' === $gdo && ! self::snapshot_matches( $user_id ) ) {
-			return 'changes_pending';
-		}
-		return self::is_verified( $user_id ) ? 'verified' : $gdo;
+		$membership = SPD_Membership_Adapter::status( $user_id );
+		if ( in_array( $membership, array( 'suspended', 'rejected', 'erased' ), true ) ) { return 'suspended' === $membership ? 'suspended' : 'rejected'; }
+		$projection = self::projection( $user_id );
+		return $projection ? $projection['status'] : 'verification_unavailable';
 	}
-
+	public static function approved_fields( $user_id ) { $p = self::projection( $user_id ); return $p && 'verified' === $p['status'] ? $p['approved_fields'] : array(); }
+	public static function is_verified( $user_id ) {
+		$p = self::projection( $user_id );
+		return SPD_Membership_Adapter::is_doctor( $user_id ) && SPD_Membership_Adapter::is_approved( $user_id ) && $p && ! empty( $p['trusted_contract'] ) && 'verified' === $p['status'];
+	}
 	public static function status_label( $status ) {
-		$labels = array(
-			'pending'                  => 'Pending',
-			'under_review'             => 'Under review',
-			'verified'                 => 'Verified',
-			'more_info'                => 'More information required',
-			'rejected'                 => 'Not approved',
-			'suspended'                => 'Suspended',
-			'changes_pending'          => 'Profile changes awaiting re-review',
-			'verification_unavailable' => 'Verification service unavailable',
-		);
-		return isset( $labels[ $status ] ) ? $labels[ $status ] : $labels['pending'];
+		$labels = array( 'pending'=>__( 'Pending','sabri-profiles-doctors' ), 'under_review'=>__( 'Under review','sabri-profiles-doctors' ), 'verified'=>__( 'Verified','sabri-profiles-doctors' ), 'more_info'=>__( 'More information required','sabri-profiles-doctors' ), 'rejected'=>__( 'Not approved','sabri-profiles-doctors' ), 'suspended'=>__( 'Suspended','sabri-profiles-doctors' ), 'expired'=>__( 'Verification expired','sabri-profiles-doctors' ), 'verification_unavailable'=>__( 'Verification service unavailable','sabri-profiles-doctors' ) );
+		return $labels[ $status ] ?? $labels['pending'];
 	}
-
-	public static function directory_eligible( $user_id ) {
-		return self::is_verified( $user_id ) && 'public' === SPD_Membership_Adapter::public_visibility( $user_id );
-	}
-
-	public static function maybe_capture_from_meta( $meta_id, $user_id, $meta_key ) {
-		unset( $meta_id );
-		if ( in_array( $meta_key, array( '_gdo_reviewed_at', '_gdo_reviewer_id', '_spd_verification_status' ), true ) ) {
-			self::capture_snapshot( $user_id );
-		}
-	}
+	public static function directory_eligible( $user_id ) { return self::is_verified( $user_id ) && ! SPD_Membership_Adapter::is_minor( $user_id ); }
+	public static function maybe_refresh_from_meta() { /* Legacy metadata is deliberately non-authoritative. */ }
 }
