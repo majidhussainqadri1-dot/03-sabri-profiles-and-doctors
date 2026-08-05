@@ -4,105 +4,103 @@ defined( 'ABSPATH' ) || exit;
 final class SPD_Admin {
 	public function hooks() {
 		add_action( 'admin_menu', array( $this, 'menu' ) );
-		add_action( 'admin_post_spd_save_founder', array( $this, 'save_founder' ) );
-		add_action( 'admin_notices', array( $this, 'activation_notice' ) );
+		add_action( 'admin_post_spd_toggle_safe_mode', array( $this, 'toggle_safe_mode' ) );
+		add_action( 'admin_post_spd_repair', array( $this, 'repair' ) );
+		add_action( 'admin_post_spd_update_report', array( $this, 'update_report' ) );
+		add_action( 'admin_notices', array( $this, 'dependency_notice' ) );
 	}
 
 	public function menu() {
-		$has_shell = defined( 'SABRI_SHELL_VERSION' );
-		if ( current_user_can( 'smc_manage_membership' ) || current_user_can( 'manage_options' ) ) {
-			if ( $has_shell ) {
-				add_submenu_page( 'sabri-shell', 'Profile Projection Status', 'Profile Projection', 'smc_manage_membership', 'sabri-profiles', array( $this, 'status_page' ) );
-			} else {
-				add_options_page( 'Profile Projection Status', 'Profile Projection', 'smc_manage_membership', 'sabri-profiles', array( $this, 'status_page' ) );
-			}
+		if ( ! $this->can_operate() ) {
+			return;
 		}
-		if ( SPD_Membership_Adapter::can_manage_founder() ) {
-			if ( $has_shell ) {
-				add_submenu_page( 'sabri-shell', 'Founder Profile', 'Founder Profile', 'read', 'sabri-founder-profile', array( $this, 'founder_page' ) );
-			} else {
-				add_menu_page( 'Founder Profile', 'Founder Profile', 'read', 'sabri-founder-profile', array( $this, 'founder_page' ), 'dashicons-admin-users', 59 );
-			}
-		}
+		$parent = defined( 'SABRI_SHELL_VERSION' ) ? 'sabri-shell' : 'tools.php';
+		add_submenu_page( $parent, __( 'Profile System Check', 'sabri-profiles-doctors' ), __( 'Profile System Check', 'sabri-profiles-doctors' ), 'read', 'sabri-profiles-system-check', array( $this, 'status_page' ) );
+		add_submenu_page( $parent, __( 'Profile Reports', 'sabri-profiles-doctors' ), __( 'Profile Reports', 'sabri-profiles-doctors' ), 'read', 'sabri-profile-reports', array( $this, 'reports_page' ) );
+	}
+
+	private function can_operate() {
+		return SPD_Membership_Adapter::can_moderate_profiles( get_current_user_id() ) || SPD_Membership_Adapter::can_manage_founder( get_current_user_id() );
 	}
 
 	public function status_page() {
-		if ( ! current_user_can( 'smc_manage_membership' ) && ! current_user_can( 'manage_options' ) ) {
+		if ( ! $this->can_operate() ) {
 			wp_die( esc_html__( 'Access denied.', 'sabri-profiles-doctors' ), '', array( 'response' => 403 ) );
 		}
-		$founder_id = SPD_Membership_Adapter::founder_id();
+		$health = SPD_Observability::health_report();
+		$dry_run = SPD_Observability::repair( false );
 		?>
-		<div class="wrap spd-admin"><h1>Profile Projection Status</h1>
-		<p>File 03 is a read-only profile and directory projection. File 00 owns identity and roles; File 09 owns doctor verification.</p>
-		<table class="widefat striped"><tbody>
-		<tr><th>File 00 Membership Core</th><td><?php echo SPD_Membership_Adapter::available() ? 'Available' : 'Missing'; ?></td></tr>
-		<tr><th>File 09 Doctor Verification</th><td><?php echo SPD_Verification_Adapter::gdo_available() ? 'Available' : 'Missing — verified directory is fail-closed'; ?></td></tr>
-		<tr><th>Canonical Founder</th><td><?php echo $founder_id ? esc_html( get_userdata( $founder_id )->display_name . ' (ID ' . $founder_id . ')' ) : 'Not uniquely resolved'; ?></td></tr>
-		<tr><th>Doctor approval controls</th><td>Not provided by File 03. Use File 09.</td></tr>
-		<tr><th>Legacy audit retention</th><td>Identifiers anonymized after 180 days; legacy rows deleted after 365 days.</td></tr>
-		</tbody></table></div>
+		<div class="wrap spd-admin">
+			<h1><?php esc_html_e( 'File 03 — Profile System Check', 'sabri-profiles-doctors' ); ?></h1>
+			<p><?php esc_html_e( 'This page reports File 03-owned health only. It never repairs or mutates companion-module data.', 'sabri-profiles-doctors' ); ?></p>
+			<table class="widefat striped"><tbody>
+			<?php foreach ( $health as $key => $value ) : ?><tr><th><?php echo esc_html( ucwords( str_replace( '_', ' ', $key ) ) ); ?></th><td><code><?php echo esc_html( is_scalar( $value ) ? (string) $value : wp_json_encode( $value ) ); ?></code></td></tr><?php endforeach; ?>
+			</tbody></table>
+			<h2><?php esc_html_e( 'Repair dry run', 'sabri-profiles-doctors' ); ?></h2>
+			<?php if ( $dry_run['actions'] ) : ?><ul><?php foreach ( $dry_run['actions'] as $action ) : ?><li><code><?php echo esc_html( $action ); ?></code></li><?php endforeach; ?></ul><?php else : ?><p><?php esc_html_e( 'No File 03-owned repair action is currently required.', 'sabri-profiles-doctors' ); ?></p><?php endif; ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="spd_repair"><?php wp_nonce_field( 'spd_repair' ); ?><button class="button" type="submit"<?php disabled( empty( $dry_run['actions'] ) ); ?>><?php esc_html_e( 'Execute File 03 repair plan', 'sabri-profiles-doctors' ); ?></button></form>
+			<h2><?php esc_html_e( 'Safe mode', 'sabri-profiles-doctors' ); ?></h2>
+			<p><?php echo SPD_Observability::safe_mode() ? esc_html__( 'Safe mode is active. Public safe reading remains available; profile mutations are disabled.', 'sabri-profiles-doctors' ) : esc_html__( 'Safe mode is not active.', 'sabri-profiles-doctors' ); ?></p>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="spd_toggle_safe_mode"><input type="hidden" name="enabled" value="<?php echo SPD_Observability::safe_mode() ? '0' : '1'; ?>"><?php wp_nonce_field( 'spd_toggle_safe_mode' ); ?><label><?php esc_html_e( 'Reason', 'sabri-profiles-doctors' ); ?><input class="regular-text" name="reason" required></label> <button class="button button-primary" type="submit"><?php echo SPD_Observability::safe_mode() ? esc_html__( 'Disable safe mode', 'sabri-profiles-doctors' ) : esc_html__( 'Enable safe mode', 'sabri-profiles-doctors' ); ?></button></form>
+		</div>
 		<?php
 	}
 
-	public function founder_page() {
-		$this->guard_founder();
-		$f = SPD_Helpers::founder();
-		$fields = array(
-			'title' => 'Professional title', 'introduction' => 'Introduction', 'mission' => 'Mission', 'vision' => 'Vision',
-			'objectives' => 'Objectives', 'methodology' => 'Professional methodology', 'experience' => 'Clinical experience',
-			'research' => 'Research and knowledge areas', 'publications' => 'Books and publications — one per line',
-		);
-		?>
-		<div class="wrap spd-admin"><h1>Founder Profile</h1><p>The Founder identity, name, location, phone, and WhatsApp are read from the canonical File 00 account. File 03 stores only public presentation content and media.</p>
-		<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" enctype="multipart/form-data"><input type="hidden" name="action" value="spd_save_founder"><?php wp_nonce_field( 'spd_save_founder' ); ?>
-		<table class="form-table"><tbody><tr><th>Canonical name</th><td><?php echo esc_html( $f['name'] ); ?></td></tr><tr><th>Canonical location</th><td><?php echo esc_html( $f['location'] ); ?></td></tr>
-		<?php foreach ( $fields as $key => $label ) : ?><tr><th><label for="spd-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label></th><td><?php if ( 'title' === $key ) : ?><input class="regular-text" id="spd-<?php echo esc_attr( $key ); ?>" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $f[ $key ] ); ?>"><?php else : ?><textarea class="large-text" rows="5" id="spd-<?php echo esc_attr( $key ); ?>" name="<?php echo esc_attr( $key ); ?>"><?php echo esc_textarea( $f[ $key ] ); ?></textarea><?php endif; ?></td></tr><?php endforeach; ?>
-		<tr><th>Public contact</th><td><label><input type="checkbox" name="public_contact" value="1" <?php checked( get_user_meta( get_current_user_id(), '_spd_public_contact', true ), '1' ); ?>> Show canonical phone and WhatsApp publicly.</label></td></tr>
-		<tr><th>Founder photo</th><td><?php if ( $f['photo_id'] ) { echo wp_get_attachment_image( $f['photo_id'], 'thumbnail' ); } ?><input type="file" name="founder_photo" accept="image/jpeg,image/png,image/webp"></td></tr>
-		<tr><th>Cover photo</th><td><?php if ( $f['cover_id'] ) { echo wp_get_attachment_image( $f['cover_id'], 'medium' ); } ?><input type="file" name="founder_cover" accept="image/jpeg,image/png,image/webp"></td></tr></tbody></table>
-		<button class="button button-primary" type="submit">Save Founder presentation</button></form></div>
-		<?php
-	}
-
-	public function save_founder() {
-		$this->guard_founder();
-		check_admin_referer( 'spd_save_founder' );
-		$allowed = array( 'title', 'introduction', 'mission', 'vision', 'objectives', 'methodology', 'experience', 'research', 'publications' );
-		$profile = array();
-		foreach ( $allowed as $key ) {
-			$raw = isset( $_POST[ $key ] ) ? wp_unslash( $_POST[ $key ] ) : '';
-			$profile[ $key ] = 'title' === $key ? sanitize_text_field( $raw ) : sanitize_textarea_field( $raw );
+	public function reports_page() {
+		global $wpdb;
+		if ( ! $this->can_operate() ) {
+			wp_die( esc_html__( 'Access denied.', 'sabri-profiles-doctors' ), '', array( 'response' => 403 ) );
 		}
-		update_option( 'spd_founder_profile', $profile, false );
-		$user_id = get_current_user_id();
-		update_user_meta( $user_id, '_spd_public_contact', isset( $_POST['public_contact'] ) ? '1' : '0' );
-		$this->save_image( $user_id, 'founder_photo', 'profile_photo_id', 'profile' );
-		$this->save_image( $user_id, 'founder_cover', 'cover_photo_id', 'cover' );
-		SPD_Helpers::audit( $user_id, 'founder_profile', 'updated', 'Founder presentation updated by canonical Founder account.' );
-		wp_safe_redirect( add_query_arg( array( 'page' => 'sabri-founder-profile', 'updated' => '1' ), admin_url( 'admin.php' ) ) );
+		$table = SPD_DB::table( 'reports' );
+		$rows = $wpdb->get_results( "SELECT * FROM {$table} ORDER BY created_at DESC LIMIT 100", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		?>
+		<div class="wrap spd-admin"><h1><?php esc_html_e( 'Profile Reports', 'sabri-profiles-doctors' ); ?></h1><p><?php esc_html_e( 'Only File 03 report orchestration is shown. Identity evidence and companion-domain decisions remain with their canonical owners.', 'sabri-profiles-doctors' ); ?></p><table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Report', 'sabri-profiles-doctors' ); ?></th><th><?php esc_html_e( 'Reason', 'sabri-profiles-doctors' ); ?></th><th><?php esc_html_e( 'Status', 'sabri-profiles-doctors' ); ?></th><th><?php esc_html_e( 'Created', 'sabri-profiles-doctors' ); ?></th><th><?php esc_html_e( 'Action', 'sabri-profiles-doctors' ); ?></th></tr></thead><tbody><?php if ( ! $rows ) : ?><tr><td colspan="5"><?php esc_html_e( 'No profile reports.', 'sabri-profiles-doctors' ); ?></td></tr><?php endif; ?><?php foreach ( $rows as $row ) : ?><tr><td><code><?php echo esc_html( $row['report_uuid'] ); ?></code><br><?php echo esc_html( wp_trim_words( $row['details'], 20 ) ); ?></td><td><?php echo esc_html( $row['reason'] ); ?></td><td><?php echo esc_html( $row['status'] ); ?> (v<?php echo esc_html( $row['version'] ); ?>)</td><td><?php echo esc_html( $row['created_at'] ); ?></td><td><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="spd_update_report"><input type="hidden" name="report_uuid" value="<?php echo esc_attr( $row['report_uuid'] ); ?>"><input type="hidden" name="version" value="<?php echo esc_attr( $row['version'] ); ?>"><?php wp_nonce_field( 'spd_update_report_' . $row['report_uuid'] ); ?><select name="status"><?php foreach ( array( 'triaged', 'in_review', 'actioned', 'rejected', 'closed' ) as $status ) : ?><option value="<?php echo esc_attr( $status ); ?>" <?php selected( $row['status'], $status ); ?>><?php echo esc_html( $status ); ?></option><?php endforeach; ?></select><input name="note" placeholder="<?php esc_attr_e( 'Review note', 'sabri-profiles-doctors' ); ?>" maxlength="1000"><button class="button" type="submit"><?php esc_html_e( 'Update', 'sabri-profiles-doctors' ); ?></button></form></td></tr><?php endforeach; ?></tbody></table></div>
+		<?php
+	}
+
+	public function update_report() {
+		if ( ! $this->can_operate() ) {
+			wp_die( esc_html__( 'Access denied.', 'sabri-profiles-doctors' ), '', array( 'response' => 403 ) );
+		}
+		$uuid = sanitize_text_field( wp_unslash( $_POST['report_uuid'] ?? '' ) );
+		check_admin_referer( 'spd_update_report_' . $uuid );
+		$result = SPD_Profile_Repository::instance()->moderate_report( $uuid, get_current_user_id(), wp_unslash( $_POST['status'] ?? '' ), absint( $_POST['version'] ?? 0 ), wp_unslash( $_POST['note'] ?? '' ) );
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => 409, 'back_link' => true ) );
+		}
+		wp_safe_redirect( admin_url( 'admin.php?page=sabri-profile-reports' ) );
 		exit;
 	}
 
-	private function save_image( $user_id, $field, $meta_key, $purpose ) {
-		$result = SPD_Media::upload( $user_id, $field, $purpose );
-		if ( is_wp_error( $result ) ) {
-			wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => 400, 'back_link' => true ) );
+	public function toggle_safe_mode() {
+		if ( ! $this->can_operate() ) {
+			wp_die( esc_html__( 'Access denied.', 'sabri-profiles-doctors' ), '', array( 'response' => 403 ) );
 		}
-		if ( $result ) {
-			SPD_Media::replace( $user_id, $meta_key, $result, $purpose );
+		check_admin_referer( 'spd_toggle_safe_mode' );
+		$enabled = ! empty( $_POST['enabled'] );
+		$reason = sanitize_text_field( wp_unslash( $_POST['reason'] ?? '' ) );
+		if ( '' === $reason ) {
+			wp_die( esc_html__( 'A reason is required.', 'sabri-profiles-doctors' ), '', array( 'response' => 400, 'back_link' => true ) );
 		}
+		SPD_Observability::set_safe_mode( $enabled, $reason );
+		wp_safe_redirect( admin_url( 'admin.php?page=sabri-profiles-system-check' ) );
+		exit;
 	}
 
-	private function guard_founder() {
-		if ( ! SPD_Membership_Adapter::can_manage_founder() ) {
-			wp_die( esc_html__( 'Only the canonical Founder account may edit this profile.', 'sabri-profiles-doctors' ), '', array( 'response' => 403 ) );
+	public function repair() {
+		if ( ! $this->can_operate() ) {
+			wp_die( esc_html__( 'Access denied.', 'sabri-profiles-doctors' ), '', array( 'response' => 403 ) );
 		}
+		check_admin_referer( 'spd_repair' );
+		SPD_Observability::repair( true );
+		wp_safe_redirect( admin_url( 'admin.php?page=sabri-profiles-system-check' ) );
+		exit;
 	}
 
-	public function activation_notice() {
-		if ( current_user_can( 'activate_plugins' ) && get_transient( 'spd_activation_notice' ) ) {
-			delete_transient( 'spd_activation_notice' );
-			echo '<div class="notice notice-success is-dismissible"><p>Sabri Profiles and Doctors 0.2.0 is active as a profile/directory projection. Doctor approvals remain in File 09.</p></div>';
+	public function dependency_notice() {
+		$health = SPD_Membership_Adapter::health();
+		if ( 'available' !== $health['status'] && current_user_can( 'activate_plugins' ) ) {
+			echo '<div class="notice notice-error"><p><strong>' . esc_html__( 'Sabri Profiles and Doctors:', 'sabri-profiles-doctors' ) . '</strong> ' . esc_html__( 'File 00 — Sabri Membership Core is missing or incompatible. File 03 has failed closed and does not expose or mutate profiles.', 'sabri-profiles-doctors' ) . '</p></div>';
 		}
 	}
 }

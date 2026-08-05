@@ -1,22 +1,27 @@
-# File 03 Status
+# File 03 Status — Plan-Completion Corrective Candidate
 
-## Corrective release
+## Exact status
 
-- Version: `0.2.0`
-- Branch: `audit/file-03-source-review`
-- Original baseline preserved: **yes**
-- Source architecture correction: **implemented**
-- Local PHP 8.4 syntax lint: **pass**
-- Local architecture test: **pass**
-- Local security unit test: **pass**
-- GitHub corrective workflow: **pending until pushed**
-- Independent post-correction review: **pending**
-- WordPress staging runtime: **pending**
-- File 00 integration acceptance: **pending**
-- File 09 integration acceptance: **pending**
-- File 20 integration acceptance: **pending**
-- Merge authorization: **no**
-- Production authorization: **no**
-- Live installation authorization: **no**
+- Branch: `codex/file-03-plan-completion-v1`
+- Version: `1.0.0-rc1`
+- Schema: `1.0.0`
+- Contract: `1.0.0`
+- Source coding against the three governing plans: complete candidate
+- Local PHP syntax lint: pass
+- Local architecture boundary test: pass
+- Local FR/NFR coverage test: pass
+- Local security/state-machine unit test: pass
+- Review/Fix Round 1: completed
+- Fresh Adversarial Review/Fix Round 2: completed
+- Post-fix regression retest: pass locally
+- GitHub Actions on branch/PR: pending until pushed
+- Deterministic package artifact: produced by CI; pending
+- Hostinger staging: pending
+- File 00 live integration acceptance: pending
+- File 09 live integration acceptance: pending
+- File 20/21/25 live integration acceptance: pending
+- Backup/restore and rollback rehearsal: pending
+- Production authorization: no
+- Live installation authorization: no
 
-The next platform file must not proceed until discovered File 03 defects are corrected, retested, and accepted under the project QA rule.
+This candidate may be reviewed and tested in staging. It must not be described as production-operational until every staging and Definition-of-Done gate is evidenced and explicitly accepted.
