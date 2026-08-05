@@ -29,6 +29,7 @@ require_once SPD_DIR . 'includes/class-spd-public-identity.php';
 require_once SPD_DIR . 'includes/class-spd-profile-policy.php';
 require_once SPD_DIR . 'includes/class-spd-timeline.php';
 require_once SPD_DIR . 'includes/class-spd-system.php';
+require_once SPD_DIR . 'includes/class-spd-router.php';
 require_once SPD_DIR . 'includes/class-spd-activator.php';
 require_once SPD_DIR . 'includes/class-spd-frontend.php';
 require_once SPD_DIR . 'includes/class-spd-admin.php';
@@ -46,6 +47,7 @@ function spd_start_plugin() {
 	SPD_Contracts::register();
 	SPD_Public_Identity::register_routes();
 	SPD_System::register();
+	SPD_Router::register();
 	( new SPD_Plugin() )->run();
 }
 add_action( 'plugins_loaded', 'spd_start_plugin', 30 );
