@@ -98,7 +98,10 @@ jobs:
           A="$RUNNER_TEMP/build-a/03-sabri-profiles-and-doctors-$VERSION.zip"
           B="$RUNNER_TEMP/build-b/03-sabri-profiles-and-doctors-$VERSION.zip"
           cmp "$A" "$B"
-          sha256sum -c "$A.sha256"
+          (
+            cd "$(dirname "$A")"
+            sha256sum -c "$(basename "$A").sha256"
+          )
           unzip -q "$A" -d "$RUNNER_TEMP/extract"
           diff -ru --strip-trailing-cr sabri-profiles-doctors.php "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/sabri-profiles-doctors.php"
           diff -ru --strip-trailing-cr includes "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/includes"
