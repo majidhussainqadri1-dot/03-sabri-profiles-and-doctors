@@ -26,6 +26,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import hashlib
           import json
           import os
           import urllib.request
@@ -51,10 +52,39 @@ jobs:
           if missing:
               raise SystemExit(f"Missing payload chunks: {missing}")
 
-          # The first split comment contains one known connector suffix; remove only
-          # that exact suffix before checksum verification.
           if chunks["10a"].endswith("islav"):
               chunks["10a"] = chunks["10a"][:-5]
+
+          expected = {
+              "00": (7000, "6a93303fc7a6edfde7b13d7c009185bb03dee38faab21366e052cf30af93dd39"),
+              "01": (7000, "9e5f6bb6e12b637800697f3b8de5bda5153f057079d89306385d1f96c4161a7a"),
+              "02": (7000, "2ca4081e1d9654f5c5450c8fef49f5987f4f5b3321912b039cf0afe94b3e8746"),
+              "03": (7000, "77c2167bef84b52d921e1b7d7c86ed2e4582592192f87c426050ef0b84c9ab3a"),
+              "04": (7000, "a7d794480970a5a9b405620151f7fcb9b706e1f89c2d2d7ffe58d7c6b5eb1d56"),
+              "05": (9000, "6441654100dfdf98e917dd79f365d604a9ccdae15e4aaf4a5f638fe4d582d4ec"),
+              "06": (9000, "60634cd772ddadaa607f6bdb38ac8f48c271cecbf4b063bce736af298ff64cf3"),
+              "07": (9000, "40941f134f4fefa4c8be4f6a9b53555d6192bc1ad4f71daeccc3b07f5eae72fd"),
+              "08": (9000, "ad1e841bcb19b7b692503d6e0bc4aea13c6dd3a50e4d20b7aa64b7c0594e5325"),
+              "09": (9000, "eda916418eb1f5e61055c579587ad749bedc310fe7ffda0c8430d0afb318f0c2"),
+              "10a": (4500, "ddcca2f4ea008d551ae7ec62f97943ed86885a6921f7309c2f54531fbb787782"),
+              "10b": (4500, "996d3d58137acd4a17a30f46b326d466478bdab8ddf6dea9df22536c2482f2c9"),
+              "11a": (4500, "ccc3a411250ac9dadcc0d67e1468f4b1377e7fdac7014af6a8afcfff9d769819"),
+              "11b": (1216, "d30deb5cf36a1a864c9e4cc19657025fab5f87fb9f22cee03eeeb2f548eb30c5"),
+          }
+          bad = []
+          for number in order:
+              data = chunks[number]
+              actual_length = len(data)
+              actual_sha = hashlib.sha256(data.encode("ascii")).hexdigest()
+              expected_length, expected_sha = expected[number]
+              print(
+                  f"CHUNK {number} len={actual_length} sha256={actual_sha} "
+                  f"expected_len={expected_length} expected_sha={expected_sha}"
+              )
+              if actual_length != expected_length or actual_sha != expected_sha:
+                  bad.append(number)
+          if bad:
+              raise SystemExit(f"Chunk integrity mismatches: {bad}")
 
           payload = "".join(chunks[number] for number in order)
           with open("/tmp/file03.b64", "w", encoding="ascii") as handle:
