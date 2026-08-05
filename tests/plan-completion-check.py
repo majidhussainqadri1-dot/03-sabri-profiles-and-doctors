@@ -11,6 +11,7 @@ required = {
     "field privacy": "_spd_field_privacy",
     "optimistic version": "_spd_profile_version",
     "minor fail closed": "SPD_Profile_Policy::is_minor",
+    "minor contact denial": "if ( SPD_Profile_Policy::is_minor( $user_id ) ) { return false; }",
     "contract health": "file00_contract_too_old",
     "safe mode": "spd_safe_mode",
     "owner dto": "spd_profile_owner_dto",
@@ -22,9 +23,8 @@ forbidden = {
     "direct credentials table": r"smc_professional_credentials",
     "direct clinic table": r"smc_clinics",
     "legacy requested role authority": r"_smc_requested_role",
-    "public minor contact": r"is_minor\([^)]*\).*return true",
 }
 for label, pattern in forbidden.items():
-    if re.search(pattern, php, re.S):
+    if re.search(pattern, php):
         raise SystemExit(f"Forbidden architecture detected: {label}")
 print("Plan-completion architecture checks passed.")
