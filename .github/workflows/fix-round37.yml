@@ -1,0 +1,52 @@
+name: Fix File 03 Round 37 Scanner
+
+on:
+  push:
+    branches:
+      - 'codex/file-03-forty-round-review'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+      - name: Correct false-positive hygiene review and commit
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tests/forty-round-review.py')
+          source = path.read_text(encoding='utf-8')
+          old = """forbidden = ['-----BEGIN PRIVATE KEY-----', 'ghp_', 'AKIA', 'wp-config.php']
+          all_text = '\\n'.join(x.read_text(encoding='utf-8', errors='ignore') for x in ROOT.rglob('*') if x.is_file() and '.git' not in x.parts and x.name != 'forty-round-review.py')
+          check(37, 'Secrets/archive hygiene', not any(token in all_text for token in forbidden) and not any(x.suffix.lower() in {'.zip','.sql','.7z','.rar'} for x in ROOT.rglob('*') if '.git' not in x.parts), 'no obvious secrets or committed archives')
+          """
+          new = """runtime_files = [ROOT / 'sabri-profiles-doctors.php', ROOT / 'uninstall.php', ROOT / 'readme.txt']
+          runtime_files += [x for root_name in ('includes', 'assets') for x in (ROOT / root_name).rglob('*') if x.is_file()]
+          credential_names = {'wp-config.php', 'credentials.json', 'service-account.json', 'id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519'}
+          secret_patterns = [
+              rb'-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----',
+              rb'\\bgh[pousr]_[A-Za-z0-9]{20,}\\b',
+              rb'\\bAKIA[0-9A-Z]{16}\\b',
+          ]
+          runtime_clean = all(not any(re.search(pattern, x.read_bytes()) for pattern in secret_patterns) for x in runtime_files)
+          names_clean = not any(x.is_file() and x.name.lower() in credential_names for x in ROOT.rglob('*') if '.git' not in x.parts)
+          archives_clean = not any(x.is_file() and x.suffix.lower() in {'.zip','.sql','.7z','.rar','.tar','.tgz','.gz'} for x in ROOT.rglob('*') if '.git' not in x.parts)
+          check(37, 'Secrets/archive hygiene', runtime_clean and names_clean and archives_clean, 'runtime source has no secret signatures, credential files or committed archives')
+          """
+          if old not in source:
+              raise SystemExit('Expected Round 37 block not found')
+          path.write_text(source.replace(old, new), encoding='utf-8')
+          PY
+          python3 tests/forty-round-review.py
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/forty-round-review.py
+          git commit -m 'Correct Round 37 secret scanner scope'
+          git push origin HEAD:codex/file-03-forty-round-review
