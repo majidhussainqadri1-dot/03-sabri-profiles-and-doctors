@@ -8,43 +8,65 @@ final class SPD_Activator {
 			wp_die( esc_html__( 'Activate a compatible File 00 — Sabri Membership Core before File 03.', 'sabri-profiles-doctors' ), '', array( 'back_link' => true ) );
 		}
 		if ( get_transient( 'spd_activation_lock' ) ) {
-			return;
+			deactivate_plugins( plugin_basename( SPD_FILE ) );
+			wp_die( esc_html__( 'File 03 activation is already running. Wait briefly and retry.', 'sabri-profiles-doctors' ), '', array( 'back_link' => true ) );
 		}
 		set_transient( 'spd_activation_lock', 1, 10 * MINUTE_IN_SECONDS );
-		self::repair_owned_resources();
-		self::migrate_legacy_options();
-		update_option( 'spd_version', SPD_VERSION, false );
-		update_option( 'spd_contract_version', SPD_CONTRACT_VERSION, false );
-		if ( false === get_option( 'spd_safe_mode', false ) ) {
-			add_option( 'spd_safe_mode', false, '', false );
+		try {
+			$repair = self::repair_owned_resources();
+			if ( is_wp_error( $repair ) ) {
+				throw new RuntimeException( $repair->get_error_message() );
+			}
+			self::migrate_legacy_options();
+			update_option( 'spd_version', SPD_VERSION, false );
+			update_option( 'spd_contract_version', SPD_CONTRACT_VERSION, false );
+			if ( false === get_option( 'spd_safe_mode', false ) ) {
+				add_option( 'spd_safe_mode', false, '', false );
+			}
+			if ( false === get_option( 'spd_migration_cursor', false ) ) {
+				add_option( 'spd_migration_cursor', 0, '', false );
+			}
+			if ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) && ! wp_schedule_event( time() + 60, 'hourly', 'spd_migrate_profiles_batch' ) ) {
+				throw new RuntimeException( __( 'The File 03 migration schedule could not be created.', 'sabri-profiles-doctors' ) );
+			}
+			flush_rewrite_rules();
+		} catch ( Throwable $exception ) {
+			deactivate_plugins( plugin_basename( SPD_FILE ) );
+			wp_die( esc_html( $exception->getMessage() ), '', array( 'back_link' => true ) );
+		} finally {
+			delete_transient( 'spd_activation_lock' );
 		}
-		if ( false === get_option( 'spd_migration_cursor', false ) ) {
-			add_option( 'spd_migration_cursor', 0, '', false );
-		}
-		if ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) {
-			wp_schedule_event( time() + 60, 'hourly', 'spd_migrate_profiles_batch' );
-		}
-		delete_transient( 'spd_activation_lock' );
-		flush_rewrite_rules();
 	}
 
 	public static function deactivate() {
 		wp_clear_scheduled_hook( 'spd_dispatch_outbox' );
 		wp_clear_scheduled_hook( 'spd_migrate_profiles_batch' );
 		wp_clear_scheduled_hook( 'spd_retention_cleanup' );
+		wp_clear_scheduled_hook( 'spd_process_media_deletions' );
 		flush_rewrite_rules();
 	}
 
 	public static function repair_owned_resources() {
-		SPD_DB::install();
-		self::pages();
-		if ( ! wp_next_scheduled( 'spd_dispatch_outbox' ) ) {
-			wp_schedule_event( time() + 300, 'hourly', 'spd_dispatch_outbox' );
+		$schema = SPD_DB::install();
+		if ( is_wp_error( $schema ) ) {
+			return $schema;
 		}
-		if ( ! wp_next_scheduled( 'spd_retention_cleanup' ) ) {
-			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'spd_retention_cleanup' );
+		$pages = self::pages();
+		if ( is_wp_error( $pages ) ) {
+			return $pages;
+		}
+		$schedules = array(
+			'spd_dispatch_outbox'          => array( time() + 300, 'hourly' ),
+			'spd_retention_cleanup'        => array( time() + HOUR_IN_SECONDS, 'daily' ),
+			'spd_process_media_deletions'  => array( time() + 300, 'hourly' ),
+		);
+		foreach ( $schedules as $hook => $definition ) {
+			if ( ! wp_next_scheduled( $hook ) && ! wp_schedule_event( $definition[0], $definition[1], $hook ) ) {
+				return new WP_Error( 'spd_schedule_failed', sprintf( __( 'The File 03 schedule %s could not be created.', 'sabri-profiles-doctors' ), $hook ) );
+			}
 		}
 		update_option( 'spd_last_repair_at', SPD_Helpers::now(), false );
+		return true;
 	}
 
 	private static function pages() {
@@ -55,13 +77,20 @@ final class SPD_Activator {
 			'account_profile' => array( 'Edit Profile and Privacy', '[sabri_edit_profile]', 'account-profile' ),
 		);
 		foreach ( $definitions as $key => $definition ) {
-			$map[ $key ] = self::managed_page( $key, $definition[0], $definition[1], $definition[2], absint( $map[ $key ] ?? 0 ) );
+			$page_id = self::managed_page( $key, $definition[0], $definition[1], $definition[2], absint( $map[ $key ] ?? 0 ) );
+			if ( is_wp_error( $page_id ) ) {
+				return $page_id;
+			}
+			$map[ $key ] = absint( $page_id );
 		}
 		$legacy = get_page_by_path( 'member-profile', OBJECT, 'page' );
 		if ( $legacy instanceof WP_Post ) {
 			$map['legacy_profile'] = absint( $legacy->ID );
 		}
-		update_option( 'spd_page_map', array_filter( $map ), false );
+		if ( false === update_option( 'spd_page_map', array_filter( $map ), false ) && (array) get_option( 'spd_page_map', array() ) !== array_filter( $map ) ) {
+			return new WP_Error( 'spd_page_map_failed', __( 'The File 03 route page map could not be recorded.', 'sabri-profiles-doctors' ) );
+		}
+		return $map;
 	}
 
 	private static function managed_page( $key, $title, $shortcode, $slug, $stored_id ) {
@@ -69,14 +98,11 @@ final class SPD_Activator {
 			$page = get_post( $stored_id );
 			if ( $page instanceof WP_Post && 'page' === $page->post_type && $key === get_post_meta( $stored_id, '_spd_managed_page_key', true ) ) {
 				$changes = array( 'ID' => $stored_id );
-				if ( trim( $page->post_content ) !== $shortcode ) {
-					$changes['post_content'] = $shortcode;
-				}
-				if ( $page->post_name !== $slug ) {
-					$changes['post_name'] = $slug;
-				}
+				if ( trim( $page->post_content ) !== $shortcode ) { $changes['post_content'] = $shortcode; }
+				if ( $page->post_name !== $slug ) { $changes['post_name'] = $slug; }
 				if ( count( $changes ) > 1 ) {
-					wp_update_post( $changes );
+					$updated = wp_update_post( $changes, true );
+					if ( is_wp_error( $updated ) ) { return $updated; }
 				}
 				return $stored_id;
 			}
@@ -86,7 +112,9 @@ final class SPD_Activator {
 			$is_owned = $key === get_post_meta( $slug_page->ID, '_spd_managed_page_key', true );
 			$is_exact = trim( $slug_page->post_content ) === $shortcode;
 			if ( $is_owned || $is_exact ) {
-				update_post_meta( $slug_page->ID, '_spd_managed_page_key', $key );
+				if ( false === update_post_meta( $slug_page->ID, '_spd_managed_page_key', $key ) ) {
+					return new WP_Error( 'spd_managed_page_marker_failed', __( 'A File 03 managed-page marker could not be recorded.', 'sabri-profiles-doctors' ) );
+				}
 				return absint( $slug_page->ID );
 			}
 			$slug .= '-file03';
@@ -98,25 +126,25 @@ final class SPD_Activator {
 				'post_content' => $shortcode,
 				'post_status'  => 'publish',
 				'post_type'    => 'page',
-			)
+			),
+			true
 		);
-		if ( is_wp_error( $id ) ) {
-			return 0;
+		if ( is_wp_error( $id ) || ! $id ) {
+			return is_wp_error( $id ) ? $id : new WP_Error( 'spd_managed_page_failed', __( 'A required File 03 route page could not be created.', 'sabri-profiles-doctors' ) );
 		}
-		update_post_meta( $id, '_spd_managed_page_key', $key );
+		if ( false === update_post_meta( $id, '_spd_managed_page_key', $key ) ) {
+			wp_delete_post( $id, true );
+			return new WP_Error( 'spd_managed_page_marker_failed', __( 'A File 03 managed-page marker could not be recorded.', 'sabri-profiles-doctors' ) );
+		}
 		return absint( $id );
 	}
 
 	private static function migrate_legacy_options() {
 		$profile = (array) get_option( 'spd_founder_profile', array() );
-		foreach ( array( 'name', 'location', 'phone', 'whatsapp', 'photo_id', 'cover_id' ) as $legacy_key ) {
-			unset( $profile[ $legacy_key ] );
-		}
+		foreach ( array( 'name', 'location', 'phone', 'whatsapp', 'photo_id', 'cover_id' ) as $legacy_key ) { unset( $profile[ $legacy_key ] ); }
 		update_option( 'spd_founder_profile_legacy_read_only', $profile, false );
 		delete_option( 'spd_founder_profile' );
 		$admin = get_role( 'administrator' );
-		if ( $admin ) {
-			$admin->remove_cap( 'manage_sabri_doctors' );
-		}
+		if ( $admin ) { $admin->remove_cap( 'manage_sabri_doctors' ); }
 	}
 }

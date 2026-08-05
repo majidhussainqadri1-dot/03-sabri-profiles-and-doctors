@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0-rc1
+Stable tag: 1.0.0-rc2
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -25,7 +25,10 @@ This is a staging candidate. It is not production-operational until all document
 
 == Changelog ==
 
+= 1.0.0-rc2 =
+* Hardens File 00 and File 09 versioned authority, moderator privacy, minor defaults, profile media scanning and deletion, report transitions, atomic outbox leases, migration quarantine, revocation-safe no-store responses and operator repair.
+* Adds behavior-oriented authorization, verification, state, timeline, schema, source-regression and full-bootstrap tests.
+* Source/package/automated-QA candidate only; staging, real provider integration, browser/WCAG/RTL, backup/restore, rollback and Founder acceptance remain mandatory.
+
 = 1.0.0-rc1 =
-* Implements the complete File 03 plan candidate with canonical UUID routes, field audiences, minor protections, concurrency/idempotency, media lifecycle, timeline providers, reports, contracts, privacy tools, observability, migration, safe mode and repair.
-* Completes two fresh review/fix cycles and local regression tests.
-* Production and live authorization remain denied pending staging evidence.
+* Initial plan-completion candidate.

@@ -46,7 +46,7 @@ final class SPD_Routes {
 		if ( ! empty( $map['legacy_profile'] ) && is_page( absint( $map['legacy_profile'] ) ) && isset( $_GET['user'] ) ) {
 			$user = get_user_by( 'slug', sanitize_title( wp_unslash( $_GET['user'] ) ) );
 			if ( $user ) {
-				$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID );
+				$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false );
 				if ( $profile && ! is_wp_error( $profile ) ) {
 					wp_safe_redirect( SPD_Helpers::canonical_profile_url( $profile['public_id'] ), 301 );
 					exit;

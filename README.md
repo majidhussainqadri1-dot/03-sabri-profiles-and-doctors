@@ -1,57 +1,29 @@
-# File 03 — Sabri Profiles and Doctors
+# File 03 — Profiles and Doctors
 
-Plan-completion corrective candidate for the Sabri Social Homeopathy Platform.
+Canonical profile-domain source candidate for the Sabri Social Homeopathy Platform.
 
-## Current release identity
+## Governing scope
 
-- Plugin version: `1.0.0-rc1`
-- Database schema: `1.0.0`
-- Contract version: `1.0.0`
-- Required File 00 minimum: `1.2.3`
-- Required PHP: `8.1+`
-- Target WordPress baseline: `7.0+`
-- Status: source implementation and local static/unit review complete; GitHub CI and Hostinger staging acceptance pending.
+This repository implements the profile-owned requirements of:
 
-## Canonical ownership
+1. Definitive Integrated Master Plan v3.0;
+2. File 03 — Profiles and Doctors Complete Master Plan 2026 v1.0;
+3. Consolidated All-Chats Recovered Directive Register v2.1.
 
-File 03 owns canonical public-profile identity, profile presentation fields, field audiences, profile media references, stable public UUIDs, slug history, profile-report intake, and profile timeline slots. It does not own membership identity, doctor-verification decisions, doctor directory/ranking, clinic truth, publication truth, global shell, or final platform-wide visual-system ownership.
+File 03 owns stable public profile identity, profile fields and audiences, Founder official profile, member/doctor presentation records, slug history, profile-media references and deletion ledger, profile reports, private professional proposals, profile timeline federation, privacy export/erasure and operational evidence. It does not own membership truth, doctor verification decisions, doctor search/ranking, clinic truth, publication records, communication graph, global shell or final visual-system ownership.
 
-## Canonical routes
+## Release identity
 
-- `/founder/`
-- `/profile/{public_id}/`
-- `/profile/{public_id}/timeline/`
-- `/profile/{public_id}/report/`
-- `/account/profile/`
-- `/u/{slug}/` is a redirect-only compatibility alias.
+- Plugin: `1.0.0-rc2`
+- Database schema: `1.2.0`
+- Contract: `1.2.0`
+- Minimum File 00 plugin: `1.2.11`
+- Minimum File 00 contract: `1.2.0`
+- PHP: `8.1`, `8.3`, `8.4`
+- WordPress: `7.0+`
 
-## Public contracts
+## Truthful status
 
-- `spd_get_public_profile( $identity, $viewer_id = 0 )`
-- `spd_get_profile_timeline( $identity, $args = array(), $viewer_id = 0 )`
-- `spd_get_profile_contract_manifest()`
-- REST namespace: `/wp-json/sabri-profiles/v1/`
+Source, deterministic package and repository-based automated QA are candidate-complete after corrective reviews. Production authorization is **not** granted. Hostinger staging, real File 09/20/21/25 and other provider integration, representative role journeys, browser/device and Urdu/Arabic RTL, WCAG 2.2 AA, backup/restore, migration/rollback rehearsal and Founder acceptance remain mandatory.
 
-## Security and privacy characteristics
-
-- File 00 identity and capability assertions are required; missing or incompatible File 00 fails closed.
-- No direct reads or writes to companion-module internal tables.
-- Public/private DTO separation and audience-aware rendering.
-- Minor accounts receive private/restricted defaults; public direct contact is prohibited.
-- Optimistic concurrency and request idempotency on profile updates.
-- Strict image validation, synchronous safety-scan hook, metadata re-encoding, ownership tracking and physical erasure.
-- Private/member/contact views receive `no-store`, `noindex`, `nofollow`, and `noarchive` controls.
-- Append-only outbox/audit events with retries and dead-letter state.
-- Non-destructive uninstall by default; destructive purge requires a constant and administrator setting.
-
-## Local verification completed
-
-- PHP syntax lint over all PHP files.
-- Architecture boundary scan.
-- Full File 03 FR/NFR token-to-implementation coverage scan.
-- Security/state-machine unit checks.
-- Four review/fix cycles, including exact-head CI evidence review, recorded in `REVIEW-CYCLES.md`.
-
-## Remaining release gates
-
-GitHub Actions, deterministic package evidence, WordPress/Hostinger fresh-install and upgrade tests, real File 00/09/20/21/25 contracts, browser/device/RTL/accessibility tests, migration/rollback rehearsal, backup/restore proof and Founder staging acceptance remain mandatory before production.
+File 09 currently has no accepted runtime projection in its repository. Consequently, verified-doctor badges and approved professional projections intentionally fail closed until that versioned provider exists.

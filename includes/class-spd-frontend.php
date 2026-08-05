@@ -15,6 +15,7 @@ final class SPD_Frontend {
 		add_shortcode( 'sabri_edit_profile', array( $this, 'edit' ) );
 		add_shortcode( 'sabri_doctor_directory', array( $this, 'directory_compatibility' ) );
 		add_action( 'admin_post_spd_save_profile', array( $this, 'save' ) );
+		add_action( 'admin_post_spd_submit_professional_fields', array( $this, 'save_professional' ) );
 		add_action( 'admin_post_spd_report_profile', array( $this, 'report' ) );
 		add_action( 'admin_post_nopriv_spd_report_profile', array( $this, 'reject_anonymous' ) );
 		add_action( 'wp_head', array( $this, 'structured_data' ), 20 );

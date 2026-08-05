@@ -34,6 +34,24 @@ trait SPD_Frontend_Edit {
 				<fieldset><legend><?php esc_html_e( 'Profile media', 'sabri-profiles-doctors' ); ?></legend><label><?php esc_html_e( 'Avatar image — JPG, PNG or WebP; maximum 5 MB', 'sabri-profiles-doctors' ); ?><input type="file" name="avatar" accept="image/jpeg,image/png,image/webp"></label><label><?php esc_html_e( 'Avatar alternative text', 'sabri-profiles-doctors' ); ?><input name="avatar_alt" maxlength="255"></label><label><?php esc_html_e( 'Avatar focal point X', 'sabri-profiles-doctors' ); ?><input type="number" name="avatar_focal_x" min="0" max="100" value="50"></label><label><?php esc_html_e( 'Avatar focal point Y', 'sabri-profiles-doctors' ); ?><input type="number" name="avatar_focal_y" min="0" max="100" value="50"></label><label><?php esc_html_e( 'Cover image — JPG, PNG or WebP; maximum 5 MB', 'sabri-profiles-doctors' ); ?><input type="file" name="cover" accept="image/jpeg,image/png,image/webp"></label><label><?php esc_html_e( 'Cover alternative text', 'sabri-profiles-doctors' ); ?><input name="cover_alt" maxlength="255"></label></fieldset>
 				<button class="spd-btn" type="submit"><?php esc_html_e( 'Save profile', 'sabri-profiles-doctors' ); ?></button>
 			</form>
+			<?php if ( 'doctor' === $model['profile_type'] ) : $submission = (array) $model['professional_submission']; $draft_values = (array) ( $submission['fields'] ?? array() ); ?>
+			<section class="spd-card" aria-labelledby="spd-professional-edit">
+				<h2 id="spd-professional-edit"><?php esc_html_e( 'Professional profile claims', 'sabri-profiles-doctors' ); ?></h2>
+				<p><?php esc_html_e( 'Professional claims are stored as a private proposal and are never shown as verified until File 09 returns a current, versioned approval.', 'sabri-profiles-doctors' ); ?></p>
+				<?php if ( ! empty( $submission['status'] ) ) : ?><p><strong><?php esc_html_e( 'Latest local submission status:', 'sabri-profiles-doctors' ); ?></strong> <?php echo esc_html( $submission['status'] ); ?></p><?php endif; ?>
+				<form class="spd-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
+					<input type="hidden" name="action" value="spd_submit_professional_fields">
+					<input type="hidden" name="version" value="<?php echo esc_attr( $model['version'] ); ?>">
+					<input type="hidden" name="idempotency_key" value="<?php echo esc_attr( wp_generate_uuid4() ); ?>">
+					<?php wp_nonce_field( 'spd_submit_professional_fields', 'spd_professional_nonce' ); ?>
+					<?php foreach ( array_merge( array( 'professional_title' => __( 'Professional Title', 'sabri-profiles-doctors' ) ), $this->professional_labels() ) as $key => $label ) : ?>
+					<label><?php echo esc_html( $label ); ?><textarea name="professional[<?php echo esc_attr( $key ); ?>]" rows="3" maxlength="3000"><?php echo esc_textarea( $draft_values[ $key ] ?? ( $model['professional'][ $key ] ?? '' ) ); ?></textarea></label>
+					<?php endforeach; ?>
+					<label class="spd-check"><input type="checkbox" name="save_draft" value="1"> <?php esc_html_e( 'Save as private draft instead of submitting for review', 'sabri-profiles-doctors' ); ?></label>
+					<button class="spd-btn" type="submit"><?php esc_html_e( 'Save professional claims', 'sabri-profiles-doctors' ); ?></button>
+				</form>
+			</section>
+			<?php endif; ?>
 		</main>
 		<?php return ob_get_clean();
 	}
@@ -72,6 +90,7 @@ trait SPD_Frontend_Edit {
 					'alt_text' => wp_unslash( $_POST[ $purpose . '_alt' ] ?? '' ),
 					'focal_x'  => wp_unslash( $_POST[ $purpose . '_focal_x' ] ?? 50 ),
 					'focal_y'  => wp_unslash( $_POST[ $purpose . '_focal_y' ] ?? 50 ),
+					'profile_visibility' => $audiences['profile_visibility'] ?? 'private',
 				)
 			);
 			if ( is_wp_error( $prepared ) ) {
@@ -83,21 +102,32 @@ trait SPD_Frontend_Edit {
 			}
 		}
 		$idempotency = sanitize_text_field( wp_unslash( $_POST['idempotency_key'] ?? '' ) );
-		$result = SPD_Profile_Repository::instance()->update_profile( $user_id, $input, $expected, $idempotency );
+		$result = SPD_Profile_Repository::instance()->update_profile( $user_id, $input, $expected, $idempotency, $prepared_media );
 		if ( is_wp_error( $result ) ) {
 			$this->cleanup_prepared_media( $prepared_media, $user_id );
 			wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => $this->error_status( $result ), 'back_link' => true ) );
 		}
-		$current_version = absint( $result['version'] );
-		foreach ( $prepared_media as $purpose => $prepared ) {
-			$media_result = SPD_Profile_Repository::instance()->attach_media( $user_id, $purpose, $prepared, $current_version );
-			if ( is_wp_error( $media_result ) ) {
-				$this->cleanup_prepared_media( array( $purpose => $prepared ), $user_id );
-				wp_die( esc_html( $media_result->get_error_message() ), '', array( 'response' => $this->error_status( $media_result ), 'back_link' => true ) );
-			}
-			$current_version = absint( $media_result['version'] );
-		}
 		wp_safe_redirect( add_query_arg( 'spd_updated', '1', home_url( '/account/profile/' ) ) );
+		exit;
+	}
+
+
+	public function save_professional() {
+		if ( ! is_user_logged_in() || empty( $_POST['spd_professional_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['spd_professional_nonce'] ) ), 'spd_submit_professional_fields' ) ) {
+			wp_die( esc_html__( 'Security check failed.', 'sabri-profiles-doctors' ), '', array( 'response' => 403 ) );
+		}
+		$input = isset( $_POST['professional'] ) && is_array( $_POST['professional'] ) ? wp_unslash( $_POST['professional'] ) : array();
+		$result = SPD_Profile_Repository::instance()->submit_professional_fields(
+			get_current_user_id(),
+			$input,
+			absint( $_POST['version'] ?? 0 ),
+			sanitize_text_field( wp_unslash( $_POST['idempotency_key'] ?? '' ) ),
+			empty( $_POST['save_draft'] )
+		);
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => $this->error_status( $result ), 'back_link' => true ) );
+		}
+		wp_safe_redirect( add_query_arg( 'spd_professional_saved', '1', home_url( '/account/profile/' ) ) );
 		exit;
 	}
 

@@ -25,6 +25,15 @@ final class SPD_Helpers {
 		return $digits ? 'https://wa.me/' . rawurlencode( $digits ) : '';
 	}
 
+	public static function same_origin_url( $url ) {
+		if ( ! $url ) { return false; }
+		$home = wp_parse_url( home_url( '/' ) );
+		$target = wp_parse_url( (string) $url );
+		return is_array( $target ) && ! empty( $target['host'] ) && isset( $home['host'] )
+			&& strtolower( $target['host'] ) === strtolower( $home['host'] )
+			&& in_array( strtolower( $target['scheme'] ?? '' ), array( 'http', 'https' ), true );
+	}
+
 	public static function sanitize_multiline( $value, $max = 4000 ) {
 		$value = sanitize_textarea_field( (string) $value );
 		return function_exists( 'mb_substr' ) ? mb_substr( $value, 0, $max ) : substr( $value, 0, $max );
@@ -38,6 +47,18 @@ final class SPD_Helpers {
 	public static function normalize_focal( $value ) {
 		$value = is_numeric( $value ) ? (float) $value : 50.0;
 		return max( 0.0, min( 100.0, $value ) );
+	}
+
+	public static function current_contract_claim( $claim, $minimum_contract = '1.0.0', $maximum_age = 600 ) {
+		if ( ! is_array( $claim ) ) { return false; }
+		$contract = sanitize_text_field( (string) ( $claim['contract_version'] ?? '' ) );
+		$generated = strtotime( (string) ( $claim['generated_at'] ?? '' ) );
+		$valid_until = strtotime( (string) ( $claim['valid_until'] ?? '' ) );
+		$now = time();
+		return $contract && version_compare( $contract, (string) $minimum_contract, '>=' )
+			&& false !== $generated && false !== $valid_until
+			&& $generated <= $now + 300 && ( $now - $generated ) <= max( 60, absint( $maximum_age ) )
+			&& $valid_until > $now && $valid_until > $generated;
 	}
 
 	public static function slug_base( $display_name, $user_id ) {

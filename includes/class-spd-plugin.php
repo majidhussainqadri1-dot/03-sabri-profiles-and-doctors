@@ -5,7 +5,11 @@ final class SPD_Plugin {
 	public function run() {
 		load_plugin_textdomain( 'sabri-profiles-doctors', false, dirname( plugin_basename( SPD_FILE ) ) . '/languages' );
 		if ( SPD_Membership_Adapter::available() && ( get_option( 'spd_db_version' ) !== SPD_DB_VERSION || ! SPD_DB::tables_exist() ) ) {
-			SPD_DB::install();
+			$schema = SPD_DB::install();
+			if ( is_wp_error( $schema ) ) {
+				$safe = SPD_Observability::set_safe_mode( true, 'schema_install_failed' );
+				if ( is_wp_error( $safe ) ) { do_action( 'spd_boot_failure', $schema, $safe ); }
+			}
 		}
 		( new SPD_Routes() )->hooks();
 		( new SPD_REST() )->hooks();
@@ -16,10 +20,8 @@ final class SPD_Plugin {
 		add_action( 'template_redirect', array( $this, 'private_headers' ), 0 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );
-		add_action( 'added_user_meta', array( 'SPD_Verification_Adapter', 'maybe_refresh_from_meta' ), 10, 3 );
-		add_action( 'updated_user_meta', array( 'SPD_Verification_Adapter', 'maybe_refresh_from_meta' ), 10, 3 );
 		add_action( 'init', array( 'SPD_Contracts', 'register' ), 50 );
-		add_action( 'spd_profile_media_scan_completed_v1', array( 'SPD_Media', 'complete_scan' ), 10, 3 );
+		add_filter( 'smc_public_profile_opt_in', array( 'SPD_Contracts', 'file00_public_profile_opt_in' ), 10, 3 );
 		add_filter( 'sabri_shell_navigation_destinations', array( $this, 'shell_navigation' ) );
 		add_filter( 'sabri_shell_route_contexts', array( $this, 'shell_contexts' ) );
 	}

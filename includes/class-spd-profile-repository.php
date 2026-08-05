@@ -19,6 +19,10 @@ final class SPD_Profile_Repository {
 		return array_merge( array( 'bio', 'country', 'city', 'languages', 'studied_books', 'locale' ), self::founder_fields() );
 	}
 
+	public static function professional_fields() {
+		return array( 'professional_title', 'qualification', 'licence_number', 'licensing_authority', 'experience_years', 'specialty', 'consultation_modes' );
+	}
+
 	public static function visibility_fields() {
 		return array_merge( array( 'profile_visibility', 'bio', 'country', 'city', 'languages', 'studied_books', 'phone', 'email', 'whatsapp', 'internal_message' ), self::founder_fields() );
 	}
@@ -27,6 +31,7 @@ final class SPD_Profile_Repository {
 	use SPD_Profile_Public_DTO;
 	use SPD_Profile_Edit_Model;
 	use SPD_Profile_Update;
+	use SPD_Profile_Professional;
 	use SPD_Profile_Media;
 	use SPD_Profile_Moderation;
 	use SPD_Profile_Lifecycle;

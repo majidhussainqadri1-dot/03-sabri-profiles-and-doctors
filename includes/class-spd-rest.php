@@ -2,167 +2,31 @@
 defined( 'ABSPATH' ) || exit;
 
 final class SPD_REST {
-	public function hooks() {
-		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
+	public function hooks(){add_action('rest_api_init',array($this,'register_routes'));}
+	public function register_routes(){
+		register_rest_route('sabri-profiles/v1','/profiles/(?P<public_id>[0-9a-fA-F-]{36})',array(
+			array('methods'=>WP_REST_Server::READABLE,'callback'=>array($this,'get_profile'),'permission_callback'=>'__return_true'),
+			array('methods'=>WP_REST_Server::EDITABLE,'callback'=>array($this,'update_profile'),'permission_callback'=>array($this,'eligible_member'))));
+		register_rest_route('sabri-profiles/v1','/profiles/(?P<public_id>[0-9a-fA-F-]{36})/timeline',array('methods'=>WP_REST_Server::READABLE,'callback'=>array($this,'get_timeline'),'permission_callback'=>'__return_true','args'=>array('limit'=>array('sanitize_callback'=>'absint','default'=>20),'cursor'=>array('sanitize_callback'=>'sanitize_text_field'),'provider'=>array('sanitize_callback'=>'sanitize_key'))));
+		register_rest_route('sabri-profiles/v1','/profiles/(?P<public_id>[0-9a-fA-F-]{36})/reports',array('methods'=>WP_REST_Server::CREATABLE,'callback'=>array($this,'create_report'),'permission_callback'=>array($this,'eligible_member')));
+		register_rest_route('sabri-profiles/v1','/profiles/(?P<public_id>[0-9a-fA-F-]{36})/moderation',array('methods'=>WP_REST_Server::EDITABLE,'callback'=>array($this,'moderate_profile'),'permission_callback'=>array($this,'can_moderate')));
+		register_rest_route('sabri-profiles/v1','/reports/(?P<report_uuid>[0-9a-fA-F-]{36})',array('methods'=>WP_REST_Server::EDITABLE,'callback'=>array($this,'moderate_report'),'permission_callback'=>array($this,'can_moderate')));
+		register_rest_route('sabri-profiles/v1','/me/edit-model',array('methods'=>WP_REST_Server::READABLE,'callback'=>array($this,'edit_model'),'permission_callback'=>array($this,'eligible_member')));
+		register_rest_route('sabri-profiles/v1','/me/professional',array('methods'=>WP_REST_Server::EDITABLE,'callback'=>array($this,'submit_professional'),'permission_callback'=>array($this,'eligible_member')));
 	}
-
-	public function register_routes() {
-		register_rest_route(
-			'sabri-profiles/v1',
-			'/profiles/(?P<public_id>[0-9a-fA-F-]{36})',
-			array(
-				array(
-					'methods'             => WP_REST_Server::READABLE,
-					'callback'            => array( $this, 'get_profile' ),
-					'permission_callback' => '__return_true',
-				),
-				array(
-					'methods'             => WP_REST_Server::EDITABLE,
-					'callback'            => array( $this, 'update_profile' ),
-					'permission_callback' => array( $this, 'logged_in' ),
-				),
-			)
-		);
-		register_rest_route(
-			'sabri-profiles/v1',
-			'/profiles/(?P<public_id>[0-9a-fA-F-]{36})/timeline',
-			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'get_timeline' ),
-				'permission_callback' => '__return_true',
-				'args'                => array(
-					'limit'    => array( 'sanitize_callback' => 'absint', 'default' => 20 ),
-					'cursor'   => array( 'sanitize_callback' => 'sanitize_text_field' ),
-					'provider' => array( 'sanitize_callback' => 'sanitize_key' ),
-				),
-			)
-		);
-		register_rest_route(
-			'sabri-profiles/v1',
-			'/profiles/(?P<public_id>[0-9a-fA-F-]{36})/reports',
-			array(
-				'methods'             => WP_REST_Server::CREATABLE,
-				'callback'            => array( $this, 'create_report' ),
-				'permission_callback' => array( $this, 'logged_in' ),
-			)
-		);
-		register_rest_route(
-			'sabri-profiles/v1',
-			'/profiles/(?P<public_id>[0-9a-fA-F-]{36})/moderation',
-			array(
-				'methods'             => WP_REST_Server::EDITABLE,
-				'callback'            => array( $this, 'moderate_profile' ),
-				'permission_callback' => array( $this, 'can_moderate' ),
-			)
-		);
-		register_rest_route(
-			'sabri-profiles/v1',
-			'/reports/(?P<report_uuid>[0-9a-fA-F-]{36})',
-			array(
-				'methods'             => WP_REST_Server::EDITABLE,
-				'callback'            => array( $this, 'moderate_report' ),
-				'permission_callback' => array( $this, 'can_moderate' ),
-			)
-		);
-		register_rest_route(
-			'sabri-profiles/v1',
-			'/me/edit-model',
-			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'edit_model' ),
-				'permission_callback' => array( $this, 'logged_in' ),
-			)
-		);
-	}
-
-	public function logged_in() {
-		return is_user_logged_in() ? true : new WP_Error( 'spd_login_required', __( 'Authentication is required.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) );
-	}
-
-	public function can_moderate() {
-		return SPD_Membership_Adapter::can_moderate_profiles( get_current_user_id() ) ? true : new WP_Error( 'spd_forbidden', __( 'Profile moderation permission is required.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
-	}
-
-	public function get_profile( WP_REST_Request $request ) {
-		$trace = SPD_Helpers::trace_id();
-		$result = SPD_Profile_Repository::instance()->public_dto( $request['public_id'], get_current_user_id() );
-		return $this->response( $result, $trace );
-	}
-
-	public function edit_model() {
-		$trace = SPD_Helpers::trace_id();
-		$result = SPD_Profile_Repository::instance()->edit_model( get_current_user_id() );
-		return $this->response( $result, $trace );
-	}
-
-	public function update_profile( WP_REST_Request $request ) {
-		$trace = SPD_Helpers::trace_id();
-		$repo = SPD_Profile_Repository::instance();
-		$profile = $repo->find_by_public_id( $request['public_id'] );
-		if ( ! $profile || absint( $profile['user_id'] ) !== get_current_user_id() ) {
-			return $this->response( new WP_Error( 'spd_forbidden', __( 'You are not authorized to change this profile.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ), $trace );
-		}
-		$expected = absint( $request->get_header( 'If-Match' ) );
-		if ( ! $expected ) {
-			$expected = absint( $request->get_param( 'version' ) );
-		}
-		$idempotency = sanitize_text_field( (string) $request->get_header( 'Idempotency-Key' ) );
-		$result = $repo->update_profile( get_current_user_id(), (array) $request->get_json_params(), $expected, $idempotency );
-		return $this->response( $result, $trace );
-	}
-
-	public function get_timeline( WP_REST_Request $request ) {
-		$trace = SPD_Helpers::trace_id();
-		$result = SPD_Timeline::query(
-			$request['public_id'],
-			array( 'limit' => $request->get_param( 'limit' ), 'cursor' => $request->get_param( 'cursor' ), 'provider' => $request->get_param( 'provider' ) ),
-			get_current_user_id()
-		);
-		return $this->response( $result, $trace );
-	}
-
-	public function create_report( WP_REST_Request $request ) {
-		$trace = SPD_Helpers::trace_id();
-		$params = (array) $request->get_json_params();
-		$result = SPD_Profile_Repository::instance()->create_report(
-			$request['public_id'],
-			get_current_user_id(),
-			$params['reason'] ?? '',
-			$params['details'] ?? ''
-		);
-		return $this->response( $result, $trace, 201 );
-	}
-
-	public function moderate_profile( WP_REST_Request $request ) {
-		$trace = SPD_Helpers::trace_id();
-		$params = (array) $request->get_json_params();
-		$result = SPD_Profile_Repository::instance()->moderate_profile( $request['public_id'], get_current_user_id(), $params['state'] ?? '', absint( $params['version'] ?? 0 ), $params['reason'] ?? '' );
-		return $this->response( $result, $trace );
-	}
-
-	public function moderate_report( WP_REST_Request $request ) {
-		$trace = SPD_Helpers::trace_id();
-		$params = (array) $request->get_json_params();
-		$result = SPD_Profile_Repository::instance()->moderate_report( $request['report_uuid'], get_current_user_id(), $params['status'] ?? '', absint( $params['version'] ?? 0 ), $params['note'] ?? '' );
-		return $this->response( $result, $trace );
-	}
-
-	private function response( $result, $trace, $success_status = 200 ) {
-		if ( is_wp_error( $result ) ) {
-			$data = $result->get_error_data();
-			$status = is_array( $data ) && ! empty( $data['status'] ) ? absint( $data['status'] ) : 400;
-			$response = new WP_REST_Response(
-				array( 'code' => $result->get_error_code(), 'message' => $result->get_error_message(), 'trace_id' => $trace ),
-				$status
-			);
-		} else {
-			$response = new WP_REST_Response( array( 'data' => $result, 'trace_id' => $trace ), $success_status );
-		}
-		$response->header( 'X-SPD-Trace-ID', $trace );
-		$response->header( 'X-SPD-Contract-Version', SPD_CONTRACT_VERSION );
-		if ( is_user_logged_in() ) {
-			$response->header( 'Cache-Control', 'private, no-store' );
-		}
-		return $response;
-	}
+	public function eligible_member(){if(!is_user_logged_in()){return new WP_Error('spd_login_required',__( 'Authentication is required.','sabri-profiles-doctors'),array('status'=>401));}return SPD_Membership_Adapter::is_member_eligible(get_current_user_id())?true:new WP_Error('spd_account_ineligible',__( 'This account is not currently eligible for protected profile actions.','sabri-profiles-doctors'),array('status'=>403));}
+	public function can_moderate(){return SPD_Authorization::moderation_guard(get_current_user_id());}
+	public function get_profile(WP_REST_Request $r){$t=SPD_Helpers::trace_id();return$this->response(SPD_Profile_Repository::instance()->public_dto($r['public_id'],get_current_user_id()),$t);}
+	public function edit_model(WP_REST_Request $r){$t=SPD_Helpers::trace_id();return$this->response(SPD_Profile_Repository::instance()->edit_model(get_current_user_id(),absint($r->get_param('target_user_id'))),$t);}
+	public function submit_professional(WP_REST_Request $r){$t=SPD_Helpers::trace_id();$p=(array)$r->get_json_params();$fields=isset($p['fields'])&&is_array($p['fields'])?$p['fields']:array();$idem=sanitize_text_field((string)$r->get_header('Idempotency-Key'));return$this->response(SPD_Profile_Repository::instance()->submit_professional_fields(get_current_user_id(),$fields,$this->expected_version($r),$idem,empty($p['save_draft'])),$t);}
+	public function update_profile(WP_REST_Request $r){$t=SPD_Helpers::trace_id();$repo=SPD_Profile_Repository::instance();$profile=$repo->find_by_public_id($r['public_id']);if(!$profile||!SPD_Authorization::can_edit_profile($profile,get_current_user_id())){return$this->response(new WP_Error('spd_profile_unavailable',__( 'This profile is unavailable.','sabri-profiles-doctors'),array('status'=>404)),$t);}$params=(array)$r->get_json_params();$params['target_user_id']=absint($profile['user_id']);$expected=$this->expected_version($r);$idem=sanitize_text_field((string)$r->get_header('Idempotency-Key'));return$this->response($repo->update_profile(get_current_user_id(),$params,$expected,$idem),$t);}
+	public function get_timeline(WP_REST_Request $r){$t=SPD_Helpers::trace_id();return$this->response(SPD_Timeline::query($r['public_id'],array('limit'=>$r->get_param('limit'),'cursor'=>$r->get_param('cursor'),'provider'=>$r->get_param('provider')),get_current_user_id()),$t);}
+	public function create_report(WP_REST_Request $r){$t=SPD_Helpers::trace_id();$p=(array)$r->get_json_params();$idem=sanitize_text_field((string)$r->get_header('Idempotency-Key'));$result=SPD_Profile_Repository::instance()->create_report($r['public_id'],get_current_user_id(),$p['reason']??'',$p['details']??'',$idem);return$this->response($result,$t,201);}
+	public function moderate_profile(WP_REST_Request $r){$t=SPD_Helpers::trace_id();$p=(array)$r->get_json_params();return$this->response(SPD_Profile_Repository::instance()->moderate_profile($r['public_id'],get_current_user_id(),$p['state']??'',$this->expected_version($r),$p['reason']??'',sanitize_text_field((string)$r->get_header('Idempotency-Key'))),$t);}
+	public function moderate_report(WP_REST_Request $r){$t=SPD_Helpers::trace_id();$p=(array)$r->get_json_params();return$this->response(SPD_Profile_Repository::instance()->moderate_report($r['report_uuid'],get_current_user_id(),$p['status']??'',$this->expected_version($r),$p['note']??'',sanitize_text_field((string)$r->get_header('Idempotency-Key'))),$t);}
+	private function expected_version(WP_REST_Request $r){$raw=trim((string)$r->get_header('If-Match'));$raw=trim($raw,'"W/ ');$v=absint($raw);return$v?:absint($r->get_param('version'));}
+	private function response($result,$trace,$success=200){$error=is_wp_error($result);if($error){$data=$result->get_error_data();$status=is_array($data)&&!empty($data['status'])?absint($data['status']):400;$response=new WP_REST_Response(array('code'=>$result->get_error_code(),'message'=>$result->get_error_message(),'trace_id'=>$trace),$status);}else{$response=new WP_REST_Response(array('data'=>$result,'trace_id'=>$trace),$success);}$response->header('X-SPD-Trace-ID',$trace);$response->header('X-SPD-Contract-Version',SPD_CONTRACT_VERSION);// Profile and timeline responses combine multiple owners whose revocations must be immediate.
+		$response->header('Cache-Control','private, no-store');
+		if($error||is_user_logged_in()){$response->header('X-Robots-Tag','noindex, nofollow, noarchive');}
+		return$response;}
 }

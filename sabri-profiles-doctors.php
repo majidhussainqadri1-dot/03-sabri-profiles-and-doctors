@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Profiles and Doctors
  * Plugin URI: https://www.sabrihomeopathy.com/
  * Description: Canonical, privacy-controlled Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
- * Version: 1.0.0-rc1
+ * Version: 1.0.0-rc2
  * Requires at least: 7.0
  * Requires PHP: 8.1
  * Author: Dr. Allamah Majid Hussain Sabri
@@ -13,9 +13,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SPD_VERSION', '1.0.0-rc1' );
-define( 'SPD_DB_VERSION', '1.0.0' );
-define( 'SPD_CONTRACT_VERSION', '1.0.0' );
+define( 'SPD_VERSION', '1.0.0-rc2' );
+define( 'SPD_DB_VERSION', '1.2.0' );
+define( 'SPD_CONTRACT_VERSION', '1.2.0' );
 define( 'SPD_FILE', __FILE__ );
 define( 'SPD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SPD_URL', plugin_dir_url( __FILE__ ) );
@@ -26,6 +26,7 @@ $spd_trait_files = array(
 	'trait-spd-profile-public-dto.php',
 	'trait-spd-profile-edit-model.php',
 	'trait-spd-profile-update.php',
+	'trait-spd-profile-professional.php',
 	'trait-spd-profile-media.php',
 	'trait-spd-profile-moderation.php',
 	'trait-spd-profile-lifecycle.php',
