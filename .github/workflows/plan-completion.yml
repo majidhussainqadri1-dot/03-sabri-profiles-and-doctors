@@ -1,0 +1,62 @@
+name: File 03 Plan Completion
+
+on:
+  push:
+    branches: [codex/file-03-plan-completion]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  architecture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Architecture and adversarial checks
+        run: |
+          set -euo pipefail
+          python3 tests/architecture-check.py
+          python3 tests/plan-completion-check.py
+          ! grep -RInE 'smc_professional_credentials|smc_clinics|_smc_requested_role' includes sabri-profiles-doctors.php
+          ! grep -RInE 'add_role\s*\(|->\s*(set_role|add_role|remove_role)\s*\(' includes sabri-profiles-doctors.php
+
+  php:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.1', '8.3']
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: none
+      - name: Lint all PHP
+        run: |
+          set -euo pipefail
+          find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+          php tests/security-unit.php
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Deterministic package and manifest
+        run: |
+          set -euo pipefail
+          mkdir -p build/sabri-profiles-and-doctors-03
+          rsync -a --exclude='.git' --exclude='.github' --exclude='build' --exclude='tests' ./ build/sabri-profiles-and-doctors-03/
+          find build/sabri-profiles-and-doctors-03 -type f -print0 | sort -z | xargs -0 sha256sum > build/MANIFEST.sha256
+          (cd build && zip -X -r 03-sabri-profiles-and-doctors-0.3.0-RC.zip sabri-profiles-and-doctors-03 >/dev/null)
+          unzip -t build/03-sabri-profiles-and-doctors-0.3.0-RC.zip
+          sha256sum build/03-sabri-profiles-and-doctors-0.3.0-RC.zip
