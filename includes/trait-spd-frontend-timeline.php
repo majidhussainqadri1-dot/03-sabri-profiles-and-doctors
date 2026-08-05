@@ -11,6 +11,7 @@ trait SPD_Frontend_Timeline {
 			return $this->notice( $result->get_error_message(), 'error' );
 		}
 		$profile = SPD_Profile_Repository::instance()->public_dto( $public_id, get_current_user_id() );
+		if ( is_wp_error( $profile ) ) { return $this->notice( $profile->get_error_message(), 'error' ); }
 		ob_start(); ?>
 		<main class="spd" aria-labelledby="spd-timeline-title">
 			<header class="spd-page-header"><h1 id="spd-timeline-title"><?php echo esc_html( sprintf( __( '%s — Timeline', 'sabri-profiles-doctors' ), $profile['display_name'] ) ); ?></h1><p><a href="<?php echo esc_url( $profile['canonical_url'] ); ?>"><?php esc_html_e( 'Back to profile', 'sabri-profiles-doctors' ); ?></a></p></header>

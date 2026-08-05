@@ -93,7 +93,7 @@ final class SPD_Membership_Adapter {
 
 		$age = self::age_guardian_claim( $user_id );
 		$age_known = ! empty( $age['age_known'] );
-		$is_minor = $age_known ? ! empty( $age['is_minor'] ) : ! in_array( $account_type, array( 'founder', 'doctor' ), true );
+		$is_minor = $age_known ? ! empty( $age['is_minor'] ) : 'founder' !== $account_type;
 		$guardian_verified = ! empty( $raw['guardian_verified'] );
 		if ( $age_known && ! empty( $age['guardian_verified'] ) ) {
 			$guardian_verified = true;
@@ -130,7 +130,7 @@ final class SPD_Membership_Adapter {
 
 	/**
 	 * Optional File 00 age/guardian projection. Absence never makes a person
-	 * public: non-professional profiles remain minor-safe until the current
+	 * public: every non-Founder profile remains minor-safe until the current
 	 * age-assurance contract is available.
 	 */
 	private static function age_guardian_claim( $user_id ) {

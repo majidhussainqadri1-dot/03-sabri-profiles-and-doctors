@@ -20,6 +20,7 @@ trait SPD_Profile_Identity_Read {
 	}
 
 	public function find_by_public_id( $public_id ) {
+		if ( ! SPD_Helpers::valid_uuid( (string) $public_id ) ) { return array(); }
 		global $wpdb;
 		$table = SPD_DB::table( 'profiles' );
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE public_id = %s LIMIT 1", sanitize_text_field( $public_id ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared

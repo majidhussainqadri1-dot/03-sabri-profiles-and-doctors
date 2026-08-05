@@ -68,6 +68,7 @@ trait SPD_Profile_Update {
 		$profile_table = SPD_DB::table( 'profiles' );
 		$media_table   = SPD_DB::table( 'media' );
 		$before = $this->public_dto( $profile['public_id'], $target_user_id );
+		if ( is_wp_error( $before ) ) { $before = array( 'error' => $before->get_error_code(), 'version' => $profile['version'] ); }
 
 		$result = SPD_DB::transaction(
 			function () use ( $wpdb, $profile_table, $media_table, $profile, $clean, $founder_values, $audiences, $internal_message, $expected_version, $new_version, $target_user_id, $prepared_media, $actor_id, $idempotency_key, $committed_response, $remove_media_for_privacy, $old_media ) {
@@ -145,19 +146,21 @@ trait SPD_Profile_Update {
 		);
 		if ( is_wp_error( $result ) ) {
 			$this->idempotency_fail( $actor_id, 'update_profile', $idempotency_key );
-			foreach ( $prepared_media as $purpose => $prepared ) { SPD_Media::queue_owned_deletion( absint( $prepared['attachment_id'] ), $target_user_id, $purpose ); }
+			foreach ( $prepared_media as $purpose => $prepared ) {
+				$queued = SPD_Media::queue_owned_deletion( absint( $prepared['attachment_id'] ), $target_user_id, $purpose );
+				if ( is_wp_error( $queued ) ) { update_post_meta( absint( $prepared['attachment_id'] ), SPD_Media::STATE_META, 'rejected' ); do_action( 'sabri_file24_profile_media_cleanup_failed', array( 'attachment_id' => absint( $prepared['attachment_id'] ), 'owner_user_id' => $target_user_id, 'purpose' => sanitize_key( $purpose ), 'error_code' => $queued->get_error_code() ) ); }
+			}
 			return $result;
 		}
 		$updated_profile = $this->find_by_user_id( $target_user_id, false );
 		$this->purge_profile_cache( $updated_profile );
 		$after = $this->public_dto( $updated_profile['public_id'], $target_user_id );
+		if ( is_wp_error( $after ) ) { $after = array( 'error' => $after->get_error_code(), 'version' => $updated_profile['version'] ); }
 		$this->audit_diff( $profile, $actor_id, $before, $after, 'profile_update' );
 		SPD_Media::process_deletion_queue( 5 );
-		$response = array( 'profile' => $after, 'public_id' => $profile['public_id'], 'version' => $updated_profile['version'], 'committed' => true );
-		// The commit already contains a deterministic replay result. Enriching it is
-		// best-effort and can never turn a committed mutation into an apparent failure.
-		$this->idempotency_complete( $actor_id, 'update_profile', $idempotency_key, $response );
-		return $response;
+		// Return exactly the response committed in the idempotency record. Clients
+		// may refetch the DTO; first execution and replay must never disagree.
+		return $committed_response;
 	}
 
 	private function validate_prepared_media_bundle( $target_user_id, array $prepared_media ) {
@@ -168,7 +171,7 @@ trait SPD_Profile_Update {
 			if ( ! $attachment_id || 'active' !== sanitize_key( (string) ( $prepared['state'] ?? '' ) ) || 'active' !== sanitize_key( (string) get_post_meta( $attachment_id, SPD_Media::STATE_META, true ) ) || absint( get_post_meta( $attachment_id, SPD_Media::OWNER_META, true ) ) !== absint( $target_user_id ) || sanitize_key( (string) get_post_meta( $attachment_id, SPD_Media::PURPOSE_META, true ) ) !== $purpose ) {
 				return new WP_Error( 'spd_media_ownership_invalid', __( 'The prepared media ownership, purpose, or scan state is invalid.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
 			}
-			if ( empty( $prepared['scan_provider'] ) || empty( $prepared['scan_reference'] ) || empty( $prepared['scan_contract_version'] ) || version_compare( (string) $prepared['scan_contract_version'], SPD_Media::SCAN_CONTRACT_MIN, '<' ) ) {
+			if ( empty( $prepared['scan_provider'] ) || empty( $prepared['scan_reference'] ) || empty( $prepared['scan_contract_version'] ) || version_compare( (string) $prepared['scan_contract_version'], SPD_Media::SCAN_CONTRACT_MIN, '<' ) || ! preg_match( '/^[0-9a-f]{64}$/', (string) ( $prepared['scan_sha256'] ?? '' ) ) || ! hash_equals( strtolower( (string) get_post_meta( $attachment_id, SPD_Media::SCAN_SHA_META, true ) ), strtolower( (string) $prepared['scan_sha256'] ) ) ) {
 				return new WP_Error( 'spd_media_scan_evidence_missing', __( 'The prepared media is missing valid scan evidence.', 'sabri-profiles-doctors' ) );
 			}
 		}
@@ -181,6 +184,7 @@ trait SPD_Profile_Update {
 			$out[ sanitize_key( $purpose ) ] = array(
 				'attachment_id' => absint( $prepared['attachment_id'] ?? 0 ),
 				'scan_reference'=> sanitize_text_field( (string) ( $prepared['scan_reference'] ?? '' ) ),
+				'scan_sha256'  => strtolower( sanitize_text_field( (string) ( $prepared['scan_sha256'] ?? '' ) ) ),
 				'focal_x'       => SPD_Helpers::normalize_focal( $prepared['focal_x'] ?? 50 ),
 				'focal_y'       => SPD_Helpers::normalize_focal( $prepared['focal_y'] ?? 50 ),
 			);

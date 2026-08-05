@@ -22,10 +22,25 @@ trait SPD_Profile_Moderation {
 		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
 		$response = array( 'public_id' => $public_id, 'state' => $new_state, 'version' => $expected_version + 1 );
 		$table = SPD_DB::table( 'profiles' );
+		$media_table = SPD_DB::table( 'media' );
+		$remove_media = in_array( $new_state, array( 'suspended', 'archived', 'tombstoned' ), true );
+		$old_media = array( 'avatar' => absint( $profile['avatar_id'] ), 'cover' => absint( $profile['cover_id'] ) );
 		$result = SPD_DB::transaction(
-			function () use ( $wpdb, $table, $profile, $new_state, $expected_version, $actor_id, $reason, $response, $idempotency_key ) {
-				$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET state=%s,version=version+1,updated_at=%s WHERE id=%d AND version=%d", $new_state, SPD_Helpers::now(), $profile['id'], $expected_version ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			function () use ( $wpdb, $table, $media_table, $profile, $new_state, $expected_version, $actor_id, $reason, $response, $idempotency_key, $remove_media, $old_media ) {
+				$sql = $remove_media ? "UPDATE {$table} SET state=%s,avatar_id=0,cover_id=0,version=version+1,updated_at=%s WHERE id=%d AND version=%d" : "UPDATE {$table} SET state=%s,version=version+1,updated_at=%s WHERE id=%d AND version=%d";
+				$updated = $wpdb->query( $wpdb->prepare( $sql, $new_state, SPD_Helpers::now(), $profile['id'], $expected_version ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				if ( 1 !== $updated ) { return new WP_Error( 'spd_version_conflict', __( 'This profile changed in another session. Reload and try again.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+				if ( $remove_media ) {
+					$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$media_table} WHERE profile_id=%d", $profile['id'] ) );
+					if ( false === $deleted ) { return new WP_Error( 'spd_media_moderation_cleanup_failed', __( 'Profile media references could not be revoked during moderation.', 'sabri-profiles-doctors' ) ); }
+					foreach ( $old_media as $purpose => $attachment_id ) {
+						if ( ! $attachment_id ) { continue; }
+						$queued = SPD_Media::queue_owned_deletion( $attachment_id, $profile['user_id'], $purpose );
+						if ( is_wp_error( $queued ) ) { return $queued; }
+						$media_event = $this->event( 'ProfileMediaChanged.v1', 'profile', $profile['public_id'], array( 'purpose' => $purpose, 'attachment_id' => $attachment_id, 'state' => 'removed_for_moderation', 'version' => $expected_version + 1 ) );
+						if ( is_wp_error( $media_event ) ) { return $media_event; }
+					}
+				}
 				$event = $this->event( 'ProfileModerated.v1', 'profile', $profile['public_id'], array( 'actor_id' => $actor_id, 'from' => $profile['state'], 'to' => $new_state, 'reason_hash' => hash( 'sha256', $reason ), 'version' => $expected_version + 1 ) );
 				if ( is_wp_error( $event ) ) { return $event; }
 				if ( ! $this->idempotency_complete( $actor_id, 'moderate_profile', $idempotency_key, $response ) ) { return new WP_Error( 'spd_idempotency_finalize_failed', __( 'The moderation replay result could not be committed.', 'sabri-profiles-doctors' ) ); }
@@ -101,7 +116,7 @@ trait SPD_Profile_Moderation {
 		$reason = sanitize_key( $reason );
 		$details = SPD_Helpers::sanitize_multiline( $details, 3000 );
 		if ( ! in_array( $reason, $allowed, true ) ) { return new WP_Error( 'spd_invalid_report_reason', __( 'Choose a valid report reason.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
-		if ( strlen( $details ) < 10 ) { return new WP_Error( 'spd_report_details_required', __( 'Provide enough detail for a fair review.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
+		if ( SPD_Helpers::text_length( $details ) < 10 ) { return new WP_Error( 'spd_report_details_required', __( 'Provide enough detail for a fair review.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		$request_hash = hash( 'sha256', SPD_Helpers::json_encode( array( $public_id, $reason, $details ) ) );
 		$idem = $this->idempotency_begin( $reporter_user_id, 'create_report', $idempotency_key, $request_hash, true );
 		if ( is_wp_error( $idem ) ) { return $idem; }
