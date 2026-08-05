@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
-      - name: Reconstruct, verify, apply and commit
+      - name: Reconstruct, verify, replace and commit
         run: |
           set -euo pipefail
           cat .patchparts/part* > /tmp/file03.patch.b64
@@ -26,7 +26,13 @@ jobs:
           test "$(sha256sum /tmp/file03.patch.gz | awk '{print $1}')" = "6da4b695be2a9b17a3b0e69d132ba1d2ec7df3d3b5111f27ee038ddb14dade97"
           gzip -dc /tmp/file03.patch.gz > /tmp/file03.patch
           test "$(sha256sum /tmp/file03.patch | awk '{print $1}')" = "4107f9f83dd5f3a75b2bd7055fcc6662079dd6901daf92a0058428e9bb73cf3c"
-          git apply --index /tmp/file03.patch
+          mapfile -t targets < <(sed -n 's#^+++ b/##p' /tmp/file03.patch | sort -u)
+          for target in "${targets[@]}"; do
+            if git ls-files --error-unmatch "$target" >/dev/null 2>&1; then
+              git rm -f "$target"
+            fi
+          done
+          git apply --index --whitespace=nowarn /tmp/file03.patch
           git rm -r .patchparts .github/workflows/apply-forty-round-review.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
