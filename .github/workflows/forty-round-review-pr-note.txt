@@ -1,0 +1,1 @@
+This branch exists only as a stable pull-request ref for the completed File 03 forty-round review. No runtime behavior is defined by this note.
