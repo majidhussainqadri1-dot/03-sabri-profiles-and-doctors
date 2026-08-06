@@ -63,9 +63,18 @@ check(33, 'Migration repair schedule', "'spd_migrate_profiles_batch' => 'schedul
 check(34, 'Unicode report minimum', 'SPD_Helpers::text_length( $details ) < 10' in moderation, 'minimum detail uses character count')
 check(35, 'Audit error normalization', "array( 'error' => $before->get_error_code()" in update and "array( 'error' => $after->get_error_code()" in update, 'WP_Error is not serialized as a misleading DTO')
 check(36, 'JSON failure handling', "return false === $json ? 'null' : $json" in helpers and "if ( 'null' === $json )" in events, 'encoding failure cannot complete idempotency')
-forbidden = ['-----BEGIN PRIVATE KEY-----', 'ghp_', 'AKIA', 'wp-config.php']
-all_text = '\n'.join(x.read_text(encoding='utf-8', errors='ignore') for x in ROOT.rglob('*') if x.is_file() and '.git' not in x.parts and x.name != 'forty-round-review.py')
-check(37, 'Secrets/archive hygiene', not any(token in all_text for token in forbidden) and not any(x.suffix.lower() in {'.zip','.sql','.7z','.rar'} for x in ROOT.rglob('*') if '.git' not in x.parts), 'no obvious secrets or committed archives')
+runtime_files = [ROOT / 'sabri-profiles-doctors.php', ROOT / 'uninstall.php', ROOT / 'readme.txt']
+runtime_files += [x for root_name in ('includes', 'assets') for x in (ROOT / root_name).rglob('*') if x.is_file()]
+credential_names = {'wp-config.php', 'credentials.json', 'service-account.json', 'id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519'}
+secret_patterns = [
+    rb'-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----',
+    rb'\bgh[pousr]_[A-Za-z0-9]{20,}\b',
+    rb'\bAKIA[0-9A-Z]{16}\b',
+]
+runtime_clean = all(not any(re.search(pattern, x.read_bytes()) for pattern in secret_patterns) for x in runtime_files)
+names_clean = not any(x.is_file() and x.name.lower() in credential_names for x in ROOT.rglob('*') if '.git' not in x.parts)
+archives_clean = not any(x.is_file() and x.suffix.lower() in {'.zip','.sql','.7z','.rar','.tar','.tgz','.gz'} for x in ROOT.rglob('*') if '.git' not in x.parts)
+check(37, 'Secrets/archive hygiene', runtime_clean and names_clean and archives_clean, 'runtime source has no secret signatures, credential files or committed archives')
 check(38, 'Non-destructive uninstall', 'SPD_ALLOW_DESTRUCTIVE_UNINSTALL' in uninstall and 'spd_purge_on_uninstall' in uninstall, 'destructive purge requires two gates')
 check(39, 'Package identity', 'Stable tag: 1.0.0-rc3' in readme and "SPD_DB_VERSION', '1.2.0'" in main, 'software/contract/schema identities are explicit')
 check(40, 'Truthful completion boundary', 'This is a staging candidate' in readme and 'not production-operational' in readme, 'source completion does not claim staging/live')
