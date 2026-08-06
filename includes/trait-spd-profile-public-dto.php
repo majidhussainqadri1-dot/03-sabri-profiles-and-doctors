@@ -23,8 +23,9 @@ trait SPD_Profile_Public_DTO {
 			return new WP_Error( 'spd_identity_dependency_unavailable', __( 'Current identity assertions are temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 		}
 		$verification = SPD_Verification_Adapter::projection( $user_id );
-		$professional = ( 'doctor' === $profile['profile_type'] && SPD_Verification_Adapter::is_verified( $user_id ) ) ? ( $verification['approved_fields'] ?? array() ) : array();
-		$clinic_raw = apply_filters( 'sabri_file08_public_clinic_projection_v1', null, $user_id, $viewer_id, SPD_CONTRACT_VERSION );
+		$is_verified_doctor = 'doctor' === $profile['profile_type'] && 'doctor' === ( $claims['account_type'] ?? '' ) && ! empty( $claims['approved'] ) && ! empty( $claims['eligible'] ) && ! empty( $claims['professional_verified'] ) && empty( $claims['suspended'] ) && $verification && ! empty( $verification['trusted_contract'] ) && 'verified' === ( $verification['status'] ?? '' );
+		$professional = $is_verified_doctor ? ( $verification['approved_fields'] ?? array() ) : array();
+		$clinic_raw = $is_verified_doctor ? apply_filters( 'sabri_file08_public_clinic_projection_v1', null, $user_id, $viewer_id, SPD_CONTRACT_VERSION ) : null;
 		$dto = array(
 			'contract_version' => SPD_CONTRACT_VERSION,
 			'public_id'        => $profile['public_id'],
@@ -36,7 +37,7 @@ trait SPD_Profile_Public_DTO {
 			'version'          => $profile['version'],
 			'display_name'     => $claims['display_name'] ?? '',
 			'locale'           => $profile['locale'],
-			'badge'            => $this->badge( $profile, $verification ),
+			'badge'            => $this->badge( $profile, $verification, $claims, $is_verified_doctor ),
 			'fields'           => array(),
 			'media'            => $this->public_media( $profile ),
 			'contacts'         => array(),
@@ -59,16 +60,17 @@ trait SPD_Profile_Public_DTO {
 				}
 			}
 		}
+		$is_minor = ! empty( $claims['is_minor'] );
 		foreach ( array( 'phone', 'email', 'whatsapp' ) as $key ) {
 			$field = $profile['fields'][ $key ] ?? array( 'audience' => 'private' );
-			if ( SPD_Membership_Adapter::is_minor( $user_id ) ) { continue; }
+			if ( $is_minor ) { continue; }
 			if ( SPD_Authorization::audience_allows( $field['audience'], $user_id, $viewer_id ) ) {
 				$value = SPD_Membership_Adapter::contact( $user_id, $key );
 				if ( $value ) { $dto['contacts'][ $key ] = $value; }
 			}
 		}
 		$internal = $profile['fields']['internal_message'] ?? array( 'audience' => 'private', 'field_value' => '0' );
-		if ( '1' === (string) $internal['field_value'] && SPD_Authorization::audience_allows( $internal['audience'], $user_id, $viewer_id ) && ! SPD_Membership_Adapter::is_minor( $user_id ) ) {
+		if ( '1' === (string) $internal['field_value'] && SPD_Authorization::audience_allows( $internal['audience'], $user_id, $viewer_id ) && ! $is_minor ) {
 			$url = (string) apply_filters( 'sabri_network_message_profile_url', '', $user_id, $viewer_id, SPD_CONTRACT_VERSION );
 			if ( SPD_Helpers::same_origin_url( $url ) ) { $dto['contacts']['internal_message_url'] = esc_url_raw( $url ); }
 		}
@@ -93,8 +95,9 @@ trait SPD_Profile_Public_DTO {
 		foreach ( array( 'avatar' => 'avatar_id', 'cover' => 'cover_id' ) as $purpose => $column ) {
 			$id = absint( $profile[ $column ] ?? 0 );
 			if ( ! $id || 'active' !== SPD_Media::state( $profile['id'], $purpose ) ) { continue; }
+			if ( absint( get_post_meta( $id, SPD_Media::OWNER_META, true ) ) !== absint( $profile['user_id'] ) || sanitize_key( (string) get_post_meta( $id, SPD_Media::PURPOSE_META, true ) ) !== $purpose || 'active' !== sanitize_key( (string) get_post_meta( $id, SPD_Media::STATE_META, true ) ) ) { continue; }
 			$url = wp_get_attachment_image_url( $id, 'large' );
-			if ( ! $url ) { continue; }
+			if ( ! $url || ! SPD_Helpers::same_origin_url( $url ) ) { continue; }
 			$out[ $purpose ] = array(
 				'attachment_id' => $id,
 				'url'           => esc_url_raw( $url ),
@@ -106,9 +109,9 @@ trait SPD_Profile_Public_DTO {
 		return $out;
 	}
 
-	private function badge( array $profile, array $verification ) {
-		if ( 'founder' === $profile['profile_type'] && SPD_Membership_Adapter::is_founder( $profile['user_id'] ) ) { return array( 'key' => 'official_founder', 'label' => __( 'Official Founder', 'sabri-profiles-doctors' ), 'verified' => true ); }
-		if ( 'doctor' === $profile['profile_type'] && SPD_Verification_Adapter::is_verified( $profile['user_id'] ) ) { return array( 'key' => 'verified_doctor', 'label' => __( 'Verified Doctor', 'sabri-profiles-doctors' ), 'verified' => true, 'claim_version' => $verification['claim_version'] ?? '', 'contract_version' => $verification['contract_version'] ?? '' ); }
+	private function badge( array $profile, array $verification, array $claims, $is_verified_doctor ) {
+		if ( 'founder' === $profile['profile_type'] && ! empty( $claims['is_founder'] ) ) { return array( 'key' => 'official_founder', 'label' => __( 'Official Founder', 'sabri-profiles-doctors' ), 'verified' => true ); }
+		if ( $is_verified_doctor ) { return array( 'key' => 'verified_doctor', 'label' => __( 'Verified Doctor', 'sabri-profiles-doctors' ), 'verified' => true, 'claim_version' => $verification['claim_version'] ?? '', 'contract_version' => $verification['contract_version'] ?? '' ); }
 		return array( 'key' => 'member', 'label' => __( 'Member', 'sabri-profiles-doctors' ), 'verified' => false );
 	}
 }

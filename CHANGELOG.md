@@ -1,7 +1,12 @@
 # Changelog
 
-## 1.0.0-rc2 — 2026-08-06
+## 1.0.0-rc3
 
-Three-plan source-completion corrective release: current File 00/09 authority, minor/guardian/contact privacy, fail-closed media, atomic deletion ledger, versioned profile/report/professional mutations, leased queues, migration quarantine, revocation-safe no-store responses, retry-aware erasure, system check/safe mode/repair, federated timeline integrity and expanded behavior-oriented QA.
-
-Not staging-accepted, live-deployed or operationally accepted.
+- Completed forty sequential review/correction rounds.
+- Made unknown-age profiles fail closed except the immutable Founder.
+- Added strict UUID, exact-origin and If-Match validation.
+- Bound media scans to mandatory exact-byte SHA-256 evidence.
+- Made update idempotency first/replay responses identical.
+- Added immediate moderation media revocation.
+- Hardened migration privacy, timeline provider failure/volume/cursor/time handling, verified-doctor clinic projection and Unicode report validation.
+- Preserved staging/live/operational status as separate evidence gates.

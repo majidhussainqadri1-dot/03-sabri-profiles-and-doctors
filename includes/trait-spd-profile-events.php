@@ -43,6 +43,7 @@ trait SPD_Profile_Events {
 	private function idempotency_begin( $actor_id, $command, $key, $request_hash, $required = true ) {
 		global $wpdb;
 		$key = trim( (string) $key );
+		if ( strlen( $key ) > 200 ) { return new WP_Error( 'spd_idempotency_invalid', __( 'The Idempotency-Key is invalid.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		if ( '' === $key ) {
 			return $required ? new WP_Error( 'spd_idempotency_required', __( 'An Idempotency-Key is required for this mutation.', 'sabri-profiles-doctors' ), array( 'status' => 428 ) ) : true;
 		}
@@ -96,9 +97,11 @@ trait SPD_Profile_Events {
 	private function idempotency_complete( $actor_id, $command, $key, array $response ) {
 		global $wpdb;
 		if ( '' === trim( (string) $key ) ) { return false; }
+		$json = SPD_Helpers::json_encode( $response );
+		if ( 'null' === $json ) { return false; }
 		$updated = $wpdb->update(
 			SPD_DB::table( 'idempotency' ),
-			array( 'status' => 'completed', 'response_json' => SPD_Helpers::json_encode( $response ), 'updated_at' => SPD_Helpers::now() ),
+			array( 'status' => 'completed', 'response_json' => $json, 'updated_at' => SPD_Helpers::now() ),
 			array( 'actor_id' => absint( $actor_id ), 'command' => sanitize_key( $command ), 'idempotency_key' => hash( 'sha256', $key ), 'status' => 'started' )
 		);
 		return 1 === $updated;

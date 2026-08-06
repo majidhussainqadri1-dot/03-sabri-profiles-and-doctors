@@ -5,6 +5,7 @@ final class SPD_Media {
 	const OWNER_META='_spd_media_owner_user_id';
 	const PURPOSE_META='_spd_media_purpose';
 	const STATE_META='_spd_media_state';
+	const SCAN_SHA_META='_spd_media_scan_sha256';
 	const SCAN_CONTRACT_MIN='1.0.0';
 
 	public static function prepare_upload( $user_id, $field, $purpose, array $context=array() ) {
@@ -40,11 +41,11 @@ final class SPD_Media {
 		$attachment_id=media_handle_upload($field,0,array('post_author'=>$user_id),array('test_form'=>false,'mimes'=>$mimes));
 		if ( is_wp_error($attachment_id) ) { return $attachment_id; }
 		$attachment_id=absint($attachment_id);
-		update_post_meta($attachment_id,self::OWNER_META,$user_id); update_post_meta($attachment_id,self::PURPOSE_META,$purpose); update_post_meta($attachment_id,self::STATE_META,'active');
+		update_post_meta($attachment_id,self::OWNER_META,$user_id); update_post_meta($attachment_id,self::PURPOSE_META,$purpose); update_post_meta($attachment_id,self::STATE_META,'active'); update_post_meta($attachment_id,self::SCAN_SHA_META,strtolower((string)$scan['sha256']));
 		$alt=sanitize_text_field((string)($context['alt_text']??''));
 		if ( !$alt ) { $alt=sanitize_text_field(SPD_Membership_Adapter::display_name($user_id)); }
 		if ( $alt ) { update_post_meta($attachment_id,'_wp_attachment_image_alt',$alt); }
-		return array('attachment_id'=>$attachment_id,'state'=>'active','alt_text'=>$alt,'focal_x'=>SPD_Helpers::normalize_focal($context['focal_x']??50),'focal_y'=>SPD_Helpers::normalize_focal($context['focal_y']??50),'scan_provider'=>sanitize_text_field((string)$scan['provider']),'scan_reference'=>sanitize_text_field((string)$scan['reference']),'scan_contract_version'=>sanitize_text_field((string)$scan['contract_version']));
+		return array('attachment_id'=>$attachment_id,'state'=>'active','alt_text'=>$alt,'focal_x'=>SPD_Helpers::normalize_focal($context['focal_x']??50),'focal_y'=>SPD_Helpers::normalize_focal($context['focal_y']??50),'scan_provider'=>sanitize_text_field((string)$scan['provider']),'scan_reference'=>sanitize_text_field((string)$scan['reference']),'scan_contract_version'=>sanitize_text_field((string)$scan['contract_version']),'scan_sha256'=>strtolower((string)$scan['sha256']));
 	}
 
 	private static function valid_clean_scan( $scan, $path ) {
@@ -52,7 +53,10 @@ final class SPD_Media {
 		if ( empty($scan['provider']) || empty($scan['reference']) || empty($scan['contract_version']) || version_compare((string)$scan['contract_version'],self::SCAN_CONTRACT_MIN,'<') ) { return false; }
 		$scanned_at=strtotime((string)($scan['scanned_at']??''));
 		if ( false===$scanned_at || abs(time()-$scanned_at)>600 ) { return false; }
-		if ( ! empty($scan['sha256']) && ! hash_equals(strtolower((string)$scan['sha256']),hash_file('sha256',$path)) ) { return false; }
+		$sha = strtolower( (string) ( $scan['sha256'] ?? '' ) );
+		if ( ! preg_match( '/^[0-9a-f]{64}$/', $sha ) ) { return false; }
+		$actual = hash_file( 'sha256', $path );
+		if ( ! is_string( $actual ) || ! hash_equals( $sha, strtolower( $actual ) ) ) { return false; }
 		return true;
 	}
 

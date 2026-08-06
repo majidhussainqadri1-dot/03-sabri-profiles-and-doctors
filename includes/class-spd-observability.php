@@ -265,7 +265,16 @@ final class SPD_Observability {
 		if ( get_user_meta( $user_id, '_spd_v1_migrated', true ) ) { return true; }
 		$legacy = sanitize_key( (string) get_user_meta( $user_id, '_spd_profile_visibility', true ) );
 		if ( in_array( $legacy, SPD_Authorization::allowed_audiences(), true ) ) {
-			$ok = $wpdb->update( SPD_DB::table( 'fields' ), array( 'audience' => $legacy, 'updated_at' => SPD_Helpers::now() ), array( 'profile_id' => $profile['id'], 'field_key' => 'profile_visibility' ) );
+			$claims = SPD_Membership_Adapter::claims( $user_id );
+			$safe_audience = 'private';
+			if ( 'founder' === $profile['profile_type'] && SPD_Membership_Adapter::is_founder( $user_id ) ) {
+				$safe_audience = 'public';
+			} elseif ( $claims && ! empty( $claims['eligible'] ) && empty( $claims['suspended'] ) ) {
+				if ( 'public' === $legacy && ! empty( $claims['public_profile_allowed'] ) && SPD_Membership_Adapter::public_profile_age_eligible( $user_id ) ) { $safe_audience = 'public'; }
+				elseif ( 'members' === $legacy ) { $safe_audience = 'members'; }
+				elseif ( 'contacts' === $legacy && empty( $claims['is_minor'] ) ) { $safe_audience = 'contacts'; }
+			}
+			$ok = $wpdb->update( SPD_DB::table( 'fields' ), array( 'audience' => $safe_audience, 'updated_at' => SPD_Helpers::now() ), array( 'profile_id' => $profile['id'], 'field_key' => 'profile_visibility' ) );
 			if ( false === $ok ) { return new WP_Error( 'spd_migration_visibility_failed', __( 'Legacy visibility could not be migrated.', 'sabri-profiles-doctors' ) ); }
 		}
 		// Legacy public contact is migrated only to the consent field. Actual contact
@@ -305,7 +314,7 @@ final class SPD_Observability {
 		foreach ( array( 'founder', 'profile', 'account_profile' ) as $key ) {
 			if ( empty( $map[ $key ] ) || ! get_post_status( absint( $map[ $key ] ) ) ) { $plan[] = 'restore_page:' . $key; }
 		}
-		foreach ( array( 'spd_dispatch_outbox' => 'schedule_outbox', 'spd_retention_cleanup' => 'schedule_retention', 'spd_process_media_deletions' => 'schedule_media_deletions' ) as $hook => $action ) {
+		foreach ( array( 'spd_dispatch_outbox' => 'schedule_outbox', 'spd_retention_cleanup' => 'schedule_retention', 'spd_process_media_deletions' => 'schedule_media_deletions', 'spd_migrate_profiles_batch' => 'schedule_migration' ) as $hook => $action ) {
 			if ( ! wp_next_scheduled( $hook ) ) { $plan[] = $action; }
 		}
 		if ( SPD_DB::tables_exist() ) {
