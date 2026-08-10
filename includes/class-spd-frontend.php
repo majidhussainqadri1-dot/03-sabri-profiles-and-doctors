@@ -5,9 +5,11 @@ final class SPD_Frontend {
 	use SPD_Frontend_Profile;
 	use SPD_Frontend_Timeline;
 	use SPD_Frontend_Edit;
-	use SPD_Frontend_Report;
 	use SPD_Frontend_Helpers;
-	use SPD_Frontend_Central;
+	use SPD_Frontend_Report, SPD_Frontend_Central {
+		SPD_Frontend_Central::structured_data insteadof SPD_Frontend_Report;
+		SPD_Frontend_Report::structured_data as legacy_structured_data;
+	}
 
 	public function hooks() {
 		add_shortcode( 'sabri_founder_profile', array( $this, 'founder' ) );
