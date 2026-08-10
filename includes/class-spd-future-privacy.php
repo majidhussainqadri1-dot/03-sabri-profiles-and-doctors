@@ -2,6 +2,38 @@
 defined( 'ABSPATH' ) || exit;
 
 final class SPD_Future_Privacy {
+	public function hooks() {
+		add_filter( 'wp_privacy_personal_data_exporters', array( $this, 'exporters' ) );
+		add_filter( 'wp_privacy_personal_data_erasers', array( $this, 'erasers' ) );
+	}
+
+	public function exporters( $exporters ) {
+		$exporters['sabri-profile-future-domain'] = array( 'exporter_friendly_name' => __( 'Sabri future professional profile data', 'sabri-profiles-doctors' ), 'callback' => array( $this, 'export' ) );
+		return $exporters;
+	}
+
+	public function erasers( $erasers ) {
+		$erasers['sabri-profile-future-domain'] = array( 'eraser_friendly_name' => __( 'Sabri future professional profile data', 'sabri-profiles-doctors' ), 'callback' => array( $this, 'erase' ) );
+		return $erasers;
+	}
+
+	public function export( $email, $page = 1 ) {
+		if ( absint( $page ) > 1 ) { return array( 'data' => array(), 'done' => true ); }
+		$user = get_user_by( 'email', $email ); if ( ! $user ) { return array( 'data' => array(), 'done' => true ); }
+		$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false ); if ( ! $profile ) { return array( 'data' => array(), 'done' => true ); }
+		$data = self::export_profile_data( $profile['id'] );
+		return array( 'data' => $data ? array( array( 'group_id' => 'sabri-profile-future-domain', 'group_label' => __( 'Sabri Future Professional Profile', 'sabri-profiles-doctors' ), 'item_id' => 'future-profile-' . $profile['public_id'], 'data' => $data ) ) : array(), 'done' => true );
+	}
+
+	public function erase( $email, $page = 1 ) {
+		if ( absint( $page ) > 1 ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
+		$user = get_user_by( 'email', $email ); if ( ! $user ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
+		$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false ); if ( ! $profile ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
+		if ( apply_filters( 'spd_future_profile_legal_hold', false, absint( $user->ID ) ) ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'Future professional profile data is retained under an active legal or governance hold.', 'sabri-profiles-doctors' ) ), 'done' => true ); }
+		$result = self::erase_profile_data( $profile['id'] );
+		return array( 'items_removed' => ! empty( $result['removed'] ), 'items_retained' => ! empty( $result['retry'] ), 'messages' => ! empty( $result['retry'] ) ? array( __( 'Future professional profile data could not yet be erased and requires a retry.', 'sabri-profiles-doctors' ) ) : array(), 'done' => empty( $result['retry'] ) );
+	}
+
 	public static function export_profile_data( $profile_id ) {
 		global $wpdb; $profile_id = absint( $profile_id ); if ( ! $profile_id || ! SPD_Future_Profile::schema_ready() ) { return array(); }
 		$translations = $wpdb->get_results( $wpdb->prepare( 'SELECT locale,headline,bio,source,status,version,created_at,updated_at FROM ' . SPD_Future_Profile::translations_table() . ' WHERE profile_id=%d ORDER BY id ASC', $profile_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
