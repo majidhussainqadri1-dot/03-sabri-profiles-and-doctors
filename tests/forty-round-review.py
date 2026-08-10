@@ -29,7 +29,7 @@ checks = []
 def check(round_no, name, condition, detail):
     checks.append((round_no, name, bool(condition), detail))
 
-check(1, 'Release identity', "Version: 1.2.0-rc1" in main and "SPD_CONTRACT_VERSION', '1.4.0'" in main and 'FUTURE-SUPERSET-18' in main, '1.2.0-rc1, contract 1.4.0 and future plan identity are aligned')
+check(1, 'Release identity', "Version: 1.2.0-rc2" in main and "SPD_CONTRACT_VERSION', '1.4.0'" in main and 'FUTURE-SUPERSET-18' in main and '80-ROUND-CORRECTIVE-REVIEW' in main, '1.2.0-rc2, contract 1.4.0, future plan identity and 80-round corrective marker are aligned')
 check(2, 'Canonical ownership', 'smc_' not in ''.join(re.findall(r'FROM\s+[^\n]+', public_dto, re.I)), 'no direct File 00 table reads')
 check(3, 'Unknown-age fail-closed', "'founder' !== $account_type" in membership and "array( 'founder', 'doctor' )" not in membership, 'unknown-age doctors are minor-safe')
 check(4, 'Guardian current claims', 'current_contract_claim( $claim' in membership and 'guardian_verified' in membership, 'guardian claim is versioned/current')
@@ -78,7 +78,7 @@ names_clean = not any(x.is_file() and x.name.lower() in credential_names for x i
 archives_clean = not any(x.is_file() and x.suffix.lower() in {'.zip','.sql','.7z','.rar','.tar','.tgz','.gz'} for x in ROOT.rglob('*') if '.git' not in x.parts)
 check(37, 'Secrets/archive hygiene', runtime_clean and names_clean and archives_clean, 'runtime source has no secret signatures, credential files or committed archives')
 check(38, 'Non-destructive uninstall', 'SPD_ALLOW_DESTRUCTIVE_UNINSTALL' in uninstall and 'spd_purge_on_uninstall' in uninstall and 'profile_future_state' in uninstall, 'destructive purge still requires two gates and covers future native data')
-check(39, 'Package identity', 'Stable tag: 1.2.0-rc1' in readme and "SPD_DB_VERSION', '1.2.0'" in main and "SPD_CONTRACT_VERSION', '1.4.0'" in main, 'software/contract/schema identities are explicit')
+check(39, 'Package identity', 'Stable tag: 1.2.0-rc2' in readme and "SPD_DB_VERSION', '1.2.0'" in main and "SPD_CONTRACT_VERSION', '1.4.0'" in main, 'software/contract/schema identities are explicit for rc2')
 check(40, 'Truthful completion boundary', 'This remains a staging candidate' in readme and 'separate from Hostinger staging' in readme and 'live deployment' in readme, 'source completion does not claim staging/live')
 
 failures = [c for c in checks if not c[2]]
