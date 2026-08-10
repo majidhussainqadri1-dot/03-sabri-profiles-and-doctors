@@ -13,7 +13,7 @@
 | Fresh review 1 | `tests/eighty-round-adversarial.py` independently rechecks post-correction negative invariants on exact candidate |
 | Fresh review 2 | Existing future/latest-plan privacy/provider/AI/interoperability/degradation review gates run after source/runtime gate |
 | Packaged | Deterministic ZIP built twice byte-identically; SHA-256, SBOM and source/package parity passed on the reviewed rc2 source tree |
-| Automated-QA Green | PR candidate head `5dfa2e0daf755354f1419c5ee5e5c7b17691b6e6` passed File 03 Plan Completion v2, Latest Plan Completion, Forty-Round Review and Future Superset 18 workflows, including PHP 8.1/8.3/8.4, all 80 gates, preserved regressions, fresh adversarial reviews and deterministic package/parity. It was merged to `main` as `9a483a9aadbfbe297d64094908eeeadf3614c884`; both commits carried the same source tree `15de71d19a0cd97e99e3e2ff94814998ac50e953`. This status-sync change is documentation-only and must pass PR gates before merge. |
+| Automated-QA Green | The rc2 corrective source and subsequent documentation-only status synchronization were each accepted only after File 03 Plan Completion v2, Latest Plan Completion, Forty-Round Review and Future Superset 18 PR workflows passed. Those gates include PHP 8.1/8.3/8.4, all 80 numbered gates, preserved regressions, fresh adversarial reviews and deterministic package/parity. Any later source or status change must be revalidated before promotion. |
 | Staging-Accepted | **Pending** |
 | Live-Deployed | **No / unverified** |
 | Operational | **No** |
