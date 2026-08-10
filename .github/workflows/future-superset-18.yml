@@ -37,11 +37,12 @@ jobs:
         run: |
           node --check assets/js/profiles.js
           node --check assets/js/future-profiles.js
-      - name: Latest, future and eighty-round governing coverage
-        run: |
-          python3 tests/latest-plan-coverage.py
-          python3 tests/future-superset-coverage.py
-          python3 tests/eighty-round-review.py
+      - name: Latest governing coverage
+        run: python3 tests/latest-plan-coverage.py
+      - name: Future Superset 18 coverage
+        run: python3 tests/future-superset-coverage.py
+      - name: Eighty numbered corrective review gates
+        run: python3 tests/eighty-round-review.py
       - name: Existing File 03 regression suites
         run: |
           set -euo pipefail
@@ -67,11 +68,12 @@ jobs:
           persist-credentials: false
       - name: Fresh review 1 — independent 80-round adversarial invariants
         run: python3 tests/eighty-round-adversarial.py
-      - name: Fresh review 2 — future requirements, privacy, providers and degradation
-        run: |
-          python3 tests/future-two-review-gates.py
-          python3 tests/latest-plan-review-1.py
-          python3 tests/latest-plan-review-2.py
+      - name: Fresh review 2a — future privacy/provider/degradation
+        run: python3 tests/future-two-review-gates.py
+      - name: Fresh review 2b — preserved latest-plan requirements/boundaries
+        run: python3 tests/latest-plan-review-1.py
+      - name: Fresh review 2c — preserved latest-plan adversarial degradation
+        run: python3 tests/latest-plan-review-2.py
 
   deterministic-package:
     name: Deterministic package, checksum, SBOM and corrective parity
