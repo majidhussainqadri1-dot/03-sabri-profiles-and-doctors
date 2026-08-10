@@ -23,7 +23,11 @@ final class SPD_Verification_Adapter {
 
 	private static function normalize( array $data, $user_id ) {
 		$fields = isset( $data['approved_fields'] ) && is_array( $data['approved_fields'] ) ? $data['approved_fields'] : array();
-		$allowed = array( 'professional_title', 'qualification', 'licence_number', 'licensing_authority', 'experience_years', 'specialty', 'languages', 'studied_books', 'consultation_modes', 'clinic_name', 'clinic_url', 'country', 'city', 'bio', 'profile_photo_id', 'cover_photo_id' );
+		$allowed = array(
+			'professional_title','qualification','degree','institution','licence_number','licensing_authority','jurisdiction',
+			'credential_issued_at','credential_expires_at','experience_years','specialty','languages','studied_books','consultation_modes',
+			'clinic_name','clinic_url','country','city','bio','profile_photo_id','cover_photo_id',
+		);
 		$clean = array();
 		foreach ( $allowed as $key ) {
 			if ( ! array_key_exists( $key, $fields ) ) { continue; }
