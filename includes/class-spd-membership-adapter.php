@@ -177,7 +177,7 @@ final class SPD_Membership_Adapter {
 
 	public static function is_doctor( $user_id ) {
 		$claims = self::claims( $user_id );
-		return $claims && 'doctor' === $claims['account_type'] && ! empty( $claims['professional_verified'] );
+		return $claims && ! empty( $claims['eligible'] ) && empty( $claims['suspended'] ) && 'doctor' === $claims['account_type'] && ! empty( $claims['professional_verified'] );
 	}
 
 	public static function is_founder( $user_id ) {
