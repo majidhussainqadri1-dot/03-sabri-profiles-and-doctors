@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'codex/file-03-future-superset-18'
+      - 'codex/file-03-eighty-round-corrective-review'
   pull_request:
     branches: [main]
 
@@ -12,7 +13,7 @@ permissions:
 
 jobs:
   source-and-runtime:
-    name: PHP ${{ matrix.php }} — future superset and regression
+    name: PHP ${{ matrix.php }} — future superset, 80-round and regression
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -36,10 +37,11 @@ jobs:
         run: |
           node --check assets/js/profiles.js
           node --check assets/js/future-profiles.js
-      - name: Latest and future governing coverage
+      - name: Latest, future and eighty-round governing coverage
         run: |
           python3 tests/latest-plan-coverage.py
           python3 tests/future-superset-coverage.py
+          python3 tests/eighty-round-review.py
       - name: Existing File 03 regression suites
         run: |
           set -euo pipefail
@@ -56,22 +58,23 @@ jobs:
           php tests/forty-round-runtime.php
 
   fresh-reviews:
-    name: Two fresh future review/fix gates
+    name: Two fresh post-correction review/fix gates
     runs-on: ubuntu-latest
     needs: source-and-runtime
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
-      - name: Future requirement and boundary reviews
-        run: python3 tests/future-two-review-gates.py
-      - name: Preserve latest-plan post-code reviews
+      - name: Fresh review 1 — independent 80-round adversarial invariants
+        run: python3 tests/eighty-round-adversarial.py
+      - name: Fresh review 2 — future requirements, privacy, providers and degradation
         run: |
+          python3 tests/future-two-review-gates.py
           python3 tests/latest-plan-review-1.py
           python3 tests/latest-plan-review-2.py
 
   deterministic-package:
-    name: Deterministic package, checksum, SBOM and future parity
+    name: Deterministic package, checksum, SBOM and corrective parity
     runs-on: ubuntu-latest
     needs: fresh-reviews
     steps:
@@ -83,11 +86,11 @@ jobs:
           set -euo pipefail
           ./build-package.sh "$RUNNER_TEMP/a"
           ./build-package.sh "$RUNNER_TEMP/b"
-      - name: Verify determinism and packaged future files
+      - name: Verify determinism and packaged corrective files
         run: |
           set -euo pipefail
           VERSION="$(sed -n 's/^ \* Version: \(.*\)$/\1/p' sabri-profiles-doctors.php | head -1)"
-          test "$VERSION" = "1.2.0-rc1"
+          test "$VERSION" = "1.2.0-rc2"
           NAME="03-sabri-profiles-and-doctors-$VERSION.zip"
           cmp "$RUNNER_TEMP/a/$NAME" "$RUNNER_TEMP/b/$NAME"
           (cd "$RUNNER_TEMP/a" && sha256sum -c "$NAME.sha256")
@@ -98,9 +101,10 @@ jobs:
           diff -u sabri-profiles-doctors.php "$TOP/sabri-profiles-doctors.php"
           diff -ru includes "$TOP/includes"
           diff -ru assets "$TOP/assets"
+          diff -u uninstall.php "$TOP/uninstall.php"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: file03-future-superset-18-1.2.0-rc1
+          name: file03-future-superset-18-1.2.0-rc2-eighty-round
           path: |
             ${{ runner.temp }}/a/*.zip
             ${{ runner.temp }}/a/*.sha256
