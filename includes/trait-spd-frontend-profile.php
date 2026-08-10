@@ -34,9 +34,10 @@ trait SPD_Frontend_Profile {
 	private function render_profile( $public_id ) {
 		$dto = SPD_Central_Profile::personal_site_dto( $public_id, get_current_user_id() );
 		if ( is_wp_error( $dto ) ) { return $this->notice( $dto->get_error_message(), 'error' ); }
+		$owner = SPD_Profile_Repository::instance()->find_by_public_id( $public_id );
+		if ( $owner ) { $dto = SPD_Future_Profile::augment_personal_site_dto( $dto, $owner, get_current_user_id() ); }
 		$avatar = $dto['media']['avatar'] ?? array();
 		$cover = $dto['media']['cover'] ?? array();
-		$owner = SPD_Profile_Repository::instance()->find_by_public_id( $public_id );
 		$is_owner = $owner && absint( $owner['user_id'] ) === get_current_user_id();
 		ob_start();
 		?>
@@ -60,6 +61,7 @@ trait SPD_Frontend_Profile {
 			</div>
 
 			<?php echo $this->personal_site_sections( $dto, false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			<?php echo $this->future_profile_sections( $dto, $is_owner ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 			<?php if ( $is_owner ) : ?><form class="spd-inline-form spd-share-rotation" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="spd_rotate_share"><input type="hidden" name="version" value="<?php echo esc_attr( $dto['version'] ); ?>"><input type="hidden" name="idempotency_key" value="<?php echo esc_attr( wp_generate_uuid4() ); ?>"><?php wp_nonce_field( 'spd_rotate_share', 'spd_share_nonce' ); ?><button class="spd-btn spd-btn--secondary" type="submit"><?php esc_html_e( 'Revoke and rotate share/QR link', 'sabri-profiles-doctors' ); ?></button></form><?php endif; ?>
 		</main>
 		<?php
