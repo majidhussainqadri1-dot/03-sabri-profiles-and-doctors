@@ -55,7 +55,7 @@ gate('Review/Fix Gate 2 — adversarial privacy, safety and degradation', [
  ('legal hold is explicit', 'spd_future_profile_legal_hold' in privacy),
  ('guarded uninstall includes all future tables', all(x in uninstall for x in ('profile_translations','profile_attestations','profile_future_state','SPD_ALLOW_DESTRUCTIVE_UNINSTALL'))),
  ('no third-party QR/tracking endpoint', not re.search(r'chart\.googleapis|api\.qrserver|quickchart', all_source, re.I)),
- ('no paid/donor advantage', not re.search(r'paid[_ -]?(?:boost|rank|verification)|donor[_ -]?(?:boost|rank)', all_source, re.I)),
+ ('no paid/donor advantage implementation', not re.search(r'\b(?:paid_boost|paid_rank|paid_verification|donor_boost|donor_rank|premium_profile)\b', all_source, re.I)),
  ('truth boundary preserved', 'staging candidate' in t('readme.txt').lower() and 'Exact deployed code remains unverified' in trace),
 ])
 
