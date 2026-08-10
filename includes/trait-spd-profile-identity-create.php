@@ -29,14 +29,26 @@ trait SPD_Profile_Identity_Create {
 		}
 		$changes = array(); if ( $row['slug'] !== $slug ) { $changes['slug'] = $slug; } if ( $row['profile_type'] !== $type ) { $changes['profile_type'] = $type; } if ( $row['state'] !== $state && SPD_Helpers::state_transition_allowed( $row['state'], $state, 'profile' ) ) { $changes['state'] = $state; } if ( $row['locale'] !== $locale ) { $changes['locale'] = $locale; }
 		if ( $changes ) {
-			$result = SPD_DB::transaction( function() use ( $wpdb, $table, $row, $changes, $slug ) {
+			$result = SPD_DB::transaction( function() use ( $wpdb, $table, $row, $changes, $slug, $user_id ) {
+				if ( isset( $changes['profile_type'] ) && 'founder' === $changes['profile_type'] ) {
+					$existing = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE profile_type='founder' AND id<>%d LIMIT 1", absint( $row['id'] ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					if ( $existing ) { return new WP_Error( 'spd_founder_profile_exists', __( 'An official Founder profile already exists.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+				}
 				$changes['version'] = absint( $row['version'] ) + 1; $changes['updated_at'] = SPD_Helpers::now();
 				$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET slug=%s,profile_type=%s,state=%s,locale=%s,version=%d,updated_at=%s WHERE id=%d AND version=%d", $changes['slug'] ?? $row['slug'], $changes['profile_type'] ?? $row['profile_type'], $changes['state'] ?? $row['state'], $changes['locale'] ?? $row['locale'], $changes['version'], $changes['updated_at'], $row['id'], $row['version'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				if ( 1 !== $updated ) { return new WP_Error( 'spd_profile_refresh_conflict', __( 'The profile changed while identity assertions were refreshed.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
 				if ( isset( $changes['slug'] ) ) { $s = $this->record_slug( $row['id'], $slug, true ); if ( is_wp_error( $s ) ) { return $s; } }
-				return true;
+				if ( isset( $changes['profile_type'] ) && 'founder' === $changes['profile_type'] ) {
+					$founder = $this->ensure_founder_invariants( absint( $row['id'] ) );
+					if ( is_wp_error( $founder ) ) { return $founder; }
+				}
+				$event = $this->event( 'PublicProfileUpdated.v1', 'profile', $row['public_id'], array( 'user_id' => $user_id, 'change' => 'identity_refresh', 'changed_fields' => array_keys( $changes ), 'version' => absint( $changes['version'] ) ) );
+				return is_wp_error( $event ) ? $event : true;
 			} );
-			if ( is_wp_error( $result ) ) { return $result; } $row = $this->find_by_id( $row['id'] );
+			if ( is_wp_error( $result ) ) { return $result; }
+			$row = $this->find_by_id( $row['id'] );
+			$this->purge_profile_cache( $row );
+			update_option( 'spd_reconciliation_required', 1, false );
 		}
 		return $this->hydrate( $row );
 	}
@@ -51,6 +63,19 @@ trait SPD_Profile_Identity_Create {
 		foreach ( $defaults as $key => $audience ) { if ( ! $this->upsert_field( $profile_id, $key, 'internal_message' === $key ? '1' : '', $audience, 'approved', 'file03' ) ) { return new WP_Error( 'spd_visibility_initialize_failed', __( 'Profile privacy defaults could not be initialized.', 'sabri-profiles-doctors' ) ); } }
 		if ( ! $this->upsert_field( $profile_id, 'share_epoch', '1', 'private', 'approved', 'file03' ) ) { return new WP_Error( 'spd_share_initialize_failed', __( 'Profile share-link state could not be initialized.', 'sabri-profiles-doctors' ) ); }
 		if ( 'founder' === $type ) { foreach ( self::founder_fields() as $key ) { if ( ! $this->upsert_field( $profile_id, $key, '', 'public', 'approved', 'file03' ) ) { return new WP_Error( 'spd_founder_fields_initialize_failed', __( 'Founder profile fields could not be initialized.', 'sabri-profiles-doctors' ) ); } } }
+		return true;
+	}
+
+	private function ensure_founder_invariants( $profile_id ) {
+		global $wpdb;
+		$profile_id = absint( $profile_id );
+		$fields = SPD_DB::table( 'fields' );
+		$current_visibility = $wpdb->get_row( $wpdb->prepare( "SELECT field_value FROM {$fields} WHERE profile_id=%d AND field_key='profile_visibility' LIMIT 1", $profile_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( ! $this->upsert_field( $profile_id, 'profile_visibility', (string) ( $current_visibility['field_value'] ?? '' ), 'public', 'approved', 'file03' ) ) { return new WP_Error( 'spd_founder_visibility_failed', __( 'Founder public visibility could not be established.', 'sabri-profiles-doctors' ) ); }
+		foreach ( self::founder_fields() as $key ) {
+			$current = $wpdb->get_row( $wpdb->prepare( "SELECT field_value FROM {$fields} WHERE profile_id=%d AND field_key=%s LIMIT 1", $profile_id, $key ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( ! $this->upsert_field( $profile_id, $key, (string) ( $current['field_value'] ?? '' ), 'public', 'approved', 'file03' ) ) { return new WP_Error( 'spd_founder_fields_initialize_failed', __( 'Founder profile fields could not be initialized.', 'sabri-profiles-doctors' ) ); }
+		}
 		return true;
 	}
 }
