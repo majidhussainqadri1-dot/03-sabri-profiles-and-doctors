@@ -46,7 +46,11 @@ final class SPD_Routes {
 		$map = (array) get_option( 'spd_page_map', array() );
 		if ( ! empty( $map['legacy_profile'] ) && is_page( absint( $map['legacy_profile'] ) ) && isset( $_GET['user'] ) ) {
 			$user = get_user_by( 'slug', sanitize_title( wp_unslash( $_GET['user'] ) ) );
-			if ( $user ) { $profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false ); if ( $profile && ! is_wp_error( $profile ) ) { wp_safe_redirect( SPD_Helpers::canonical_profile_url( $profile['public_id'] ), 301 ); exit; } }
+			if ( $user ) {
+				$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false );
+				if ( $profile && ! is_wp_error( $profile ) && SPD_Authorization::profile_visibility_allows( $profile, 0 ) ) { wp_safe_redirect( SPD_Helpers::canonical_profile_url( $profile['public_id'] ), 301 ); exit; }
+			}
+			status_header( 404 ); return;
 		}
 		$public_id = sanitize_text_field( (string) get_query_var( 'spd_public_id' ) );
 		if ( $public_id ) { $profile = SPD_Profile_Repository::instance()->find_by_public_id( $public_id ); if ( $profile && 'tombstoned' === $profile['state'] ) { status_header( 410 ); } }
