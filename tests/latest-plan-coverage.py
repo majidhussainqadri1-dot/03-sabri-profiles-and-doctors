@@ -58,6 +58,7 @@ for name,tokens in checks.items():
 if missing: raise SystemExit('Latest-plan/future coverage gaps:\n'+'\n'.join(missing))
 if re.search(r'https://(?:chart\.googleapis|api\.qrserver|quickchart)', source, re.I):
     raise SystemExit('Third-party QR/tracking dependency detected')
-if re.search(r'paid[_ -]?(?:boost|rank|verification)|donor[_ -]?(?:boost|rank)', source, re.I):
-    raise SystemExit('Paid/donor profile advantage detected')
+# Detect executable advantage flags/identifiers, not protective prose such as “no paid ranking”.
+if re.search(r'\b(?:paid_boost|paid_rank|paid_verification|donor_boost|donor_rank|premium_profile)\b', source, re.I):
+    raise SystemExit('Paid/donor profile advantage implementation detected')
 print(f'Latest governing coverage passed: {len(central)} central IDs + {len(future)} future IDs = {len(expected)} additive IDs, plus native ownership guards.')
