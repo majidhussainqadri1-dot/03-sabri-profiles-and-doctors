@@ -30,6 +30,7 @@ final class SPD_Plugin {
 		( new SPD_Future_Privacy() )->hooks();
 		( new SPD_Observability() )->hooks();
 		( new SPD_Admin() )->hooks();
+		add_action( 'admin_post_spd_save_profile', array( $this, 'guard_profile_media_upload_rate' ), 1 );
 		add_action( 'template_redirect', array( $this, 'private_headers' ), 0 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );
@@ -42,6 +43,17 @@ final class SPD_Plugin {
 	}
 
 	public function private_headers() { ( new SPD_Routes() )->private_headers(); }
+
+	public function guard_profile_media_upload_rate() {
+		if ( ! is_user_logged_in() ) { return; }
+		$user_id = get_current_user_id();
+		foreach ( array( 'avatar', 'cover' ) as $purpose ) {
+			if ( empty( $_FILES[ $purpose ]['name'] ) ) { continue; }
+			if ( ! SPD_Helpers::consume_rate_limit( 'media_upload_' . $user_id, 10, HOUR_IN_SECONDS ) ) {
+				wp_die( esc_html__( 'Too many profile uploads were attempted. Try again later.', 'sabri-profiles-doctors' ), '', array( 'response' => 429, 'back_link' => true ) );
+			}
+		}
+	}
 
 	public function assets() {
 		$map = (array) get_option( 'spd_page_map', array() );
