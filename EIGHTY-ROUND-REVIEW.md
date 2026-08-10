@@ -83,17 +83,17 @@ Rule used in every round: inspect one bounded risk surface → if a defect is fo
 | 75 | File 17 contact transport ownership remains external | No defect found |
 | 76 | File 16 AI execution ownership remains external | No defect found |
 | 77 | File 26 search/ranking/analytics ownership remains external | No defect found |
-| 78 | Existing regression/40-round/latest-plan/future suites preserved | No defect found before CI; must be re-proved on exact final candidate |
+| 78 | Existing regression/40-round/latest-plan/future suites preserved | **Defect found → fixed**: future coverage test was coupled to the old one-shot JS idempotency marker and was updated to assert retry-safe key reuse |
 | 79 | Deterministic package/checksum/SBOM/parity gate | No source defect found; exact final candidate CI/package gate required |
 | 80 | Truth-status/release boundary | No defect found: staging/live/operational remain explicitly unverified until real evidence exists |
 
 ## Defect rounds
 
-Defects were found in rounds **12, 13, 15, 16, 23, 33, 43, 44, 46, 51, 52, 57, and 63**.
+Defects were found in rounds **12, 13, 15, 16, 23, 33, 43, 44, 46, 51, 52, 57, 63, and 78**.
 
 Total fresh rounds: **80**.  
-Rounds with defects: **13**.  
-Rounds with no newly established defect: **67**.
+Rounds with defects: **14**.  
+Rounds with no newly established defect: **66**.
 
 ## Corrections made during this 80-round cycle
 
@@ -109,6 +109,7 @@ Rounds with no newly established defect: **67**.
 10. AI output cannot claim grounded success with an empty answer or zero accepted citations.
 11. Future-state mutation rejects unknown fields.
 12. Future privacy export fails explicitly on database read errors.
+13. The future-superset regression assertion now validates the retry-safe idempotency client instead of a removed one-shot marker.
 
 ## Release truth boundary
 
