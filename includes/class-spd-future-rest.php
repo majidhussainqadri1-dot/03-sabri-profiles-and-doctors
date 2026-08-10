@@ -40,6 +40,11 @@ final class SPD_Future_REST {
 	private function dto( $public_id ) { return spd_get_personal_site_profile( (string) $public_id, get_current_user_id() ); }
 	private function idem( WP_REST_Request $r ) { return trim( sanitize_text_field( (string) $r->get_header( 'Idempotency-Key' ) ) ); }
 
+	private function medical_scope_question( $question ) {
+		$q = (string) $question;
+		return 1 === preg_match( '/\b(diagnos\w*|prescrib\w*|prescription|dosage|dose|potency|emergency|urgent medical|guaranteed cure|treatment recommendation)\b|\b(what|which|recommend|suggest)\b.{0,45}\b(remedy|medicine|medication|drug|treatment|potency|dose)\b|\b(should i|can i)\b.{0,35}\b(take|use)\b.{0,35}\b(remedy|medicine|medication|drug|dose|potency)\b|\b(treat|cure)\b.{0,25}\b(my|me)\b|\b(for my|my)\b.{0,30}\b(symptom|condition|disease|pain)\b|تشخیص|نسخہ|خوراک|ایمرجنسی|علاج تجویز|کون سی دوا|کیا دوا|دوا لوں|مجھے.{0,20}دوا|میرے لیے.{0,20}دوا|پوٹینسی/ui', $q );
+	}
+
 	private function mutate( WP_REST_Request $r, $command, array $payload, callable $callback, $status = 200 ) {
 		$repo = SPD_Profile_Repository::instance(); $actor = get_current_user_id(); $key = $this->idem( $r );
 		$hash = hash( 'sha256', SPD_Helpers::json_encode( array( sanitize_key( $command ), $payload ) ) );
@@ -68,7 +73,15 @@ final class SPD_Future_REST {
 		$viewer = get_current_user_id();
 		if ( ! SPD_Helpers::consume_rate_limit( 'ask_work_' . $viewer, 30, HOUR_IN_SECONDS ) ) { return $this->response( new WP_Error( 'spd_ai_rate_limited', __( 'Too many profile-work questions were submitted. Try again later.', 'sabri-profiles-doctors' ), array( 'status' => 429 ) ) ); }
 		$p = (array) $r->get_json_params();
-		return $this->response( SPD_Future_Profile::ask_about_work( $r['public_id'], $viewer, $p['question'] ?? '' ) );
+		$question = trim( SPD_Helpers::sanitize_multiline( $p['question'] ?? '', 500 ) );
+		if ( $this->medical_scope_question( $question ) ) { return $this->response( new WP_Error( 'spd_ai_scope_restricted', __( 'This assistant answers only about the professional’s published work; it does not diagnose, prescribe, dose or replace emergency care.', 'sabri-profiles-doctors' ), array( 'status' => 422 ) ) ); }
+		$result = SPD_Future_Profile::ask_about_work( $r['public_id'], $viewer, $question );
+		if ( ! is_wp_error( $result ) ) {
+			$answer = trim( (string) ( $result['answer'] ?? '' ) );
+			$citations = (array) ( $result['citations'] ?? array() );
+			if ( '' === $answer || ! $citations ) { $result = new WP_Error( 'spd_ai_grounding_incomplete', __( 'The grounded answer did not include sufficient public source evidence.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		}
+		return $this->response( $result );
 	}
 	public function create_disclosure( WP_REST_Request $r ) {
 		$p = (array) $r->get_json_params(); $profile = SPD_Profile_Repository::instance()->find_by_user_id( get_current_user_id(), false );
@@ -82,12 +95,12 @@ final class SPD_Future_REST {
 	}
 	public function disclosure( WP_REST_Request $r ) {
 		$packet = SPD_Future_Profile::disclosure_packet( $r['token'] );
-		if ( is_wp_error( $packet ) ) { return $this->response( $packet, 200, true ); }
+		if ( is_wp_error( $packet ) ) { return $this->response( $packet, 200, false ); }
 		$parts = explode( '.', (string) $r['token'], 2 );
 		$raw = base64_decode( strtr( (string) ( $parts[0] ?? '' ), '-_', '+/' ) . str_repeat( '=', ( 4 - strlen( (string) ( $parts[0] ?? '' ) ) % 4 ) % 4 ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		$payload = json_decode( (string) $raw, true );
 		$dto = is_array( $payload ) && ! empty( $payload['pid'] ) ? spd_get_personal_site_profile( sanitize_text_field( $payload['pid'] ), 0 ) : new WP_Error( 'spd_disclosure_invalid', __( 'This disclosure link is invalid.', 'sabri-profiles-doctors' ) );
-		if ( is_wp_error( $dto ) ) { return $this->response( $dto, 200, true ); }
+		if ( is_wp_error( $dto ) ) { return $this->response( $dto, 200, false ); }
 		foreach ( (array) ( $packet['scopes'] ?? array() ) as $scope ) {
 			switch ( sanitize_key( $scope ) ) {
 				case 'credentials': $packet['credentials'] = $dto['future']['credential_wallet'] ?? array(); break;
@@ -95,11 +108,12 @@ final class SPD_Future_REST {
 				case 'achievements': $packet['achievements'] = $dto['future']['learning_passport'] ?? array(); break;
 			}
 		}
-		return $this->response( $packet, 200, true );
+		return $this->response( $packet, 200, false );
 	}
 	public function translation( WP_REST_Request $r ) {
 		$p = (array) $r->get_json_params(); $profile = SPD_Profile_Repository::instance()->find_by_user_id( get_current_user_id(), false ); if ( ! $profile ) { return $this->response( new WP_Error( 'spd_profile_unavailable', __( 'Your profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ) ); }
-		$payload = array( 'public_id' => $profile['public_id'], 'locale' => (string) ( $p['locale'] ?? '' ), 'headline' => (string) ( $p['headline'] ?? '' ), 'bio' => (string) ( $p['bio'] ?? '' ), 'source' => (string) ( $p['source'] ?? 'human' ) );
+		if ( ! SPD_Helpers::valid_locale( $p['locale'] ?? '' ) ) { return $this->response( new WP_Error( 'spd_translation_locale_invalid', __( 'Choose a valid locale.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ) ); }
+		$payload = array( 'public_id' => $profile['public_id'], 'locale' => (string) $p['locale'], 'headline' => (string) ( $p['headline'] ?? '' ), 'bio' => (string) ( $p['bio'] ?? '' ), 'source' => (string) ( $p['source'] ?? 'human' ) );
 		return $this->mutate( $r, 'save_profile_translation', $payload, function() use ( $profile, $payload ) { return SPD_Future_Profile::save_translation( get_current_user_id(), $profile['public_id'], $payload['locale'], $payload['headline'], $payload['bio'], $payload['source'] ); }, 201 );
 	}
 	public function reconfirm( WP_REST_Request $r ) {
@@ -112,9 +126,13 @@ final class SPD_Future_REST {
 		$profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) $r['public_id'] );
 		if ( ! $profile ) { return $this->response( new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ) ); }
 		$payload = (array) $r->get_json_params();
+		$allowed = array( 'professional_lifecycle', 'lifecycle_reason', 'federation_opt_in' );
+		$unknown = array_diff( array_keys( $payload ), $allowed );
+		if ( $unknown ) { return $this->response( new WP_Error( 'spd_unknown_future_state_field', __( 'One or more future-profile state fields are not supported.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ) ); }
 		$is_owner = absint( $profile['user_id'] ) === $actor;
 		$is_governor = SPD_Membership_Adapter::can_manage_founder( $actor ) || SPD_Membership_Adapter::can_operate_profiles( $actor );
 		if ( ! $is_owner && ! $is_governor ) { return $this->response( new WP_Error( 'spd_forbidden', __( 'You cannot change this professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ) ); }
+		if ( ! empty( $payload['federation_opt_in'] ) && ! $is_owner ) { return $this->response( new WP_Error( 'spd_federation_owner_opt_in_required', __( 'Federation opt-in must be given explicitly by the profile owner.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ) ); }
 		if ( 'legacy' === sanitize_key( (string) ( $payload['professional_lifecycle'] ?? '' ) ) && ! $is_governor ) { return $this->response( new WP_Error( 'spd_legacy_governance_required', __( 'Legacy/memorial status requires current governed approval.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ) ); }
 		$payload['public_id'] = (string) $r['public_id'];
 		return $this->mutate( $r, 'set_future_profile_state', $payload, function() use ( $actor, $r, $payload ) { unset( $payload['public_id'] ); return SPD_Future_Profile::set_future_state( $actor, $r['public_id'], $payload ); } );

@@ -57,9 +57,14 @@ final class SPD_Helpers {
 		return function_exists( 'mb_strlen' ) ? mb_strlen( $value ) : strlen( $value );
 	}
 
+	public static function valid_locale( $locale ) {
+		$locale = str_replace( '_', '-', sanitize_text_field( (string) $locale ) );
+		return '' !== $locale && 1 === preg_match( '/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/', $locale );
+	}
+
 	public static function normalize_locale( $locale ) {
 		$locale = str_replace( '_', '-', sanitize_text_field( (string) $locale ) );
-		return preg_match( '/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/', $locale ) ? $locale : 'en-US';
+		return self::valid_locale( $locale ) ? $locale : 'en-US';
 	}
 
 	public static function normalize_focal( $value ) {

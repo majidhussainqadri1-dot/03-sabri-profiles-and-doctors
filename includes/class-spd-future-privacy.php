@@ -22,6 +22,7 @@ final class SPD_Future_Privacy {
 		$user = get_user_by( 'email', $email ); if ( ! $user ) { return array( 'data' => array(), 'done' => true ); }
 		$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false ); if ( ! $profile ) { return array( 'data' => array(), 'done' => true ); }
 		$data = self::export_profile_data( $profile['id'] );
+		if ( is_wp_error( $data ) ) { return $data; }
 		return array( 'data' => $data ? array( array( 'group_id' => 'sabri-profile-future-domain', 'group_label' => __( 'Sabri Future Professional Profile', 'sabri-profiles-doctors' ), 'item_id' => 'future-profile-' . $profile['public_id'], 'data' => $data ) ) : array(), 'done' => true );
 	}
 
@@ -39,9 +40,15 @@ final class SPD_Future_Privacy {
 
 	public static function export_profile_data( $profile_id ) {
 		global $wpdb; $profile_id = absint( $profile_id ); if ( ! $profile_id || ! SPD_Future_Profile::schema_ready() ) { return array(); }
+		$wpdb->last_error = '';
 		$translations = $wpdb->get_results( $wpdb->prepare( 'SELECT locale,headline,bio,source,status,version,created_at,updated_at FROM ' . SPD_Future_Profile::translations_table() . ' WHERE profile_id=%d ORDER BY id ASC', $profile_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_privacy_export_failed', __( 'Future-profile translation data could not be read for export.', 'sabri-profiles-doctors' ) ); }
+		$wpdb->last_error = '';
 		$attestations = $wpdb->get_results( $wpdb->prepare( 'SELECT field_key,confirmed_at,expires_at,version FROM ' . SPD_Future_Profile::attestations_table() . ' WHERE profile_id=%d ORDER BY id ASC', $profile_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_privacy_export_failed', __( 'Future-profile freshness data could not be read for export.', 'sabri-profiles-doctors' ) ); }
+		$wpdb->last_error = '';
 		$state = $wpdb->get_row( $wpdb->prepare( 'SELECT federation_opt_in,professional_lifecycle,lifecycle_reason,lifecycle_changed_at,version,updated_at FROM ' . SPD_Future_Profile::state_table() . ' WHERE profile_id=%d LIMIT 1', $profile_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_privacy_export_failed', __( 'Future-profile lifecycle data could not be read for export.', 'sabri-profiles-doctors' ) ); }
 		$data = array();
 		foreach ( (array) $translations as $row ) { $data[] = array( 'name' => 'Approved translation ' . $row['locale'], 'value' => wp_json_encode( $row ) ); }
 		foreach ( (array) $attestations as $row ) { $data[] = array( 'name' => 'Field freshness ' . $row['field_key'], 'value' => wp_json_encode( $row ) ); }
