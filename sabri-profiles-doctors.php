@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Profiles and Doctors
  * Plugin URI: https://www.sabrihomeopathy.com/
  * Description: Canonical, privacy-controlled Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
- * Version: 1.0.0-rc3
+ * Version: 1.1.0-rc1
  * Requires at least: 7.0
  * Requires PHP: 8.1
  * Author: Dr. Allamah Majid Hussain Sabri
@@ -13,9 +13,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SPD_VERSION', '1.0.0-rc3' );
+define( 'SPD_VERSION', '1.1.0-rc1' );
 define( 'SPD_DB_VERSION', '1.2.0' );
-define( 'SPD_CONTRACT_VERSION', '1.2.1' );
+define( 'SPD_CONTRACT_VERSION', '1.3.0' );
+define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum' );
 define( 'SPD_FILE', __FILE__ );
 define( 'SPD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SPD_URL', plugin_dir_url( __FILE__ ) );
@@ -32,15 +33,15 @@ $spd_trait_files = array(
 	'trait-spd-profile-lifecycle.php',
 	'trait-spd-profile-events.php',
 	'trait-spd-profile-cache.php',
+	'trait-spd-profile-central.php',
 	'trait-spd-frontend-profile.php',
 	'trait-spd-frontend-timeline.php',
 	'trait-spd-frontend-edit.php',
 	'trait-spd-frontend-report.php',
 	'trait-spd-frontend-helpers.php',
+	'trait-spd-frontend-central.php',
 );
-foreach ( $spd_trait_files as $spd_trait_file ) {
-	require_once SPD_DIR . 'includes/' . $spd_trait_file;
-}
+foreach ( $spd_trait_files as $spd_trait_file ) { require_once SPD_DIR . 'includes/' . $spd_trait_file; }
 unset( $spd_trait_files, $spd_trait_file );
 
 $spd_files = array(
@@ -50,11 +51,13 @@ $spd_files = array(
 	'class-spd-contracts.php',
 	'class-spd-authorization.php',
 	'class-spd-helpers.php',
+	'class-spd-central-profile.php',
 	'class-spd-profile-repository.php',
 	'class-spd-media.php',
 	'class-spd-timeline.php',
 	'class-spd-routes.php',
 	'class-spd-rest.php',
+	'class-spd-central-rest.php',
 	'class-spd-frontend.php',
 	'class-spd-privacy.php',
 	'class-spd-observability.php',
@@ -62,47 +65,24 @@ $spd_files = array(
 	'class-spd-activator.php',
 	'class-spd-plugin.php',
 );
-foreach ( $spd_files as $spd_file ) {
-	require_once SPD_DIR . 'includes/' . $spd_file;
-}
+foreach ( $spd_files as $spd_file ) { require_once SPD_DIR . 'includes/' . $spd_file; }
 unset( $spd_files, $spd_file );
 
 register_activation_hook( SPD_FILE, array( 'SPD_Activator', 'activate' ) );
 register_deactivation_hook( SPD_FILE, array( 'SPD_Activator', 'deactivate' ) );
 
-/**
- * Public, versioned query contract for companion modules.
- *
- * @param int|string $identity User ID or canonical public UUID.
- * @param int        $viewer_id Viewer user ID, or 0 for a guest.
- * @return array|WP_Error
- */
-function spd_get_public_profile( $identity, $viewer_id = 0 ) {
-	return SPD_Profile_Repository::instance()->public_dto( $identity, absint( $viewer_id ) );
-}
+/** Public, versioned query contract for companion modules. */
+function spd_get_public_profile( $identity, $viewer_id = 0 ) { return SPD_Profile_Repository::instance()->public_dto( $identity, absint( $viewer_id ) ); }
+/** Public, versioned personal-site projection. */
+function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) { return SPD_Central_Profile::personal_site_dto( $identity, absint( $viewer_id ) ); }
+/** File 26 current, public-safe search projection. */
+function spd_get_search_projection( $identity ) { return SPD_Central_Profile::search_projection( $identity ); }
+/** Public, versioned timeline query contract. */
+function spd_get_profile_timeline( $identity, array $args = array(), $viewer_id = 0 ) { return SPD_Timeline::query( $identity, $args, absint( $viewer_id ) ); }
+/** Machine-readable profile-domain contract manifest. */
+function spd_get_profile_contract_manifest() { return SPD_Contracts::manifest(); }
+/** Delegated authority claim for File 08. This is authorization context, never appointment truth. */
+function spd_delegate_can_manage_profile_scope( $owner_user_id, $delegate_user_id, $scope ) { return SPD_Profile_Repository::instance()->delegate_can_manage( absint( $owner_user_id ), absint( $delegate_user_id ), sanitize_key( $scope ) ); }
 
-/**
- * Public, versioned timeline query contract.
- *
- * @param int|string $identity User ID or canonical public UUID.
- * @param array      $args Query arguments.
- * @param int        $viewer_id Viewer ID.
- * @return array|WP_Error
- */
-function spd_get_profile_timeline( $identity, array $args = array(), $viewer_id = 0 ) {
-	return SPD_Timeline::query( $identity, $args, absint( $viewer_id ) );
-}
-
-/**
- * Machine-readable profile-domain contract manifest.
- *
- * @return array
- */
-function spd_get_profile_contract_manifest() {
-	return SPD_Contracts::manifest();
-}
-
-function spd_start_plugin() {
-	( new SPD_Plugin() )->run();
-}
+function spd_start_plugin() { ( new SPD_Plugin() )->run(); }
 add_action( 'plugins_loaded', 'spd_start_plugin', 30 );

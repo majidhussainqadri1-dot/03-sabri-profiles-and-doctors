@@ -1,0 +1,104 @@
+name: File 03 Latest Plan Completion
+
+on:
+  push:
+    branches:
+      - 'codex/file-03-latest-plan-completion'
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-runtime:
+    name: PHP ${{ matrix.php }} — latest plans and regression
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: none
+          ini-file: production
+      - name: PHP syntax
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do php -l "$file"; done < <(find . -name '*.php' -type f -print0)
+      - name: JavaScript syntax
+        run: node --check assets/js/profiles.js
+      - name: Latest governing plan coverage
+        run: python3 tests/latest-plan-coverage.py
+      - name: Existing File 03 regression suites
+        run: |
+          set -euo pipefail
+          python3 tests/architecture-check.py
+          python3 tests/source-security-regression.py
+          python3 tests/schema-check.py
+          python3 tests/plan-coverage.py
+          python3 tests/forty-round-review.py
+          php tests/bootstrap-load.php
+          php tests/authorization-runtime.php
+          php tests/verification-runtime.php
+          php tests/state-runtime.php
+          php tests/timeline-runtime.php
+          php tests/forty-round-runtime.php
+
+  review-gates:
+    name: Two fresh post-code review gates
+    runs-on: ubuntu-latest
+    needs: source-and-runtime
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Review/Fix gate 1 — requirements and boundaries
+        run: python3 tests/latest-plan-review-1.py
+      - name: Review/Fix gate 2 — adversarial privacy and degradation
+        run: python3 tests/latest-plan-review-2.py
+
+  deterministic-package:
+    name: Deterministic package, checksum, SBOM and parity
+    runs-on: ubuntu-latest
+    needs: review-gates
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Build twice
+        run: |
+          set -euo pipefail
+          ./build-package.sh "$RUNNER_TEMP/a"
+          ./build-package.sh "$RUNNER_TEMP/b"
+      - name: Verify determinism and packaged latest-plan files
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n 's/^ \* Version: \(.*\)$/\1/p' sabri-profiles-doctors.php | head -1)"
+          NAME="03-sabri-profiles-and-doctors-$VERSION.zip"
+          cmp "$RUNNER_TEMP/a/$NAME" "$RUNNER_TEMP/b/$NAME"
+          (cd "$RUNNER_TEMP/a" && sha256sum -c "$NAME.sha256")
+          cmp "$RUNNER_TEMP/a/SBOM.json" "$RUNNER_TEMP/b/SBOM.json"
+          unzip -q "$RUNNER_TEMP/a/$NAME" -d "$RUNNER_TEMP/extract"
+          test -f "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/includes/class-spd-central-profile.php"
+          test -f "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/includes/class-spd-central-rest.php"
+          test -f "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/includes/trait-spd-profile-central.php"
+          test -f "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/includes/trait-spd-frontend-central.php"
+          diff -u sabri-profiles-doctors.php "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/sabri-profiles-doctors.php"
+          diff -ru includes "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/includes"
+          diff -ru assets "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/assets"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: file03-latest-plan-1.1.0-rc1
+          path: |
+            ${{ runner.temp }}/a/*.zip
+            ${{ runner.temp }}/a/*.sha256
+            ${{ runner.temp }}/a/SBOM.json
+          if-no-files-found: error
+          retention-days: 14
