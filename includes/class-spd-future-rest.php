@@ -46,10 +46,16 @@ final class SPD_Future_REST {
 		$idem = $repo->future_idempotency_begin( $actor, $command, $key, $hash );
 		if ( is_wp_error( $idem ) ) { return $this->response( $idem ); }
 		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $this->response( $idem['response'], $status ); }
-		$result = $callback();
+		$result = SPD_DB::transaction( function() use ( $repo, $actor, $command, $key, $callback ) {
+			$mutation = $callback();
+			if ( is_wp_error( $mutation ) ) { return $mutation; }
+			if ( ! is_array( $mutation ) ) { $mutation = array( 'ok' => (bool) $mutation ); }
+			if ( ! $repo->future_idempotency_complete( $actor, $command, $key, $mutation ) ) {
+				return new WP_Error( 'spd_idempotency_finalize_failed', __( 'The replay-protection result could not be committed.', 'sabri-profiles-doctors' ), array( 'status' => 500 ) );
+			}
+			return $mutation;
+		} );
 		if ( is_wp_error( $result ) ) { $repo->future_idempotency_fail( $actor, $command, $key ); return $this->response( $result ); }
-		if ( ! is_array( $result ) ) { $result = array( 'ok' => (bool) $result ); }
-		if ( ! $repo->future_idempotency_complete( $actor, $command, $key, $result ) ) { $repo->future_idempotency_fail( $actor, $command, $key ); return $this->response( new WP_Error( 'spd_idempotency_finalize_failed', __( 'The replay-protection result could not be committed.', 'sabri-profiles-doctors' ), array( 'status' => 500 ) ) ); }
 		return $this->response( $result, $status );
 	}
 
