@@ -12,6 +12,10 @@ final class SPD_Plugin {
 			$central = SPD_Central_Profile::install_schema();
 			if ( is_wp_error( $central ) ) { SPD_Observability::set_safe_mode( true, 'central_schema_install_failed' ); }
 		}
+		if ( SPD_Membership_Adapter::available() && ( get_option( 'spd_future_schema_version' ) !== SPD_Future_Profile::SCHEMA_VERSION || ! SPD_Future_Profile::schema_ready() ) ) {
+			$future = SPD_Future_Profile::install_schema();
+			if ( is_wp_error( $future ) ) { SPD_Observability::set_safe_mode( true, 'future_schema_install_failed' ); }
+		}
 		if ( SPD_Membership_Adapter::available() && get_option( 'spd_version' ) !== SPD_VERSION ) {
 			$upgrade = SPD_Activator::repair_owned_resources();
 			if ( is_wp_error( $upgrade ) ) { SPD_Observability::set_safe_mode( true, 'latest_plan_upgrade_failed' ); }
@@ -20,8 +24,10 @@ final class SPD_Plugin {
 		( new SPD_Routes() )->hooks();
 		( new SPD_REST() )->hooks();
 		( new SPD_Central_REST() )->hooks();
+		( new SPD_Future_REST() )->hooks();
 		( new SPD_Frontend() )->hooks();
 		( new SPD_Privacy() )->hooks();
+		( new SPD_Future_Privacy() )->hooks();
 		( new SPD_Observability() )->hooks();
 		( new SPD_Admin() )->hooks();
 		add_action( 'template_redirect', array( $this, 'private_headers' ), 0 );
@@ -44,6 +50,7 @@ final class SPD_Plugin {
 		if ( ! $is_profile_route && ! $is_managed_page ) { return; }
 		wp_enqueue_style( 'spd-profiles', SPD_URL . 'assets/css/profiles.css', array(), SPD_VERSION );
 		wp_enqueue_script( 'spd-profiles', SPD_URL . 'assets/js/profiles.js', array(), SPD_VERSION, true );
+		wp_enqueue_script( 'spd-future-profiles', SPD_URL . 'assets/js/future-profiles.js', array( 'spd-profiles' ), SPD_VERSION, true );
 		wp_localize_script( 'spd-profiles', 'SPDProfileUI', array( 'restUrl' => esc_url_raw( rest_url( 'sabri-profiles/v1/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'rtl' => is_rtl(), 'shareText' => __( 'View this verified profile on Sabri Social Homeopathy Platform', 'sabri-profiles-doctors' ), 'copiedText' => __( 'Link copied', 'sabri-profiles-doctors' ) ) );
 	}
 
@@ -67,7 +74,11 @@ final class SPD_Plugin {
 
 	public function file26_search_projection( $current, $identity ) {
 		if ( null !== $current && ! is_wp_error( $current ) ) { return $current; }
-		return SPD_Central_Profile::search_projection( $identity );
+		$out = SPD_Central_Profile::search_projection( $identity );
+		if ( is_wp_error( $out ) ) { return $out; }
+		$profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) $out['canonical_id'] );
+		if ( $profile ) { $out['professional_lifecycle'] = SPD_Future_Profile::lifecycle( $profile )['status']; }
+		return $out;
 	}
 
 	public function file08_delegation_claim( $claim, $owner_user_id, $delegate_user_id, $scope ) {

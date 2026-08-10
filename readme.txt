@@ -1,21 +1,42 @@
 === Sabri Profiles and Doctors ===
 Contributors: majidhussainqadri1-dot
-Tags: profiles, doctors, privacy, founder, timeline, personal-site, qr, seo
+Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials, knowledge, interoperability, federation
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.1.0-rc1
+Stable tag: 1.2.0-rc1
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
 
 == Description ==
 
-File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline content; File 20 owns the application/PWA shell and File 25 owns platform-wide visual components.
+File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.1.0-rc1 implements the 2026-08-07 latest-governing-plan addendum at repository level: doctor personal-site presentation, evidence-backed credential card projection, expertise taxonomy, current clinic/availability/appointment projection, revocable first-party share link and local QR, private responsive/RTL preview, scoped delegation, aggregate analytics projection, verified affiliations, File 26 search projection, expanded safety reports/appeals, Sabri Green fallback and current privacy/safety/ownership contracts.
+1.2.0-rc1 preserves the complete 1.1.0-rc1 latest-plan scope and adds the approved File 03 Future Professional Identity & Profile Superset — 18 Enhancements:
 
-No paid/pro/premium or donor-advantage gate exists in File 03. External canonical facts are never fabricated when their provider is absent or stale.
+1. Portable Verifiable Professional Credential Wallet.
+2. Selective-Disclosure Professional Card with expiring, revocable public-safe scope packets.
+3. Verified Learning & Achievement Passport.
+4. Professional Trust Timeline.
+5. Evidence-Backed Expertise Map.
+6. Professional Knowledge Graph Profile.
+7. Transparent Knowledge Coverage Map with no paid/donor influence or cure ranking.
+8. Grounded “Ask About This Doctor’s Work” AI, restricted to public professional work and blocked from diagnosis/prescription/dose/emergency/cure claims.
+9. Owner-approved multilingual profile editions with machine-translation labelling.
+10. Privacy-Safe Contact Relay through File 17 with recipient address hidden.
+11. Verified external-domain and institutional-link badges.
+12. One-page professional card plus structured full dossier.
+13. Scriptless, tracking-free embeddable verified profile card.
+14. Field-level freshness and owner reconfirmation.
+15. Owner-only visual profile change history.
+16. Governed retired / legacy / memorial professional lifecycle state with active contact/appointment suppression.
+17. Public-safe FHIR Practitioner / PractitionerRole interoperability projection with no patient record.
+18. Explicit-opt-in federation-ready public actor projection while federation transport remains external.
+
+The future extension adds only three native File 03 data structures: approved translations, field freshness attestations and future-profile state. Credential, learning, AI, contact, knowledge, clinic, search/ranking and federation facts remain current/versioned external projections. Future mutations reuse File 03’s canonical idempotency store and emit auditable events. Privacy export/erasure and two-gate destructive uninstall include the new File 03-owned data.
+
+No paid/pro/premium or donor-advantage gate exists in File 03. No third-party QR/tracking service, hidden viewer-level analytics store, patient chart, raw identity evidence, automatic doctor verification, cure guarantee or AI diagnosis/prescription is introduced. Missing or stale canonical providers fail closed or hide/degrade only the affected feature.
 
 This remains a staging candidate. Source/package/automated-QA status is separate from Hostinger staging, real-provider integration, browser/WCAG/RTL, backup/restore, rollback, Founder acceptance, live deployment and operations.
 
@@ -24,11 +45,21 @@ This remains a staging candidate. Source/package/automated-QA status is separate
 1. Back up and verify restore capability.
 2. Activate a compatible File 00 Membership Core.
 3. Install and activate this plugin on staging.
-4. Run Profile System Check and verify central extension schema.
-5. Execute documented migration, provider, accessibility, backup/restore and rollback acceptance matrices.
+4. Run Profile System Check and verify base, central and future extension schemas.
+5. Execute documented migration, privacy, provider, disclosure, AI-safety, interoperability, accessibility, backup/restore and rollback acceptance matrices.
 6. Do not promote to live until Founder approval and exact package/deployment parity are recorded.
 
 == Changelog ==
+
+= 1.2.0-rc1 =
+* Adds the complete approved 18-feature Future Professional Identity & Profile Superset under `F03-FUT-01..18` while preserving all canonical ownership boundaries.
+* Adds current/provider-backed credential wallet, learning passport, trust timeline, expertise evidence, knowledge graph/coverage, verified external links and File 17 privacy-safe contact relay.
+* Adds signed expiring selective disclosure, structured dossier, tracking-free embed card, owner-approved multilingual editions, freshness reconfirmation and owner-only change history.
+* Adds grounded File 16 work-Q&A with explicit diagnosis/prescription/dose/emergency/cure guardrails.
+* Adds governed active/retired/legacy lifecycle state, public-safe FHIR Practitioner/PractitionerRole projection and explicit-opt-in federation-ready actor projection without taking federation transport ownership.
+* Adds three additive future-profile tables, activation/repair integration, WordPress privacy export/erasure and guarded-uninstall coverage.
+* Reuses canonical File 03 Idempotency-Key replay protection for future mutations and emits future-profile audit/outbox events.
+* Preserves repository/staging/live/operational status separation.
 
 = 1.1.0-rc1 =
 * Implements the latest File 03 plan and 2026-08-07 central-plan addendum without taking ownership from Files 00/07/08/09/20/21/24/25/26.

@@ -37,4 +37,9 @@ final class SPD_Profile_Repository {
 	use SPD_Profile_Events;
 	use SPD_Profile_Cache;
 	use SPD_Profile_Central;
+
+	/** Narrow public wrappers let additive File 03 owner commands reuse the canonical replay-protection store. */
+	public function future_idempotency_begin( $actor_id, $command, $key, $request_hash ) { return $this->idempotency_begin( $actor_id, $command, $key, $request_hash, true ); }
+	public function future_idempotency_complete( $actor_id, $command, $key, array $response ) { return $this->idempotency_complete( $actor_id, $command, $key, $response ); }
+	public function future_idempotency_fail( $actor_id, $command, $key ) { $this->idempotency_fail( $actor_id, $command, $key ); }
 }
