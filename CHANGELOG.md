@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.0-rc1 — Future Professional Identity & Profile Superset — 18 Enhancements
+
+- Added `F03-FUT-01..18` as a bounded extension of the approved File 03 and central-plan architecture.
+- Added provider-backed portable credentials, learning/achievement passport, professional trust timeline, evidence-backed expertise, knowledge graph and transparent knowledge-coverage projections.
+- Added signed, expiring, revocable selective-disclosure packets restricted to public-safe scopes.
+- Added a File 16 grounded public-work assistant that rejects diagnosis, prescription, dose, emergency replacement and cure/outcome requests instead of falling back to local generative answers.
+- Added owner-approved multilingual editions, File 17 privacy-safe contact relay and provider-verified HTTPS external/institutional links.
+- Added one-page/full professional dossier projection and scriptless, tracking-free embeddable verified profile card.
+- Added field-level freshness attestations/reconfirmation and owner-only privacy-safe change-history projection.
+- Added governed active/retired/legacy professional lifecycle state; retired/legacy states suppress direct contact and appointment presentation.
+- Added FHIR Practitioner/PractitionerRole public professional projection without patient/clinical record ownership.
+- Added explicit-opt-in federation-ready actor projection; actual inbox/outbox transport remains external and current-contract gated.
+- Added only three new File 03-owned data structures: approved translations, freshness attestations and future-profile state. External credentials, achievements, AI, contact, content/knowledge, search/ranking, clinic and federation facts remain canonical projections.
+- Added activation/repair integration, WordPress privacy export/erasure, guarded uninstall coverage and canonical idempotency replay protection for future mutations.
+- Kept staging, live deployment and operational acceptance as separate evidence gates.
+
 ## 1.1.0-rc1 — Latest governing plans completion
 
 - Reconciled File 03 source with the newly supplied File 03 plan plus its 7 August 2026 central-plan addendum.
