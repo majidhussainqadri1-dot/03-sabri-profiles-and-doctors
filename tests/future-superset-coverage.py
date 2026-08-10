@@ -42,18 +42,19 @@ for n,tokens in features.items():
     for token in tokens:
         if token not in combined: fail.append(f'{rid}: missing {token}')
 
+retry_safe_client = 'formMutationKey' in js and 'idempotencyKey: formMutationKey(form, body)' in js and "options.idempotencyKey" in js
 security={
  'current provider claims':'current_contract_claim' in future,
  'external URL requires HTTPS':"'https'" in future and 'safe_external_url' in future,
  'selective disclosure signed':'hash_hmac' in future and 'hash_equals' in future,
  'disclosure is expiring':'exp' in future and 'spd_disclosure_expired' in future,
  'disclosure is revocable':'share_epoch' in future and 'spd_disclosure_revoked' in future,
- 'future mutations require idempotency':'future_idempotency_begin' in rest and 'Idempotency-Key' in rest and "{ idempotent: true }" in js,
+ 'future mutations require idempotency':'future_idempotency_begin' in rest and 'Idempotency-Key' in rest and retry_safe_client,
  'AI is grounded and medical-safe':'public_professional_work' in future and 'diagnos' in future and 'prescrib' in future and 'emergency' in future,
  'contact address hidden':'address_hidden' in future,
  'legacy needs governance':"'legacy' === $lifecycle && ! $is_governor" in future,
  'legacy suppresses contact':"$dto['contacts'] = array()" in future and "unset( $dto['clinic']['appointment_url'] )" in future,
- 'federation explicit opt-in':'federation_opt_in' in future and "if ( ! $opt_in )" in future,
+ 'federation explicit opt-in':'federation_opt_in' in future and "if ( ! $opt_in )" in future and 'spd_federation_owner_opt_in_required' in rest,
  'federation transport external':'sabri_federation_actor_transport_v1' in future and "'transport_owner' => 'external'" in future,
  'FHIR excludes clinical record':"'clinical_record' => false" in future,
  'privacy exporter/eraser':'wp_privacy_personal_data_exporters' in privacy and 'wp_privacy_personal_data_erasers' in privacy,
@@ -72,4 +73,4 @@ if fail:
     print('Future superset coverage failures:', file=sys.stderr)
     for item in fail: print('- '+item, file=sys.stderr)
     sys.exit(1)
-print('Future Professional Identity & Profile Superset passed: 18/18 features traced with ownership, privacy, safety, interoperability and replay-protection guards.')
+print('Future Professional Identity & Profile Superset passed: 18/18 features traced with ownership, privacy, safety, interoperability and retry-safe replay-protection guards.')
