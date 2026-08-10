@@ -31,15 +31,20 @@ jobs:
         run: python3 tests/future-superset-coverage.py
       - name: Latest governing-plan coverage
         run: python3 tests/latest-plan-coverage.py
-      - name: Architecture and security regression
+      - name: Fresh governing review gates
         run: |
           python3 tests/architecture-check.py
-          python3 tests/security-check.py
-          python3 tests/schema-check.py
+          python3 tests/future-two-review-gates.py
+          python3 tests/latest-plan-review-1.py
+          python3 tests/latest-plan-review-2.py
       - name: Existing forty-round regression
         run: python3 tests/forty-round-review.py
-      - name: Runtime composition smoke
+      - name: Runtime composition and security smoke
         run: |
           php tests/bootstrap-load.php
           php tests/authorization-runtime.php
+          php tests/security-unit.php
+          php tests/state-runtime.php
+          php tests/verification-runtime.php
+          php tests/timeline-runtime.php
           php tests/forty-round-runtime.php
