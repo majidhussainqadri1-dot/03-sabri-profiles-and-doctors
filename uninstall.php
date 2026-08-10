@@ -10,6 +10,7 @@ global $wpdb;
 foreach ( array( 'spd_dispatch_outbox', 'spd_migrate_profiles_batch', 'spd_retention_cleanup', 'spd_process_media_deletions' ) as $hook ) {
 	wp_clear_scheduled_hook( $hook );
 }
+delete_transient( 'spd_migration_lock' );
 
 $attachment_refs = array();
 $profiles_table  = $wpdb->prefix . 'spd_profiles';
@@ -61,3 +62,11 @@ foreach ( array(
 ) as $option ) {
 	delete_option( $option );
 }
+
+// Corrective synchronization/rate-limiter keys are dynamic. They are strictly
+// File-03-owned prefixes and are removed only inside the explicit destructive
+// uninstall gate above.
+$lock_like = $wpdb->esc_like( 'spd_lock_' ) . '%';
+$rate_like = $wpdb->esc_like( '_transient_spd_rate_' ) . '%';
+$rate_timeout_like = $wpdb->esc_like( '_transient_timeout_spd_rate_' ) . '%';
+$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s", $lock_like, $rate_like, $rate_timeout_like ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared

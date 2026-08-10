@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Profiles and Doctors
  * Plugin URI: https://www.sabrihomeopathy.com/
  * Description: Canonical, privacy-controlled Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
- * Version: 1.2.0-rc1
+ * Version: 1.2.0-rc2
  * Requires at least: 7.0
  * Requires PHP: 8.1
  * Author: Dr. Allamah Majid Hussain Sabri
@@ -13,10 +13,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SPD_VERSION', '1.2.0-rc1' );
+define( 'SPD_VERSION', '1.2.0-rc2' );
 define( 'SPD_DB_VERSION', '1.2.0' );
 define( 'SPD_CONTRACT_VERSION', '1.4.0' );
-define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18' );
+define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW' );
 define( 'SPD_FILE', __FILE__ );
 define( 'SPD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SPD_URL', plugin_dir_url( __FILE__ ) );
@@ -83,7 +83,12 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 	$dto = SPD_Central_Profile::personal_site_dto( $identity, $viewer_id );
 	if ( is_wp_error( $dto ) ) { return $dto; }
 	$profile = SPD_Profile_Repository::instance()->find_by_public_id( $dto['public_id'] );
-	return $profile ? SPD_Future_Profile::augment_personal_site_dto( $dto, $profile, $viewer_id ) : $dto;
+	if ( ! $profile ) { return $dto; }
+	$dto = SPD_Future_Profile::augment_personal_site_dto( $dto, $profile, $viewer_id );
+	if ( isset( $dto['future']['federation'] ) && is_array( $dto['future']['federation'] ) ) {
+		$dto['future']['federation']['transport_active'] = ! empty( $dto['future']['federation']['inbox'] ) && ! empty( $dto['future']['federation']['outbox'] );
+	}
+	return $dto;
 }
 /** File 26 current, public-safe search projection. */
 function spd_get_search_projection( $identity ) { return SPD_Central_Profile::search_projection( $identity ); }

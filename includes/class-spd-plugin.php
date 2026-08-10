@@ -2,6 +2,8 @@
 defined( 'ABSPATH' ) || exit;
 
 final class SPD_Plugin {
+	private $migration_lock_token = '';
+
 	public function run() {
 		load_plugin_textdomain( 'sabri-profiles-doctors', false, dirname( plugin_basename( SPD_FILE ) ) . '/languages' );
 		if ( SPD_Membership_Adapter::available() && ( get_option( 'spd_db_version' ) !== SPD_DB_VERSION || ! SPD_DB::tables_exist() ) ) {
@@ -30,6 +32,9 @@ final class SPD_Plugin {
 		( new SPD_Future_Privacy() )->hooks();
 		( new SPD_Observability() )->hooks();
 		( new SPD_Admin() )->hooks();
+		add_action( 'admin_post_spd_save_profile', array( $this, 'guard_profile_media_upload_rate' ), 1 );
+		add_action( 'spd_migrate_profiles_batch', array( $this, 'before_migration_batch' ), 0 );
+		add_action( 'spd_migrate_profiles_batch', array( $this, 'after_migration_batch' ), 99 );
 		add_action( 'template_redirect', array( $this, 'private_headers' ), 0 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );
@@ -43,6 +48,39 @@ final class SPD_Plugin {
 
 	public function private_headers() { ( new SPD_Routes() )->private_headers(); }
 
+	public function guard_profile_media_upload_rate() {
+		if ( ! is_user_logged_in() ) { return; }
+		$user_id = get_current_user_id();
+		foreach ( array( 'avatar', 'cover' ) as $purpose ) {
+			if ( empty( $_FILES[ $purpose ]['name'] ) ) { continue; }
+			if ( ! SPD_Helpers::consume_rate_limit( 'media_upload_' . $user_id, 10, HOUR_IN_SECONDS ) ) {
+				wp_die( esc_html__( 'Too many profile uploads were attempted. Try again later.', 'sabri-profiles-doctors' ), '', array( 'response' => 429, 'back_link' => true ) );
+			}
+		}
+	}
+
+	/**
+	 * Serialize migration requests before the historical transient guard runs.
+	 * A contending request sets the compatibility transient so the legacy runner
+	 * returns without touching the migration cursor. The owner token remains the
+	 * authoritative lock and is released only by this request at priority 99.
+	 */
+	public function before_migration_batch() {
+		$this->migration_lock_token = SPD_Helpers::acquire_lock( 'migration_batch', 10 * MINUTE_IN_SECONDS );
+		if ( ! $this->migration_lock_token ) {
+			set_transient( 'spd_migration_lock', 1, 10 * MINUTE_IN_SECONDS );
+			return;
+		}
+		delete_transient( 'spd_migration_lock' );
+	}
+
+	public function after_migration_batch() {
+		if ( $this->migration_lock_token ) {
+			SPD_Helpers::release_lock( 'migration_batch', $this->migration_lock_token );
+			$this->migration_lock_token = '';
+		}
+	}
+
 	public function assets() {
 		$map = (array) get_option( 'spd_page_map', array() );
 		$is_profile_route = (bool) get_query_var( 'spd_public_id' );
@@ -51,7 +89,9 @@ final class SPD_Plugin {
 		wp_enqueue_style( 'spd-profiles', SPD_URL . 'assets/css/profiles.css', array(), SPD_VERSION );
 		wp_enqueue_script( 'spd-profiles', SPD_URL . 'assets/js/profiles.js', array(), SPD_VERSION, true );
 		wp_enqueue_script( 'spd-future-profiles', SPD_URL . 'assets/js/future-profiles.js', array( 'spd-profiles' ), SPD_VERSION, true );
-		wp_localize_script( 'spd-profiles', 'SPDProfileUI', array( 'restUrl' => esc_url_raw( rest_url( 'sabri-profiles/v1/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'rtl' => is_rtl(), 'shareText' => __( 'View this verified profile on Sabri Social Homeopathy Platform', 'sabri-profiles-doctors' ), 'copiedText' => __( 'Link copied', 'sabri-profiles-doctors' ) ) );
+		$user_id = get_current_user_id();
+		$can_govern_legacy = $user_id && ( SPD_Membership_Adapter::can_manage_founder( $user_id ) || SPD_Membership_Adapter::can_operate_profiles( $user_id ) );
+		wp_localize_script( 'spd-profiles', 'SPDProfileUI', array( 'restUrl' => esc_url_raw( rest_url( 'sabri-profiles/v1/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'rtl' => is_rtl(), 'canGovernLegacy' => (bool) $can_govern_legacy, 'shareText' => __( 'View this verified profile on Sabri Social Homeopathy Platform', 'sabri-profiles-doctors' ), 'copiedText' => __( 'Link copied', 'sabri-profiles-doctors' ) ) );
 	}
 
 	public function admin_assets( $hook ) { if ( false !== strpos( (string) $hook, 'sabri-profiles' ) ) { wp_enqueue_style( 'spd-admin', SPD_URL . 'assets/css/admin.css', array(), SPD_VERSION ); } }

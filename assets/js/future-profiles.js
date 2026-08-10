@@ -4,6 +4,10 @@
   const base = String(cfg.restUrl || '').replace(/\/?$/, '/');
   const nonce = String(cfg.nonce || '');
 
+  if (!cfg.canGovernLegacy) {
+    document.querySelectorAll('[data-spd-future-state] option[value="legacy"]').forEach((option) => option.remove());
+  }
+
   function mutationKey() {
     if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
     return `spd-${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;

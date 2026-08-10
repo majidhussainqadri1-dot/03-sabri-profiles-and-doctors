@@ -135,6 +135,7 @@ final class SPD_Future_Profile {
 		$ttl = min( self::DISCLOSURE_MAX_TTL, max( 300, absint( $ttl ) ) );
 		$payload = array( 'pid' => $profile['public_id'], 'epoch' => SPD_Central_Profile::share_epoch( $profile ), 'scopes' => $scopes, 'exp' => time() + $ttl );
 		$json = wp_json_encode( $payload );
+		if ( false === $json ) { return new WP_Error( 'spd_disclosure_encode_failed', __( 'The disclosure link could not be created.', 'sabri-profiles-doctors' ), array( 'status' => 500 ) ); }
 		$body = rtrim( strtr( base64_encode( $json ), '+/', '-_' ), '=' ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		$sig = hash_hmac( 'sha256', $body, wp_salt( 'auth' ) );
 		return $body . '.' . $sig;
@@ -148,7 +149,7 @@ final class SPD_Future_Profile {
 		if ( ! is_array( $p ) || empty( $p['pid'] ) || empty( $p['scopes'] ) || time() > absint( $p['exp'] ?? 0 ) ) { return new WP_Error( 'spd_disclosure_expired', __( 'This disclosure link has expired.', 'sabri-profiles-doctors' ), array( 'status' => 410 ) ); }
 		$profile = SPD_Profile_Repository::instance()->find_by_public_id( sanitize_text_field( $p['pid'] ) );
 		if ( ! $profile || absint( $p['epoch'] ?? 0 ) !== SPD_Central_Profile::share_epoch( $profile ) || ! SPD_Authorization::profile_visibility_allows( $profile, 0 ) ) { return new WP_Error( 'spd_disclosure_revoked', __( 'This disclosure link is no longer available.', 'sabri-profiles-doctors' ), array( 'status' => 410 ) ); }
-		$dto = SPD_Central_Profile::personal_site_dto( $profile['public_id'], 0 );
+		$dto = spd_get_personal_site_profile( $profile['public_id'], 0 );
 		if ( is_wp_error( $dto ) ) { return $dto; }
 		$out = array( 'contract_version' => SPD_CONTRACT_VERSION, 'expires_at' => gmdate( 'c', absint( $p['exp'] ) ), 'scopes' => array_values( $p['scopes'] ) );
 		foreach ( $p['scopes'] as $scope ) {
@@ -343,7 +344,10 @@ final class SPD_Future_Profile {
 		$out = array( 'opt_in' => $opt_in, 'actor_id' => $dto['canonical_url'] . '#actor', 'type' => 'Person', 'name' => $dto['display_name'], 'url' => $dto['canonical_url'], 'transport_owner' => 'external', 'transport_active' => false );
 		if ( ! $opt_in ) { return $out; }
 		$claim = self::current_claim( 'sabri_federation_actor_transport_v1', $profile['user_id'], 0, 300 );
-		if ( $claim && ! empty( $claim['active'] ) ) { foreach ( array( 'inbox','outbox' ) as $key ) { if ( ! empty( $claim[ $key ] ) && SPD_Helpers::same_origin_url( (string) $claim[ $key ] ) ) { $out[ $key ] = esc_url_raw( $claim[ $key ] ); } } $out['transport_active'] = ! empty( $out['inbox'] ); }
+		if ( $claim && ! empty( $claim['active'] ) ) {
+			foreach ( array( 'inbox','outbox' ) as $key ) { if ( ! empty( $claim[ $key ] ) && SPD_Helpers::same_origin_url( (string) $claim[ $key ] ) ) { $out[ $key ] = esc_url_raw( $claim[ $key ] ); } }
+			$out['transport_active'] = ! empty( $out['inbox'] ) && ! empty( $out['outbox'] );
+		}
 		return $out;
 	}
 
@@ -397,9 +401,9 @@ final class SPD_Future_Profile {
 		$table = self::translations_table(); $now = SPD_Helpers::now();
 		$existing = $wpdb->get_row( $wpdb->prepare( "SELECT id,version FROM {$table} WHERE profile_id=%d AND locale=%s LIMIT 1", $profile['id'], $locale ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$data = array( 'headline' => $headline, 'bio' => $bio, 'source' => $source, 'status' => 'approved', 'approved_by' => absint( $actor_id ), 'updated_at' => $now );
-		if ( $existing ) { $data['version'] = absint( $existing['version'] ) + 1; $ok = false !== $wpdb->update( $table, $data, array( 'id' => absint( $existing['id'] ) ) ); }
+		if ( $existing ) { $data['version'] = absint( $existing['version'] ) + 1; $ok = 1 === $wpdb->update( $table, $data, array( 'id' => absint( $existing['id'] ), 'version' => absint( $existing['version'] ) ) ); }
 		else { $data += array( 'profile_id' => absint( $profile['id'] ), 'locale' => $locale, 'version' => 1, 'created_at' => $now ); $ok = (bool) $wpdb->insert( $table, $data ); }
-		if ( ! $ok || ! self::insert_event( 'ProfileTranslationUpdated.v1', $profile, array( 'changed_fields' => array( 'translation:' . $locale ), 'version' => absint( $profile['version'] ) ) ) ) { return new WP_Error( 'spd_translation_save_failed', __( 'The profile translation could not be saved.', 'sabri-profiles-doctors' ), array( 'status' => 500 ) ); }
+		if ( ! $ok || ! self::insert_event( 'ProfileTranslationUpdated.v1', $profile, array( 'changed_fields' => array( 'translation:' . $locale ), 'version' => absint( $profile['version'] ) ) ) ) { return new WP_Error( 'spd_translation_save_failed', __( 'The profile translation changed concurrently or could not be saved.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
 		return array( 'locale' => $locale, 'source' => $source, 'approved' => true );
 	}
 
@@ -410,15 +414,17 @@ final class SPD_Future_Profile {
 		$days = min( 730, max( 30, absint( $days ) ) ); $now = SPD_Helpers::now(); $expires = gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS * $days ); $table = self::attestations_table();
 		$existing = $wpdb->get_row( $wpdb->prepare( "SELECT id,version FROM {$table} WHERE profile_id=%d AND field_key=%s LIMIT 1", $profile['id'], $field_key ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$data = array( 'confirmed_by' => absint( $actor_id ), 'confirmed_at' => $now, 'expires_at' => $expires );
-		if ( $existing ) { $data['version'] = absint( $existing['version'] ) + 1; $ok = false !== $wpdb->update( $table, $data, array( 'id' => absint( $existing['id'] ) ) ); }
+		if ( $existing ) { $data['version'] = absint( $existing['version'] ) + 1; $ok = 1 === $wpdb->update( $table, $data, array( 'id' => absint( $existing['id'] ), 'version' => absint( $existing['version'] ) ) ); }
 		else { $data += array( 'profile_id' => absint( $profile['id'] ), 'field_key' => $field_key, 'version' => 1 ); $ok = (bool) $wpdb->insert( $table, $data ); }
-		if ( ! $ok || ! self::insert_event( 'ProfileFieldReconfirmed.v1', $profile, array( 'changed_fields' => array( $field_key ), 'version' => absint( $profile['version'] ) ) ) ) { return new WP_Error( 'spd_reconfirm_failed', __( 'The field confirmation could not be saved.', 'sabri-profiles-doctors' ), array( 'status' => 500 ) ); }
+		if ( ! $ok || ! self::insert_event( 'ProfileFieldReconfirmed.v1', $profile, array( 'changed_fields' => array( $field_key ), 'version' => absint( $profile['version'] ) ) ) ) { return new WP_Error( 'spd_reconfirm_failed', __( 'The field confirmation changed concurrently or could not be saved.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
 		return array( 'field_key' => $field_key, 'confirmed_at' => $now, 'expires_at' => $expires );
 	}
 
 	public static function set_future_state( $actor_id, $public_id, array $input ) {
 		global $wpdb; $profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) $public_id ); if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
-		$actor_id = absint( $actor_id ); $is_owner = absint( $profile['user_id'] ) === $actor_id; $is_governor = SPD_Membership_Adapter::is_founder( $actor_id ) || current_user_can( 'manage_options' );
+		$actor_id = absint( $actor_id );
+		$is_owner = absint( $profile['user_id'] ) === $actor_id;
+		$is_governor = SPD_Membership_Adapter::can_manage_founder( $actor_id ) || SPD_Membership_Adapter::can_operate_profiles( $actor_id );
 		if ( ! $is_owner && ! $is_governor ) { return new WP_Error( 'spd_forbidden', __( 'You cannot change this professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		if ( $is_owner ) { $guard = SPD_Authorization::mutation_guard( $profile, $actor_id ); if ( is_wp_error( $guard ) ) { return $guard; } }
 		$current = self::state_for_profile( $profile['id'] ); $federation = array_key_exists( 'federation_opt_in', $input ) ? ( ! empty( $input['federation_opt_in'] ) ? 1 : 0 ) : absint( $current['federation_opt_in'] );
@@ -428,8 +434,9 @@ final class SPD_Future_Profile {
 		$now = SPD_Helpers::now(); $changed_at = $lifecycle !== $current['professional_lifecycle'] ? $now : ( $current['lifecycle_changed_at'] ?: $now ); $table = self::state_table();
 		$data = array( 'federation_opt_in' => $federation, 'professional_lifecycle' => $lifecycle, 'lifecycle_reason' => $reason, 'lifecycle_changed_at' => $changed_at, 'version' => absint( $current['version'] ) + 1, 'updated_at' => $now );
 		$exists = $wpdb->get_var( $wpdb->prepare( "SELECT profile_id FROM {$table} WHERE profile_id=%d", $profile['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$ok = $exists ? false !== $wpdb->update( $table, $data, array( 'profile_id' => absint( $profile['id'] ) ) ) : (bool) $wpdb->insert( $table, array_merge( array( 'profile_id' => absint( $profile['id'] ) ), $data ) );
-		if ( ! $ok || ! self::insert_event( 'ProfileFutureStateChanged.v1', $profile, array( 'changed_fields' => array( 'federation_opt_in','professional_lifecycle' ), 'version' => absint( $profile['version'] ), 'lifecycle' => $lifecycle ) ) ) { return new WP_Error( 'spd_future_state_save_failed', __( 'The future-profile state could not be saved.', 'sabri-profiles-doctors' ), array( 'status' => 500 ) ); }
+		if ( $exists ) { $ok = 1 === $wpdb->update( $table, $data, array( 'profile_id' => absint( $profile['id'] ), 'version' => absint( $current['version'] ) ) ); }
+		else { $ok = (bool) $wpdb->insert( $table, array_merge( array( 'profile_id' => absint( $profile['id'] ) ), $data ) ); }
+		if ( ! $ok || ! self::insert_event( 'ProfileFutureStateChanged.v1', $profile, array( 'changed_fields' => array( 'federation_opt_in','professional_lifecycle' ), 'version' => absint( $profile['version'] ), 'lifecycle' => $lifecycle ) ) ) { return new WP_Error( 'spd_future_state_save_failed', __( 'The future-profile state changed concurrently or could not be saved.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
 		return array( 'federation_opt_in' => (bool) $federation, 'professional_lifecycle' => $lifecycle, 'lifecycle_changed_at' => $changed_at );
 	}
 }

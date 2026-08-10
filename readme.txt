@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials,
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.0-rc1
+Stable tag: 1.2.0-rc2
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -13,7 +13,9 @@ Canonical Founder, member and doctor profile domain for the Sabri Social Homeopa
 
 File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.2.0-rc1 preserves the complete 1.1.0-rc1 latest-plan scope and adds the approved File 03 Future Professional Identity & Profile Superset — 18 Enhancements:
+1.2.0-rc2 preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements introduced in rc1 and applies an 80-round corrective review. The review corrected atomic activation/migration locking, Founder singleton refresh propagation, strict optimistic-concurrency preconditions, transactional future replay/event coupling, delegation/report/appeal integrity, bounded media/report/AI abuse controls, selective-disclosure future scopes, governed legacy UI/server alignment, federation inbox+outbox readiness and guarded-uninstall cleanup.
+
+The approved 18 enhancements remain:
 
 1. Portable Verifiable Professional Credential Wallet.
 2. Selective-Disclosure Professional Card with expiring, revocable public-safe scope packets.
@@ -34,7 +36,7 @@ File 03 owns stable public profile identity, presentation fields, field visibili
 17. Public-safe FHIR Practitioner / PractitionerRole interoperability projection with no patient record.
 18. Explicit-opt-in federation-ready public actor projection while federation transport remains external.
 
-The future extension adds only three native File 03 data structures: approved translations, field freshness attestations and future-profile state. Credential, learning, AI, contact, knowledge, clinic, search/ranking and federation facts remain current/versioned external projections. Future mutations reuse File 03’s canonical idempotency store and emit auditable events. Privacy export/erasure and two-gate destructive uninstall include the new File 03-owned data.
+The future extension adds only three native File 03 data structures: approved translations, field freshness attestations and future-profile state. Credential, learning, AI, contact, knowledge, clinic, search/ranking and federation facts remain current/versioned external projections. Future native mutations use File 03’s canonical idempotency store; write, outbox evidence and replay-result finalization are a transactional outcome on rc2. Privacy export/erasure and two-gate destructive uninstall include the File 03-owned data and corrective dynamic lock/rate state.
 
 No paid/pro/premium or donor-advantage gate exists in File 03. No third-party QR/tracking service, hidden viewer-level analytics store, patient chart, raw identity evidence, automatic doctor verification, cure guarantee or AI diagnosis/prescription is introduced. Missing or stale canonical providers fail closed or hide/degrade only the affected feature.
 
@@ -50,6 +52,19 @@ This remains a staging candidate. Source/package/automated-QA status is separate
 6. Do not promote to live until Founder approval and exact package/deployment parity are recorded.
 
 == Changelog ==
+
+= 1.2.0-rc2 =
+* Completes the numbered 80-round corrective review recorded in `EIGHTY-ROUND-REVIEW.md`; defects were found and immediately corrected in 18 rounds and 62 rounds were clean.
+* Replaces race-prone activation/migration and user-abuse counters with owner-safe atomic locking/serialized rate-limit primitives where File 03 owns the state.
+* Enforces Founder singleton during identity transitions and propagates identity refresh through outbox, cache invalidation and reconciliation evidence.
+* Hardens malformed `If-Match`, delegation grant/revoke, safety reports and report appeals with stricter concurrency, replay and transactional event semantics.
+* Makes future-profile native mutation, outbox evidence and replay-result finalization one transactional outcome.
+* Completes selective-disclosure credential/expertise/achievement scopes from the current augmented public-safe profile projection.
+* Adds bounded grounded-AI abuse throttling and aligns legacy lifecycle UI with current governed server authority.
+* Requires both current federation inbox and outbox before transport can be marked active.
+* Extends guarded destructive uninstall to remove File-03-owned dynamic corrective lock/rate state.
+* Adds exact-candidate `tests/eighty-round-review.py`, independent adversarial post-correction review and rc2 deterministic package/SBOM/parity gates.
+* Preserves staging/live/operational separation; no live deployment claim is made.
 
 = 1.2.0-rc1 =
 * Adds the complete approved 18-feature Future Professional Identity & Profile Superset under `F03-FUT-01..18` while preserving all canonical ownership boundaries.

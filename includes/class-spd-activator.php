@@ -7,11 +7,11 @@ final class SPD_Activator {
 			deactivate_plugins( plugin_basename( SPD_FILE ) );
 			wp_die( esc_html__( 'Activate a compatible File 00 — Sabri Membership Core before File 03.', 'sabri-profiles-doctors' ), '', array( 'back_link' => true ) );
 		}
-		if ( get_transient( 'spd_activation_lock' ) ) {
+		$activation_lock = SPD_Helpers::acquire_lock( 'activation', 10 * MINUTE_IN_SECONDS );
+		if ( ! $activation_lock ) {
 			deactivate_plugins( plugin_basename( SPD_FILE ) );
 			wp_die( esc_html__( 'File 03 activation is already running. Wait briefly and retry.', 'sabri-profiles-doctors' ), '', array( 'back_link' => true ) );
 		}
-		set_transient( 'spd_activation_lock', 1, 10 * MINUTE_IN_SECONDS );
 		try {
 			$repair = self::repair_owned_resources();
 			if ( is_wp_error( $repair ) ) { throw new RuntimeException( $repair->get_error_message() ); }
@@ -26,7 +26,9 @@ final class SPD_Activator {
 		} catch ( Throwable $exception ) {
 			deactivate_plugins( plugin_basename( SPD_FILE ) );
 			wp_die( esc_html( $exception->getMessage() ), '', array( 'back_link' => true ) );
-		} finally { delete_transient( 'spd_activation_lock' ); }
+		} finally {
+			SPD_Helpers::release_lock( 'activation', $activation_lock );
+		}
 	}
 
 	public static function deactivate() {

@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+def text(path): return (ROOT / path).read_text(encoding='utf-8')
+def require(condition, message):
+    if not condition: raise SystemExit(message)
+
+main = text('sabri-profiles-doctors.php')
+helpers = text('includes/class-spd-helpers.php')
+activator = text('includes/class-spd-activator.php')
+plugin = text('includes/class-spd-plugin.php')
+identity = text('includes/trait-spd-profile-identity-create.php')
+central_rest = text('includes/class-spd-central-rest.php')
+central = text('includes/trait-spd-profile-central.php')
+future_rest = text('includes/class-spd-future-rest.php')
+future = text('includes/class-spd-future-profile.php')
+privacy = text('includes/class-spd-future-privacy.php')
+uninstall = text('uninstall.php')
+js = text('assets/js/future-profiles.js')
+ledger = text('EIGHTY-ROUND-REVIEW.md')
+
+# Fresh adversarial gate: intentionally checks negative properties and cross-file coupling,
+# not merely the same positive tokens used by eighty-round-review.py.
+require("'1.2.0-rc2'" in main and '80-ROUND-CORRECTIVE-REVIEW' in main, 'Candidate identity drifted')
+require("set_transient( 'spd_activation_lock'" not in activator, 'Race-prone activation transient returned')
+require("add_option( $key, $value, '', false )" in helpers and 'hash_equals' in helpers, 'Atomic lock lacks owner-safe acquire/release')
+require("acquire_lock( 'migration_batch'" in plugin, 'Migration outer serialization missing')
+require("profile_type='founder' AND id<>%d" in identity, 'Founder singleton transition guard missing')
+require("'identity_refresh'" in identity and 'purge_profile_cache' in identity and 'spd_reconciliation_required' in identity, 'Identity refresh does not fully propagate')
+require("return preg_match" in central_rest and ": 0;" in central_rest, 'Malformed If-Match may still bypass concurrency guard')
+require("idempotency_begin( $owner_id, 'grant_profile_delegate'" in central and "idempotency_complete( $owner_id, 'grant_profile_delegate'" in central, 'Delegation grant replay contract incomplete')
+require("idempotency_begin( $owner_id, 'revoke_profile_delegate'" in central and "status='active'" in central, 'Delegation revoke active-row/replay guard incomplete')
+require("idempotency_begin( $requester_id, 'request_report_appeal'" in central and 'ProfileReportAppealed.v1' in central, 'Report appeal is not replay-safe/auditable')
+require("consume_rate_limit( 'profile_report_'" in central, 'Safety-report concurrency throttle absent')
+require('SPD_DB::transaction( function() use ( $repo, $actor, $command, $key, $callback )' in future_rest, 'Future mutation callback is outside transaction')
+require('future_idempotency_complete( $actor, $command, $key, $mutation )' in future_rest, 'Future replay finalization is not part of mutation transaction')
+require("consume_rate_limit( 'ask_work_'" in future_rest, 'AI route lacks bounded abuse control')
+require("case 'credentials'" in future_rest and "case 'expertise'" in future_rest and "case 'achievements'" in future_rest, 'Selective disclosure future scopes are not populated')
+require('can_manage_founder( $actor )' in future_rest and 'can_operate_profiles( $actor )' in future_rest, 'Future lifecycle governance is not actor-bound')
+require("current_user_can( 'manage_options' )" not in future_rest, 'Future-state server route regressed to WordPress role shortcut')
+require('canGovernLegacy' in plugin and 'canGovernLegacy' in js, 'Legacy governance UI does not mirror current server capability')
+require("! empty( $dto['future']['federation']['inbox'] ) && ! empty( $dto['future']['federation']['outbox'] )" in main, 'Federation transport activates without both endpoints')
+require('spd_profile_legal_hold' in privacy and 'spd_future_profile_legal_hold' in privacy, 'Future privacy erasure lost legal/governance hold checks')
+require("'spd_lock_'" in uninstall and "'_transient_spd_rate_'" in uninstall, 'Dynamic corrective state is orphaned by destructive uninstall')
+require('Rounds with defects found and corrected' in ledger and '18' in ledger and '62' in ledger, '80-round ledger totals missing')
+require('Exact deployed code remains unverified' in ledger, 'Live/deployed truth boundary missing')
+
+print('Independent post-correction adversarial gate passed.')
