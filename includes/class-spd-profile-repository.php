@@ -5,9 +5,7 @@ final class SPD_Profile_Repository {
 	private static $instance;
 
 	public static function instance() {
-		if ( ! self::$instance ) {
-			self::$instance = new self();
-		}
+		if ( ! self::$instance ) { self::$instance = new self(); }
 		return self::$instance;
 	}
 
@@ -16,16 +14,17 @@ final class SPD_Profile_Repository {
 	}
 
 	public static function editable_fields() {
-		return array_merge( array( 'bio', 'country', 'city', 'languages', 'studied_books', 'locale' ), self::founder_fields() );
+		return array_merge( array( 'bio', 'country', 'city', 'languages', 'studied_books', 'locale' ), SPD_Central_Profile::extended_fields(), self::founder_fields() );
 	}
 
 	public static function professional_fields() {
-		return array( 'professional_title', 'qualification', 'licence_number', 'licensing_authority', 'experience_years', 'specialty', 'consultation_modes' );
+		return array( 'professional_title', 'qualification', 'degree', 'institution', 'licence_number', 'licensing_authority', 'jurisdiction', 'credential_issued_at', 'credential_expires_at', 'experience_years', 'specialty', 'consultation_modes' );
 	}
 
 	public static function visibility_fields() {
-		return array_merge( array( 'profile_visibility', 'bio', 'country', 'city', 'languages', 'studied_books', 'phone', 'email', 'whatsapp', 'internal_message' ), self::founder_fields() );
+		return array_merge( array( 'profile_visibility', 'bio', 'country', 'city', 'languages', 'studied_books', 'phone', 'email', 'whatsapp', 'internal_message' ), SPD_Central_Profile::extended_fields(), self::founder_fields() );
 	}
+
 	use SPD_Profile_Identity_Create;
 	use SPD_Profile_Identity_Read;
 	use SPD_Profile_Public_DTO;
@@ -37,4 +36,5 @@ final class SPD_Profile_Repository {
 	use SPD_Profile_Lifecycle;
 	use SPD_Profile_Events;
 	use SPD_Profile_Cache;
+	use SPD_Profile_Central;
 }
