@@ -27,7 +27,7 @@ checks = []
 def check(round_no, name, condition, detail):
     checks.append((round_no, name, bool(condition), detail))
 
-check(1, 'Release identity', "Version: 1.0.0-rc3" in main and "SPD_CONTRACT_VERSION', '1.2.1'" in main, 'rc3 and contract 1.2.1 are aligned')
+check(1, 'Release identity', "Version: 1.1.0-rc1" in main and "SPD_CONTRACT_VERSION', '1.3.0'" in main, '1.1.0-rc1 and contract 1.3.0 are aligned')
 check(2, 'Canonical ownership', 'smc_' not in ''.join(re.findall(r'FROM\s+[^\n]+', public_dto, re.I)), 'no direct File 00 table reads')
 check(3, 'Unknown-age fail-closed', "'founder' !== $account_type" in membership and "array( 'founder', 'doctor' )" not in membership, 'unknown-age doctors are minor-safe')
 check(4, 'Guardian current claims', 'current_contract_claim( $claim' in membership and 'guardian_verified' in membership, 'guardian claim is versioned/current')
@@ -76,8 +76,8 @@ names_clean = not any(x.is_file() and x.name.lower() in credential_names for x i
 archives_clean = not any(x.is_file() and x.suffix.lower() in {'.zip','.sql','.7z','.rar','.tar','.tgz','.gz'} for x in ROOT.rglob('*') if '.git' not in x.parts)
 check(37, 'Secrets/archive hygiene', runtime_clean and names_clean and archives_clean, 'runtime source has no secret signatures, credential files or committed archives')
 check(38, 'Non-destructive uninstall', 'SPD_ALLOW_DESTRUCTIVE_UNINSTALL' in uninstall and 'spd_purge_on_uninstall' in uninstall, 'destructive purge requires two gates')
-check(39, 'Package identity', 'Stable tag: 1.0.0-rc3' in readme and "SPD_DB_VERSION', '1.2.0'" in main, 'software/contract/schema identities are explicit')
-check(40, 'Truthful completion boundary', 'This is a staging candidate' in readme and 'not production-operational' in readme, 'source completion does not claim staging/live')
+check(39, 'Package identity', 'Stable tag: 1.1.0-rc1' in readme and "SPD_DB_VERSION', '1.2.0'" in main and "SPD_CONTRACT_VERSION', '1.3.0'" in main, 'software/contract/schema identities are explicit')
+check(40, 'Truthful completion boundary', 'This remains a staging candidate' in readme and 'separate from Hostinger staging' in readme and 'live deployment' in readme, 'source completion does not claim staging/live')
 
 failures = [c for c in checks if not c[2]]
 for n, name, ok, detail in checks:
