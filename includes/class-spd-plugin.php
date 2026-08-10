@@ -27,6 +27,7 @@ final class SPD_Plugin {
 		( new SPD_Future_REST() )->hooks();
 		( new SPD_Frontend() )->hooks();
 		( new SPD_Privacy() )->hooks();
+		( new SPD_Future_Privacy() )->hooks();
 		( new SPD_Observability() )->hooks();
 		( new SPD_Admin() )->hooks();
 		add_action( 'template_redirect', array( $this, 'private_headers' ), 0 );
