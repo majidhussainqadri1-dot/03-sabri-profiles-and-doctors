@@ -76,16 +76,22 @@ register_deactivation_hook( SPD_FILE, array( 'SPD_Activator', 'deactivate' ) );
 
 /** Public, versioned query contract for companion modules. */
 function spd_get_public_profile( $identity, $viewer_id = 0 ) { return SPD_Profile_Repository::instance()->public_dto( $identity, absint( $viewer_id ) ); }
-/** Public, versioned personal-site projection. */
-function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) { return SPD_Central_Profile::personal_site_dto( $identity, absint( $viewer_id ) ); }
+/** Public, versioned personal-site projection, including the future superset. */
+function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
+	$viewer_id = absint( $viewer_id );
+	$dto = SPD_Central_Profile::personal_site_dto( $identity, $viewer_id );
+	if ( is_wp_error( $dto ) ) { return $dto; }
+	$profile = SPD_Profile_Repository::instance()->find_by_public_id( $dto['public_id'] );
+	return $profile ? SPD_Future_Profile::augment_personal_site_dto( $dto, $profile, $viewer_id ) : $dto;
+}
 /** File 26 current, public-safe search projection. */
 function spd_get_search_projection( $identity ) { return SPD_Central_Profile::search_projection( $identity ); }
 /** Future professional identity superset projection. */
-function spd_get_future_profile_projection( $identity, $viewer_id = 0 ) { $dto = SPD_Central_Profile::personal_site_dto( $identity, absint( $viewer_id ) ); return is_wp_error( $dto ) ? $dto : (array) ( $dto['future'] ?? array() ); }
+function spd_get_future_profile_projection( $identity, $viewer_id = 0 ) { $dto = spd_get_personal_site_profile( $identity, absint( $viewer_id ) ); return is_wp_error( $dto ) ? $dto : (array) ( $dto['future'] ?? array() ); }
 /** Public-safe FHIR Practitioner/PractitionerRole projection. */
-function spd_get_fhir_professional_projection( $identity ) { $dto = SPD_Central_Profile::personal_site_dto( $identity, 0 ); return is_wp_error( $dto ) ? $dto : (array) ( $dto['future']['fhir'] ?? array() ); }
+function spd_get_fhir_professional_projection( $identity ) { $dto = spd_get_personal_site_profile( $identity, 0 ); return is_wp_error( $dto ) ? $dto : (array) ( $dto['future']['fhir'] ?? array() ); }
 /** Federation-ready public actor projection; transport remains external. */
-function spd_get_federation_profile_projection( $identity ) { $dto = SPD_Central_Profile::personal_site_dto( $identity, 0 ); return is_wp_error( $dto ) ? $dto : (array) ( $dto['future']['federation'] ?? array() ); }
+function spd_get_federation_profile_projection( $identity ) { $dto = spd_get_personal_site_profile( $identity, 0 ); return is_wp_error( $dto ) ? $dto : (array) ( $dto['future']['federation'] ?? array() ); }
 /** Public, versioned timeline query contract. */
 function spd_get_profile_timeline( $identity, array $args = array(), $viewer_id = 0 ) { return SPD_Timeline::query( $identity, $args, absint( $viewer_id ) ); }
 /** Machine-readable profile-domain contract manifest. */
