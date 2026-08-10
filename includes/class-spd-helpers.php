@@ -79,6 +79,65 @@ final class SPD_Helpers {
 			&& $valid_until > $now && $valid_until > $generated;
 	}
 
+	/**
+	 * Acquire a process-safe, expiring lock backed by the unique WordPress option
+	 * name. The random owner token prevents an expired worker from releasing a
+	 * newer worker's lease.
+	 *
+	 * @return string|false Lock owner token on success, false when already held.
+	 */
+	public static function acquire_lock( $name, $ttl = 600 ) {
+		$name = sanitize_key( (string) $name );
+		if ( ! $name ) { return false; }
+		$ttl = min( HOUR_IN_SECONDS, max( 10, absint( $ttl ) ) );
+		$key = 'spd_lock_' . substr( hash( 'sha256', $name ), 0, 32 );
+		$token = self::trace_id();
+		$value = wp_json_encode( array( 'token' => $token, 'expires' => time() + $ttl ) );
+		if ( add_option( $key, $value, '', false ) ) { return $token; }
+		$current = json_decode( (string) get_option( $key, '' ), true );
+		if ( ! is_array( $current ) || absint( $current['expires'] ?? 0 ) >= time() ) { return false; }
+		delete_option( $key );
+		return add_option( $key, $value, '', false ) ? $token : false;
+	}
+
+	public static function release_lock( $name, $token ) {
+		$name = sanitize_key( (string) $name );
+		$token = (string) $token;
+		if ( ! $name || ! $token ) { return false; }
+		$key = 'spd_lock_' . substr( hash( 'sha256', $name ), 0, 32 );
+		$current = json_decode( (string) get_option( $key, '' ), true );
+		if ( ! is_array( $current ) || ! hash_equals( (string) ( $current['token'] ?? '' ), $token ) ) { return false; }
+		return delete_option( $key );
+	}
+
+	/**
+	 * Small fixed-window limiter serialized by the same atomic option lock. It is
+	 * deliberately fail-closed when the counter lock cannot be acquired.
+	 */
+	public static function consume_rate_limit( $bucket, $limit, $window ) {
+		$bucket = sanitize_key( (string) $bucket );
+		$limit = max( 1, absint( $limit ) );
+		$window = max( 60, absint( $window ) );
+		if ( ! $bucket ) { return false; }
+		$lock = self::acquire_lock( 'rate_' . $bucket, 10 );
+		if ( ! $lock ) { return false; }
+		try {
+			$key = 'spd_rate_' . substr( hash( 'sha256', $bucket ), 0, 32 );
+			$record = json_decode( (string) get_transient( $key ), true );
+			$now = time();
+			if ( ! is_array( $record ) || absint( $record['expires'] ?? 0 ) <= $now ) {
+				$record = array( 'count' => 0, 'expires' => $now + $window );
+			}
+			if ( absint( $record['count'] ?? 0 ) >= $limit ) { return false; }
+			$record['count'] = absint( $record['count'] ?? 0 ) + 1;
+			$ttl = max( 1, absint( $record['expires'] ) - $now );
+			set_transient( $key, wp_json_encode( $record ), $ttl );
+			return true;
+		} finally {
+			self::release_lock( 'rate_' . $bucket, $lock );
+		}
+	}
+
 	public static function slug_base( $display_name, $user_id ) {
 		$base = sanitize_title( remove_accents( (string) $display_name ) );
 		if ( '' === $base ) { $base = 'profile-' . absint( $user_id ); }
