@@ -6,7 +6,36 @@
 
   function mutationKey() {
     if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+      const bytes = new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      return `spd-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+    }
     return `spd-${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function stablePayload(body) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return JSON.stringify(body);
+    const ordered = {};
+    Object.keys(body).sort().forEach((key) => {
+      const value = body[key];
+      ordered[key] = Array.isArray(value) ? value.slice() : value;
+    });
+    return JSON.stringify(ordered);
+  }
+
+  function formMutationKey(form, body) {
+    const fingerprint = stablePayload(body);
+    if (!form.dataset.spdIdempotencyKey || form.dataset.spdIdempotencyPayload !== fingerprint) {
+      form.dataset.spdIdempotencyKey = mutationKey();
+      form.dataset.spdIdempotencyPayload = fingerprint;
+    }
+    return form.dataset.spdIdempotencyKey;
+  }
+
+  function clearMutationKey(form) {
+    delete form.dataset.spdIdempotencyKey;
+    delete form.dataset.spdIdempotencyPayload;
   }
 
   async function request(path, method = 'GET', body, options = {}) {
@@ -16,7 +45,7 @@
       requestOptions.headers['Content-Type'] = 'application/json';
       requestOptions.body = JSON.stringify(body);
     }
-    if (options.idempotent) requestOptions.headers['Idempotency-Key'] = mutationKey();
+    if (options.idempotencyKey) requestOptions.headers['Idempotency-Key'] = String(options.idempotencyKey);
     const response = await fetch(base + path.replace(/^\//, ''), requestOptions);
     let payload = {};
     try { payload = await response.json(); } catch (e) { payload = {}; }
@@ -62,21 +91,27 @@
         const fd = new FormData(form);
         const scopes = fd.getAll('scopes[]').map(String);
         const hours = Math.min(24, Math.max(1, Number(fd.get('hours') || 1)));
-        const data = await request('me/disclosures', 'POST', { scopes, ttl: Math.round(hours * 3600) }, { idempotent: true });
+        const body = { scopes, ttl: Math.round(hours * 3600) };
+        const data = await request('me/disclosures', 'POST', body, { idempotencyKey: formMutationKey(form, body) });
+        clearMutationKey(form);
         resultBox(form, '[data-spd-disclosure-result]', data.url || 'Disclosure link created.');
         return;
       }
       if (form.matches('[data-spd-translation]')) {
         event.preventDefault();
         const fd = new FormData(form);
-        await request('me/translations', 'POST', { locale: fd.get('locale'), headline: fd.get('headline'), bio: fd.get('bio'), source: fd.get('source') }, { idempotent: true });
+        const body = { locale: fd.get('locale'), headline: fd.get('headline'), bio: fd.get('bio'), source: fd.get('source') };
+        await request('me/translations', 'POST', body, { idempotencyKey: formMutationKey(form, body) });
+        clearMutationKey(form);
         resultBox(form, '[data-spd-translation-result]', 'Approved language edition saved.');
         return;
       }
       if (form.matches('[data-spd-reconfirm]')) {
         event.preventDefault();
         const fd = new FormData(form);
-        const data = await request('me/reconfirm', 'POST', { field_key: fd.get('field_key'), days: Number(fd.get('days') || 365) }, { idempotent: true });
+        const body = { field_key: fd.get('field_key'), days: Number(fd.get('days') || 365) };
+        const data = await request('me/reconfirm', 'POST', body, { idempotencyKey: formMutationKey(form, body) });
+        clearMutationKey(form);
         resultBox(form, '[data-spd-reconfirm-result]', `Reconfirmed until ${data.expires_at || ''}.`);
         return;
       }
@@ -84,7 +119,9 @@
         event.preventDefault();
         const fd = new FormData(form);
         const id = form.dataset.publicId;
-        const data = await request(`profiles/${encodeURIComponent(id)}/future-state`, 'PUT', { professional_lifecycle: fd.get('professional_lifecycle'), lifecycle_reason: fd.get('lifecycle_reason'), federation_opt_in: fd.get('federation_opt_in') === '1' }, { idempotent: true });
+        const body = { professional_lifecycle: fd.get('professional_lifecycle'), lifecycle_reason: fd.get('lifecycle_reason'), federation_opt_in: fd.get('federation_opt_in') === '1' };
+        const data = await request(`profiles/${encodeURIComponent(id)}/future-state`, 'PUT', body, { idempotencyKey: formMutationKey(form, body) });
+        clearMutationKey(form);
         resultBox(form, '[data-spd-future-state-result]', `Saved: ${data.professional_lifecycle}.`);
       }
     } catch (error) {
