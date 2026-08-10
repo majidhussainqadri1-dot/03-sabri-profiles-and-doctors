@@ -57,9 +57,9 @@ final class SPD_Authorization {
 		$is_guardian = ! $is_owner && SPD_Membership_Adapter::guardian_can_manage( $actor_id, $owner_id );
 		if ( ! $is_owner && ! $is_guardian ) { return false; }
 		$claims = SPD_Membership_Adapter::claims( $owner_id );
-		if ( ! $claims || ! empty( $claims['suspended'] ) ) { return false; }
+		if ( ! $claims || empty( $claims['eligible'] ) || ! empty( $claims['suspended'] ) ) { return false; }
 		if ( ! empty( $claims['guardian_required'] ) && empty( $claims['guardian_verified'] ) ) { return false; }
-		return SPD_Membership_Adapter::is_approved( $owner_id );
+		return ! empty( $claims['approved'] );
 	}
 
 	public static function can_publish_audience( $user_id, $field_key, $audience ) {
