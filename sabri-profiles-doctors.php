@@ -53,6 +53,7 @@ $spd_files = array(
 	'class-spd-helpers.php',
 	'class-spd-central-profile.php',
 	'class-spd-future-profile.php',
+	'class-spd-future-privacy.php',
 	'class-spd-contracts.php',
 	'class-spd-profile-repository.php',
 	'class-spd-media.php',
