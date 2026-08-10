@@ -36,7 +36,7 @@ checks={
  'knowledge-graph':['sabri_profile_knowledge_graph_v1','knowledge_graph'],
  'knowledge-coverage':['sabri_profile_knowledge_coverage_v1','paid_influence'],
  'grounded-ai':['sabri_file16_grounded_profile_ask_v1','public_professional_work','spd_ai_scope_restricted'],
- 'multilingual':['profile_translations','save_translation','machine translated, owner approved'],
+ 'multilingual':['profile_translations','save_translation','owner approved'],
  'contact-relay':['sabri_file17_profile_contact_relay_v1','address_hidden'],
  'verified-links':['sabri_verified_external_profile_links_v1','safe_external_url'],
  'dossier':['dossier','Structured Professional Dossier'],
