@@ -44,19 +44,7 @@ jobs:
       - name: Eighty numbered corrective review gates
         run: python3 tests/eighty-round-review-ci.py
       - name: Existing File 03 regression suites
-        run: |
-          set -euo pipefail
-          python3 tests/architecture-check.py
-          python3 tests/source-security-regression.py
-          python3 tests/schema-check.py
-          python3 tests/plan-coverage.py
-          python3 tests/forty-round-review.py
-          php tests/bootstrap-load.php
-          php tests/authorization-runtime.php
-          php tests/verification-runtime.php
-          php tests/state-runtime.php
-          php tests/timeline-runtime.php
-          php tests/forty-round-runtime.php
+        run: python3 tests/regression-ci.py
 
   fresh-reviews:
     name: Two fresh post-correction review/fix gates
