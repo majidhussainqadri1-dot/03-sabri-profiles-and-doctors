@@ -142,7 +142,7 @@ trait SPD_Profile_Central {
 		return $result;
 	}
 
-	public function grant_delegate( $owner_id, $delegate_id, array $scopes, $expires_at = '' ) {
+	public function grant_delegate( $owner_id, $delegate_id, array $scopes, $expires_at = '', $idempotency_key = '' ) {
 		global $wpdb;
 		$owner_id = absint( $owner_id ); $delegate_id = absint( $delegate_id );
 		if ( ! $owner_id || ! $delegate_id || $owner_id === $delegate_id ) { return new WP_Error( 'spd_delegate_invalid', __( 'Choose a different eligible account as delegate.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
@@ -154,25 +154,52 @@ trait SPD_Profile_Central {
 		if ( ! $scopes ) { return new WP_Error( 'spd_delegate_scope_required', __( 'Choose at least one allowed delegation scope.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		$expires = $expires_at ? strtotime( $expires_at ) : false;
 		if ( $expires && $expires <= time() ) { return new WP_Error( 'spd_delegate_expired', __( 'Delegation expiry must be in the future.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
+		$expires_value = $expires ? gmdate( 'Y-m-d H:i:s', $expires ) : null;
+		$request_hash = hash( 'sha256', SPD_Helpers::json_encode( array( $owner_id, $delegate_id, $scopes, $expires_value ) ) );
+		$idem = $this->idempotency_begin( $owner_id, 'grant_profile_delegate', $idempotency_key, $request_hash, true );
+		if ( is_wp_error( $idem ) ) { return $idem; }
+		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
+		$response = array( 'delegate_user_id' => $delegate_id, 'scopes' => $scopes, 'status' => 'active', 'expires_at' => $expires_value );
 		$table = SPD_Central_Profile::delegation_table(); $now = SPD_Helpers::now();
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT id,version FROM {$table} WHERE owner_user_id=%d AND delegate_user_id=%d LIMIT 1", $owner_id, $delegate_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$data = array( 'profile_id' => $profile['id'], 'scopes' => implode( ',', $scopes ), 'status' => 'active', 'expires_at' => $expires ? gmdate( 'Y-m-d H:i:s', $expires ) : null, 'updated_at' => $now );
-		if ( $row ) { $data['version'] = absint( $row['version'] ) + 1; $ok = $wpdb->update( $table, $data, array( 'id' => absint( $row['id'] ) ) ); }
-		else { $data += array( 'owner_user_id' => $owner_id, 'delegate_user_id' => $delegate_id, 'version' => 1, 'created_at' => $now ); $ok = $wpdb->insert( $table, $data ); }
-		if ( false === $ok ) { return new WP_Error( 'spd_delegate_save_failed', __( 'The delegation could not be saved.', 'sabri-profiles-doctors' ) ); }
-		$this->event( 'ProfileDelegationChanged.v1', 'profile', $profile['public_id'], array( 'delegate_user_id' => $delegate_id, 'status' => 'active', 'scopes' => $scopes ) );
-		return array( 'delegate_user_id' => $delegate_id, 'scopes' => $scopes, 'status' => 'active' );
+		$result = SPD_DB::transaction( function() use ( $wpdb, $table, $profile, $owner_id, $delegate_id, $scopes, $expires_value, $now, $response, $idempotency_key ) {
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT id,version FROM {$table} WHERE owner_user_id=%d AND delegate_user_id=%d LIMIT 1", $owner_id, $delegate_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$data = array( 'profile_id' => $profile['id'], 'scopes' => implode( ',', $scopes ), 'status' => 'active', 'expires_at' => $expires_value, 'updated_at' => $now );
+			if ( $row ) { $data['version'] = absint( $row['version'] ) + 1; $ok = $wpdb->update( $table, $data, array( 'id' => absint( $row['id'] ), 'version' => absint( $row['version'] ) ) ); }
+			else { $data += array( 'owner_user_id' => $owner_id, 'delegate_user_id' => $delegate_id, 'version' => 1, 'created_at' => $now ); $ok = $wpdb->insert( $table, $data ); }
+			if ( false === $ok || 0 === $ok ) { return new WP_Error( 'spd_delegate_save_failed', __( 'The delegation could not be saved because it changed concurrently or persistence failed.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+			$event = $this->event( 'ProfileDelegationChanged.v1', 'profile', $profile['public_id'], array( 'delegate_user_id' => $delegate_id, 'status' => 'active', 'scopes' => $scopes ) );
+			if ( is_wp_error( $event ) ) { return $event; }
+			if ( ! $this->idempotency_complete( $owner_id, 'grant_profile_delegate', $idempotency_key, $response ) ) { return new WP_Error( 'spd_idempotency_finalize_failed', __( 'The replay-protection result could not be committed.', 'sabri-profiles-doctors' ) ); }
+			return true;
+		} );
+		if ( is_wp_error( $result ) ) { $this->idempotency_fail( $owner_id, 'grant_profile_delegate', $idempotency_key ); return $result; }
+		return $response;
 	}
 
-	public function revoke_delegate( $owner_id, $delegate_id ) {
+	public function revoke_delegate( $owner_id, $delegate_id, $idempotency_key = '' ) {
 		global $wpdb; $owner_id = absint( $owner_id ); $delegate_id = absint( $delegate_id );
 		$profile = $this->find_by_user_id( $owner_id, false );
-		if ( ! $profile || ! SPD_Authorization::can_edit_profile( $profile, $owner_id ) ) { return new WP_Error( 'spd_forbidden', __( 'You cannot revoke this delegation.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
+		if ( ! $profile ) { return new WP_Error( 'spd_forbidden', __( 'You cannot revoke this delegation.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
+		$guard = SPD_Authorization::mutation_guard( $profile, $owner_id );
+		if ( is_wp_error( $guard ) ) { return $guard; }
+		$request_hash = hash( 'sha256', SPD_Helpers::json_encode( array( $owner_id, $delegate_id ) ) );
+		$idem = $this->idempotency_begin( $owner_id, 'revoke_profile_delegate', $idempotency_key, $request_hash, true );
+		if ( is_wp_error( $idem ) ) { return $idem; }
+		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
+		$response = array( 'delegate_user_id' => $delegate_id, 'status' => 'revoked' );
 		$table = SPD_Central_Profile::delegation_table();
-		$ok = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='revoked',version=version+1,updated_at=%s WHERE owner_user_id=%d AND delegate_user_id=%d AND status='active'", SPD_Helpers::now(), $owner_id, $delegate_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		if ( false === $ok ) { return new WP_Error( 'spd_delegate_revoke_failed', __( 'The delegation could not be revoked.', 'sabri-profiles-doctors' ) ); }
-		$this->event( 'ProfileDelegationChanged.v1', 'profile', $profile['public_id'], array( 'delegate_user_id' => $delegate_id, 'status' => 'revoked' ) );
-		return array( 'delegate_user_id' => $delegate_id, 'status' => 'revoked' );
+		$result = SPD_DB::transaction( function() use ( $wpdb, $table, $profile, $owner_id, $delegate_id, $response, $idempotency_key ) {
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT id,version FROM {$table} WHERE owner_user_id=%d AND delegate_user_id=%d AND status='active' LIMIT 1", $owner_id, $delegate_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( ! $row ) { return new WP_Error( 'spd_delegate_not_active', __( 'No active delegation exists for that account.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
+			$ok = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='revoked',version=version+1,updated_at=%s WHERE id=%d AND version=%d AND status='active'", SPD_Helpers::now(), absint( $row['id'] ), absint( $row['version'] ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( 1 !== $ok ) { return new WP_Error( 'spd_delegate_revoke_failed', __( 'The delegation changed concurrently and could not be revoked.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+			$event = $this->event( 'ProfileDelegationChanged.v1', 'profile', $profile['public_id'], array( 'delegate_user_id' => $delegate_id, 'status' => 'revoked' ) );
+			if ( is_wp_error( $event ) ) { return $event; }
+			if ( ! $this->idempotency_complete( $owner_id, 'revoke_profile_delegate', $idempotency_key, $response ) ) { return new WP_Error( 'spd_idempotency_finalize_failed', __( 'The replay-protection result could not be committed.', 'sabri-profiles-doctors' ) ); }
+			return true;
+		} );
+		if ( is_wp_error( $result ) ) { $this->idempotency_fail( $owner_id, 'revoke_profile_delegate', $idempotency_key ); return $result; }
+		return $response;
 	}
 
 	public function delegate_can_manage( $owner_id, $delegate_id, $scope ) {
@@ -206,12 +233,13 @@ trait SPD_Profile_Central {
 		$reason = sanitize_key( $reason ); $details = SPD_Helpers::sanitize_multiline( $details, 3000 );
 		if ( ! in_array( $reason, SPD_Central_Profile::report_reasons(), true ) ) { return new WP_Error( 'spd_invalid_report_reason', __( 'Choose a valid report reason.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		if ( SPD_Helpers::text_length( $details ) < 10 ) { return new WP_Error( 'spd_report_details_required', __( 'Provide enough detail for a fair review.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
-		$reports = SPD_DB::table( 'reports' );
-		$count = absint( $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$reports} WHERE reporter_user_id=%d AND created_at >= (UTC_TIMESTAMP() - INTERVAL 1 DAY)", $reporter_user_id ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		if ( $count >= 5 ) { return new WP_Error( 'spd_report_rate_limited', __( 'Too many reports were submitted. Try again later.', 'sabri-profiles-doctors' ), array( 'status' => 429 ) ); }
 		$request_hash = hash( 'sha256', SPD_Helpers::json_encode( array( $public_id, $reason, $details ) ) );
 		$idem = $this->idempotency_begin( $reporter_user_id, 'create_safety_report', $idempotency_key, $request_hash, true );
-		if ( is_wp_error( $idem ) ) { return $idem; } if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
+		if ( is_wp_error( $idem ) ) { return $idem; }
+		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
+		$reports = SPD_DB::table( 'reports' );
+		$count = absint( $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$reports} WHERE reporter_user_id=%d AND created_at >= (UTC_TIMESTAMP() - INTERVAL 1 DAY)", $reporter_user_id ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $count >= 5 || ! SPD_Helpers::consume_rate_limit( 'profile_report_' . $reporter_user_id, 5, DAY_IN_SECONDS ) ) { $this->idempotency_fail( $reporter_user_id, 'create_safety_report', $idempotency_key ); return new WP_Error( 'spd_report_rate_limited', __( 'Too many reports were submitted. Try again later.', 'sabri-profiles-doctors' ), array( 'status' => 429 ) ); }
 		$uuid = SPD_Helpers::public_id(); $now = SPD_Helpers::now();
 		$critical = in_array( $reason, array( 'harm','child_safety','impersonation','privacy','privacy_breach','scam' ), true );
 		$severity = $critical ? 'high' : 'normal';
@@ -229,16 +257,29 @@ trait SPD_Profile_Central {
 		return $response;
 	}
 
-	public function request_report_appeal( $report_uuid, $requester_id, $reason ) {
+	public function request_report_appeal( $report_uuid, $requester_id, $reason, $idempotency_key = '' ) {
 		global $wpdb; $requester_id = absint( $requester_id ); $reason = SPD_Helpers::sanitize_multiline( $reason, 2000 );
+		if ( ! $requester_id || ! SPD_Membership_Adapter::is_member_eligible( $requester_id ) ) { return new WP_Error( 'spd_account_ineligible', __( 'An eligible account is required to appeal a report.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		if ( SPD_Helpers::text_length( $reason ) < 10 ) { return new WP_Error( 'spd_appeal_reason_required', __( 'Provide a clear reason for the appeal.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		$reports = SPD_DB::table( 'reports' );
-		$report = $wpdb->get_row( $wpdb->prepare( "SELECT id,reporter_user_id,status FROM {$reports} WHERE report_uuid=%s LIMIT 1", sanitize_text_field( $report_uuid ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$report_uuid = sanitize_text_field( $report_uuid );
+		$report = $wpdb->get_row( $wpdb->prepare( "SELECT id,reporter_user_id,status FROM {$reports} WHERE report_uuid=%s LIMIT 1", $report_uuid ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		if ( ! $report || absint( $report['reporter_user_id'] ) !== $requester_id || ! in_array( $report['status'], array( 'rejected','closed','actioned' ), true ) ) { return new WP_Error( 'spd_appeal_unavailable', __( 'This report is not eligible for appeal by this account.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
+		$request_hash = hash( 'sha256', SPD_Helpers::json_encode( array( $report_uuid, $requester_id, $reason ) ) );
+		$idem = $this->idempotency_begin( $requester_id, 'request_report_appeal', $idempotency_key, $request_hash, true );
+		if ( is_wp_error( $idem ) ) { return $idem; }
+		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
 		$table = SPD_Central_Profile::appeals_table(); $uuid = SPD_Helpers::public_id(); $now = SPD_Helpers::now();
-		$ok = $wpdb->insert( $table, array( 'appeal_uuid' => $uuid, 'report_id' => absint( $report['id'] ), 'requested_by' => $requester_id, 'reason' => $reason, 'status' => 'submitted', 'version' => 1, 'created_at' => $now, 'updated_at' => $now ) );
-		if ( ! $ok ) { return new WP_Error( 'spd_appeal_duplicate_or_failed', __( 'An appeal already exists or could not be recorded.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
-		$this->event( 'ProfileReportAppealed.v1', 'report', sanitize_text_field( $report_uuid ), array( 'appeal_uuid' => $uuid, 'requested_by' => $requester_id ) );
-		return array( 'appeal_uuid' => $uuid, 'status' => 'submitted' );
+		$response = array( 'appeal_uuid' => $uuid, 'status' => 'submitted' );
+		$result = SPD_DB::transaction( function() use ( $wpdb, $table, $report, $report_uuid, $requester_id, $reason, $uuid, $now, $response, $idempotency_key ) {
+			$ok = $wpdb->insert( $table, array( 'appeal_uuid' => $uuid, 'report_id' => absint( $report['id'] ), 'requested_by' => $requester_id, 'reason' => $reason, 'status' => 'submitted', 'version' => 1, 'created_at' => $now, 'updated_at' => $now ) );
+			if ( ! $ok ) { return new WP_Error( 'spd_appeal_duplicate_or_failed', __( 'An appeal already exists or could not be recorded.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+			$event = $this->event( 'ProfileReportAppealed.v1', 'report', $report_uuid, array( 'appeal_uuid' => $uuid, 'requested_by' => $requester_id ) );
+			if ( is_wp_error( $event ) ) { return $event; }
+			if ( ! $this->idempotency_complete( $requester_id, 'request_report_appeal', $idempotency_key, $response ) ) { return new WP_Error( 'spd_idempotency_finalize_failed', __( 'The replay-protection result could not be committed.', 'sabri-profiles-doctors' ) ); }
+			return true;
+		} );
+		if ( is_wp_error( $result ) ) { $this->idempotency_fail( $requester_id, 'request_report_appeal', $idempotency_key ); return $result; }
+		return $response;
 	}
 }
