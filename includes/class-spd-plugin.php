@@ -89,7 +89,9 @@ final class SPD_Plugin {
 		wp_enqueue_style( 'spd-profiles', SPD_URL . 'assets/css/profiles.css', array(), SPD_VERSION );
 		wp_enqueue_script( 'spd-profiles', SPD_URL . 'assets/js/profiles.js', array(), SPD_VERSION, true );
 		wp_enqueue_script( 'spd-future-profiles', SPD_URL . 'assets/js/future-profiles.js', array( 'spd-profiles' ), SPD_VERSION, true );
-		wp_localize_script( 'spd-profiles', 'SPDProfileUI', array( 'restUrl' => esc_url_raw( rest_url( 'sabri-profiles/v1/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'rtl' => is_rtl(), 'shareText' => __( 'View this verified profile on Sabri Social Homeopathy Platform', 'sabri-profiles-doctors' ), 'copiedText' => __( 'Link copied', 'sabri-profiles-doctors' ) ) );
+		$user_id = get_current_user_id();
+		$can_govern_legacy = $user_id && ( SPD_Membership_Adapter::can_manage_founder( $user_id ) || SPD_Membership_Adapter::can_operate_profiles( $user_id ) );
+		wp_localize_script( 'spd-profiles', 'SPDProfileUI', array( 'restUrl' => esc_url_raw( rest_url( 'sabri-profiles/v1/' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'rtl' => is_rtl(), 'canGovernLegacy' => (bool) $can_govern_legacy, 'shareText' => __( 'View this verified profile on Sabri Social Homeopathy Platform', 'sabri-profiles-doctors' ), 'copiedText' => __( 'Link copied', 'sabri-profiles-doctors' ) ) );
 	}
 
 	public function admin_assets( $hook ) { if ( false !== strpos( (string) $hook, 'sabri-profiles' ) ) { wp_enqueue_style( 'spd-admin', SPD_URL . 'assets/css/admin.css', array(), SPD_VERSION ); } }
