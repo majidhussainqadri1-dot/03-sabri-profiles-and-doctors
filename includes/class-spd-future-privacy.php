@@ -29,7 +29,10 @@ final class SPD_Future_Privacy {
 		if ( absint( $page ) > 1 ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
 		$user = get_user_by( 'email', $email ); if ( ! $user ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
 		$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false ); if ( ! $profile ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
-		if ( apply_filters( 'spd_future_profile_legal_hold', false, absint( $user->ID ) ) ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'Future professional profile data is retained under an active legal or governance hold.', 'sabri-profiles-doctors' ) ), 'done' => true ); }
+		if ( SPD_Membership_Adapter::is_founder( $user->ID ) ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'The official Founder future-profile record requires an authorized governance decision before removal.', 'sabri-profiles-doctors' ) ), 'done' => true ); }
+		$base_hold = apply_filters( 'spd_profile_legal_hold', false, absint( $user->ID ), $profile );
+		$future_hold = apply_filters( 'spd_future_profile_legal_hold', false, absint( $user->ID ), $profile );
+		if ( $base_hold || $future_hold ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'Future professional profile data is retained under an active legal or governance hold.', 'sabri-profiles-doctors' ) ), 'done' => true ); }
 		$result = self::erase_profile_data( $profile['id'] );
 		return array( 'items_removed' => ! empty( $result['removed'] ), 'items_retained' => ! empty( $result['retry'] ), 'messages' => ! empty( $result['retry'] ) ? array( __( 'Future professional profile data could not yet be erased and requires a retry.', 'sabri-profiles-doctors' ) ) : array(), 'done' => empty( $result['retry'] ) );
 	}
