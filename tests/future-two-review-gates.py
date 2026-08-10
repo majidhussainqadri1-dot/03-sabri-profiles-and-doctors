@@ -19,6 +19,13 @@ def gate(name, checks):
     failed=[label for label,ok in checks if not ok]
     rounds.append((name,failed))
 
+retry_safe_client = (
+    "'Idempotency-Key'" in js
+    and 'formMutationKey' in js
+    and js.count('idempotencyKey: formMutationKey(form, body)') >= 4
+    and 'clearMutationKey(form)' in js
+)
+
 # Fresh Review/Fix Gate 1: requirement completeness, canonical ownership, mutations and lifecycle.
 gate('Review/Fix Gate 1 — requirements, ownership and command boundaries', [
  ('18 future trace rows', all(f'| F03-FUT-{i:02d} |' in trace for i in range(1,19))),
@@ -33,7 +40,7 @@ gate('Review/Fix Gate 1 — requirements, ownership and command boundaries', [
  ('only three additive future data tables', future.count('CREATE TABLE') == 3),
  ('future schema activation/repair wired', 'SPD_Future_Profile::install_schema()' in t('includes/class-spd-activator.php') and 'spd_future_schema_version' in t('includes/class-spd-plugin.php')),
  ('future mutations use canonical idempotency', 'future_idempotency_begin' in rest and 'future_idempotency_complete' in rest and 'future_idempotency_fail' in rest),
- ('browser mutations send keys', "'Idempotency-Key'" in js and js.count('idempotent: true') >= 4),
+ ('browser mutations send retry-safe keys', retry_safe_client),
  ('lifecycle governance protects legacy', "'legacy' === $lifecycle && ! $is_governor" in future),
  ('retired/legacy suppress service actions', "$dto['contacts'] = array()" in future and "unset( $dto['clinic']['appointment_url'] )" in future),
 ])
@@ -49,7 +56,7 @@ gate('Review/Fix Gate 2 — adversarial privacy, safety and degradation', [
  ('external verified links require HTTPS', 'safe_external_url' in future and "array( 'https' )" in future),
  ('contact relay hides address', "'address_hidden' => true" in future),
  ('FHIR explicitly excludes clinical record', "'clinical_record' => false" in future and 'PractitionerRole' in future),
- ('federation requires explicit opt-in', "if ( ! $opt_in )" in future and 'federation_opt_in' in future),
+ ('federation requires explicit opt-in', "if ( ! $opt_in )" in future and 'federation_opt_in' in future and 'spd_federation_owner_opt_in_required' in rest),
  ('future data has privacy export', 'wp_privacy_personal_data_exporters' in privacy and 'export_profile_data' in privacy),
  ('future data has privacy erasure', 'wp_privacy_personal_data_erasers' in privacy and 'erase_profile_data' in privacy),
  ('legal hold is explicit', 'spd_future_profile_legal_hold' in privacy),
