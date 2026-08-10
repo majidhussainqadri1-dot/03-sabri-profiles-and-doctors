@@ -12,7 +12,7 @@ js = (root / 'assets/js/future-profiles.js').read_text(encoding='utf-8')
 rounds = re.findall(r'^\|\s*(\d{2})\s*\|', ledger, flags=re.M)
 assert rounds == [f'{i:02d}' for i in range(1, 81)], f'expected exactly rounds 01..80, got {rounds}'
 
-expected_defect_rounds = {'12','13','15','16','23','33','43','44','46','51','52','57','63'}
+expected_defect_rounds = {'12','13','15','16','23','33','43','44','46','51','52','57','63','78'}
 actual_defect_rounds = set(re.findall(r'^\|\s*(\d{2})\s*\|.*\*\*Defect found → fixed\*\*', ledger, flags=re.M))
 assert actual_defect_rounds == expected_defect_rounds, (actual_defect_rounds, expected_defect_rounds)
 
