@@ -40,6 +40,7 @@ final class SPD_Activator {
 	public static function repair_owned_resources() {
 		$schema = SPD_DB::install(); if ( is_wp_error( $schema ) ) { return $schema; }
 		$central = SPD_Central_Profile::install_schema(); if ( is_wp_error( $central ) ) { return $central; }
+		$future = SPD_Future_Profile::install_schema(); if ( is_wp_error( $future ) ) { return $future; }
 		$pages = self::pages(); if ( is_wp_error( $pages ) ) { return $pages; }
 		$schedules = array(
 			'spd_dispatch_outbox'         => array( time() + 300, 'hourly' ),
