@@ -2,6 +2,8 @@
 defined( 'ABSPATH' ) || exit;
 
 final class SPD_Plugin {
+	private $migration_lock_token = '';
+
 	public function run() {
 		load_plugin_textdomain( 'sabri-profiles-doctors', false, dirname( plugin_basename( SPD_FILE ) ) . '/languages' );
 		if ( SPD_Membership_Adapter::available() && ( get_option( 'spd_db_version' ) !== SPD_DB_VERSION || ! SPD_DB::tables_exist() ) ) {
@@ -31,6 +33,8 @@ final class SPD_Plugin {
 		( new SPD_Observability() )->hooks();
 		( new SPD_Admin() )->hooks();
 		add_action( 'admin_post_spd_save_profile', array( $this, 'guard_profile_media_upload_rate' ), 1 );
+		add_action( 'spd_migrate_profiles_batch', array( $this, 'before_migration_batch' ), 0 );
+		add_action( 'spd_migrate_profiles_batch', array( $this, 'after_migration_batch' ), 99 );
 		add_action( 'template_redirect', array( $this, 'private_headers' ), 0 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );
@@ -52,6 +56,28 @@ final class SPD_Plugin {
 			if ( ! SPD_Helpers::consume_rate_limit( 'media_upload_' . $user_id, 10, HOUR_IN_SECONDS ) ) {
 				wp_die( esc_html__( 'Too many profile uploads were attempted. Try again later.', 'sabri-profiles-doctors' ), '', array( 'response' => 429, 'back_link' => true ) );
 			}
+		}
+	}
+
+	/**
+	 * Serialize migration requests before the historical transient guard runs.
+	 * A contending request sets the compatibility transient so the legacy runner
+	 * returns without touching the migration cursor. The owner token remains the
+	 * authoritative lock and is released only by this request at priority 99.
+	 */
+	public function before_migration_batch() {
+		$this->migration_lock_token = SPD_Helpers::acquire_lock( 'migration_batch', 10 * MINUTE_IN_SECONDS );
+		if ( ! $this->migration_lock_token ) {
+			set_transient( 'spd_migration_lock', 1, 10 * MINUTE_IN_SECONDS );
+			return;
+		}
+		delete_transient( 'spd_migration_lock' );
+	}
+
+	public function after_migration_batch() {
+		if ( $this->migration_lock_token ) {
+			SPD_Helpers::release_lock( 'migration_batch', $this->migration_lock_token );
+			$this->migration_lock_token = '';
 		}
 	}
 
