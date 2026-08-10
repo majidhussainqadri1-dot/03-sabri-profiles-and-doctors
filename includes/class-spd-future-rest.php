@@ -16,12 +16,25 @@ final class SPD_Future_REST {
 		register_rest_route( 'sabri-profiles/v1', '/disclosures/(?P<token>[A-Za-z0-9_.-]+)', array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( $this, 'disclosure' ), 'permission_callback' => '__return_true' ) );
 		register_rest_route( 'sabri-profiles/v1', '/me/translations', array( 'methods' => WP_REST_Server::CREATABLE, 'callback' => array( $this, 'translation' ), 'permission_callback' => array( $this, 'eligible' ) ) );
 		register_rest_route( 'sabri-profiles/v1', '/me/reconfirm', array( 'methods' => WP_REST_Server::CREATABLE, 'callback' => array( $this, 'reconfirm' ), 'permission_callback' => array( $this, 'eligible' ) ) );
-		register_rest_route( 'sabri-profiles/v1', '/profiles/(?P<public_id>[0-9a-fA-F-]{36})/future-state', array( 'methods' => WP_REST_Server::EDITABLE, 'callback' => array( $this, 'future_state' ), 'permission_callback' => array( $this, 'eligible' ), 'args' => array( 'public_id' => $uuid ) ) );
+		register_rest_route( 'sabri-profiles/v1', '/profiles/(?P<public_id>[0-9a-fA-F-]{36})/future-state', array( 'methods' => WP_REST_Server::EDITABLE, 'callback' => array( $this, 'future_state' ), 'permission_callback' => array( $this, 'future_state_actor' ), 'args' => array( 'public_id' => $uuid ) ) );
 	}
 
 	public function eligible() {
 		if ( ! is_user_logged_in() ) { return new WP_Error( 'spd_login_required', __( 'Authentication is required.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
 		return SPD_Membership_Adapter::is_member_eligible( get_current_user_id() ) ? true : new WP_Error( 'spd_account_ineligible', __( 'This account is not currently eligible.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+	}
+
+	/**
+	 * The professional lifecycle has a governed recovery/moderation path. A
+	 * Founder/administrator therefore must not be accidentally blocked merely
+	 * because the account is outside the ordinary member-eligibility surface.
+	 * Object/state authorization still happens in SPD_Future_Profile.
+	 */
+	public function future_state_actor() {
+		if ( ! is_user_logged_in() ) { return new WP_Error( 'spd_login_required', __( 'Authentication is required.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
+		$actor = get_current_user_id();
+		if ( current_user_can( 'manage_options' ) || SPD_Membership_Adapter::is_founder( $actor ) || SPD_Membership_Adapter::is_member_eligible( $actor ) ) { return true; }
+		return new WP_Error( 'spd_account_ineligible', __( 'This account cannot change professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
 	}
 
 	private function response( $result, $status = 200, $public = false ) {
@@ -40,16 +53,34 @@ final class SPD_Future_REST {
 	private function dto( $public_id ) { return spd_get_personal_site_profile( (string) $public_id, get_current_user_id() ); }
 	private function idem( WP_REST_Request $r ) { return trim( sanitize_text_field( (string) $r->get_header( 'Idempotency-Key' ) ) ); }
 
+	/**
+	 * Begin replay protection before the transaction so a simultaneous request
+	 * can observe the started row. The domain mutation, its outbox/audit event,
+	 * and idempotency completion then commit atomically in one DB transaction.
+	 * A failed finalization therefore rolls the mutation back rather than
+	 * returning a false failure after state has already changed.
+	 */
 	private function mutate( WP_REST_Request $r, $command, array $payload, callable $callback, $status = 200 ) {
 		$repo = SPD_Profile_Repository::instance(); $actor = get_current_user_id(); $key = $this->idem( $r );
 		$hash = hash( 'sha256', SPD_Helpers::json_encode( array( sanitize_key( $command ), $payload ) ) );
 		$idem = $repo->future_idempotency_begin( $actor, $command, $key, $hash );
 		if ( is_wp_error( $idem ) ) { return $this->response( $idem ); }
 		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $this->response( $idem['response'], $status ); }
-		$result = $callback();
-		if ( is_wp_error( $result ) ) { $repo->future_idempotency_fail( $actor, $command, $key ); return $this->response( $result ); }
-		if ( ! is_array( $result ) ) { $result = array( 'ok' => (bool) $result ); }
-		if ( ! $repo->future_idempotency_complete( $actor, $command, $key, $result ) ) { $repo->future_idempotency_fail( $actor, $command, $key ); return $this->response( new WP_Error( 'spd_idempotency_finalize_failed', __( 'The replay-protection result could not be committed.', 'sabri-profiles-doctors' ), array( 'status' => 500 ) ) ); }
+
+		$result = SPD_DB::transaction( function() use ( $repo, $actor, $command, $key, $callback ) {
+			$value = $callback();
+			if ( is_wp_error( $value ) ) { return $value; }
+			if ( ! is_array( $value ) ) { $value = array( 'ok' => (bool) $value ); }
+			if ( ! $repo->future_idempotency_complete( $actor, $command, $key, $value ) ) {
+				return new WP_Error( 'spd_idempotency_finalize_failed', __( 'The replay-protection result could not be committed.', 'sabri-profiles-doctors' ), array( 'status' => 500 ) );
+			}
+			return $value;
+		} );
+
+		if ( is_wp_error( $result ) ) {
+			$repo->future_idempotency_fail( $actor, $command, $key );
+			return $this->response( $result );
+		}
 		return $this->response( $result, $status );
 	}
 
@@ -69,7 +100,8 @@ final class SPD_Future_REST {
 			return array( 'token' => $token, 'url' => rest_url( 'sabri-profiles/v1/disclosures/' . rawurlencode( $token ) ), 'revocable_with_share_epoch' => true );
 		}, 201 );
 	}
-	public function disclosure( WP_REST_Request $r ) { return $this->response( SPD_Future_Profile::disclosure_packet( $r['token'] ), 200, true ); }
+	/** Signed temporary disclosure links are revocable and must never be shared-cacheable. */
+	public function disclosure( WP_REST_Request $r ) { return $this->response( SPD_Future_Profile::disclosure_packet( $r['token'] ), 200, false ); }
 	public function translation( WP_REST_Request $r ) {
 		$p = (array) $r->get_json_params(); $profile = SPD_Profile_Repository::instance()->find_by_user_id( get_current_user_id(), false ); if ( ! $profile ) { return $this->response( new WP_Error( 'spd_profile_unavailable', __( 'Your profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ) ); }
 		$payload = array( 'public_id' => $profile['public_id'], 'locale' => (string) ( $p['locale'] ?? '' ), 'headline' => (string) ( $p['headline'] ?? '' ), 'bio' => (string) ( $p['bio'] ?? '' ), 'source' => (string) ( $p['source'] ?? 'human' ) );
@@ -81,7 +113,11 @@ final class SPD_Future_REST {
 		return $this->mutate( $r, 'reconfirm_profile_field', $payload, function() use ( $profile, $payload ) { return SPD_Future_Profile::reconfirm_field( get_current_user_id(), $profile['public_id'], $payload['field_key'], $payload['days'] ); }, 201 );
 	}
 	public function future_state( WP_REST_Request $r ) {
-		$payload = (array) $r->get_json_params(); $payload['public_id'] = (string) $r['public_id'];
-		return $this->mutate( $r, 'set_future_profile_state', $payload, function() use ( $r, $payload ) { unset( $payload['public_id'] ); return SPD_Future_Profile::set_future_state( get_current_user_id(), $r['public_id'], $payload ); } );
+		$payload = (array) $r->get_json_params();
+		$allowed = array( 'professional_lifecycle', 'lifecycle_reason', 'federation_opt_in' );
+		$unknown = array_diff( array_keys( $payload ), $allowed );
+		if ( $unknown ) { return $this->response( new WP_Error( 'spd_unknown_future_state_field', __( 'One or more future-profile state fields are not supported.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ) ); }
+		$payload['public_id'] = (string) $r['public_id'];
+		return $this->mutate( $r, 'set_future_profile_state', $payload, function() use ( $r, $payload ) { $input = $payload; unset( $input['public_id'] ); return SPD_Future_Profile::set_future_state( get_current_user_id(), $r['public_id'], $input ); } );
 	}
 }
