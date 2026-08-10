@@ -42,7 +42,7 @@ jobs:
       - name: Future Superset 18 coverage
         run: python3 tests/future-superset-coverage.py
       - name: Eighty numbered corrective review gates
-        run: python3 tests/eighty-round-review.py
+        run: python3 tests/eighty-round-review-ci.py
       - name: Existing File 03 regression suites
         run: |
           set -euo pipefail
