@@ -1,0 +1,45 @@
+name: File 03 Eighty-Round Review
+
+on:
+  push:
+    branches:
+      - codex/file-03-80-round-review-fixes
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-candidate-review:
+    name: Exact candidate — 80-round corrective gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: PHP syntax
+        run: find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - name: JavaScript syntax
+        run: find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Fresh 80-round corrective invariants
+        run: python3 tests/eighty-round-review.py
+      - name: Future superset coverage
+        run: python3 tests/future-superset-coverage.py
+      - name: Latest governing-plan coverage
+        run: python3 tests/latest-plan-coverage.py
+      - name: Architecture and security regression
+        run: |
+          python3 tests/architecture-check.py
+          python3 tests/security-check.py
+          python3 tests/schema-check.py
+      - name: Existing forty-round regression
+        run: python3 tests/forty-round-review.py
+      - name: Runtime composition smoke
+        run: |
+          php tests/bootstrap-load.php
+          php tests/authorization-runtime.php
+          php tests/forty-round-runtime.php
