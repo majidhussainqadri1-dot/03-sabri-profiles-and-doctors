@@ -3,6 +3,7 @@ name: File 03 Fresh Eighty-Round Review
 on:
   push:
     branches:
+      - main
       - codex/file-03-fresh-80-review-20260810
   pull_request:
   workflow_dispatch:
