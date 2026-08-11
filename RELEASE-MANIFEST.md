@@ -10,19 +10,26 @@
 - Ninth-review ledger: `NINTH-TEN-ROUND-REVIEW-2026-08-11.md`
 - Defect-bearing rounds: `01, 03, 08, 09, 10`
 - Clean rounds: `02, 04, 05, 06, 07`
-- Exact reviewed candidate: **pending final same-SHA CI freeze**
-- Exact reviewed tree: **pending**
-- Exact-candidate Corrective Integrity: **pending final same-SHA result**
-- Exact-candidate Fresh Eighty-Round: **pending final same-SHA result**
-- Exact-candidate Future Superset 18: **pending final same-SHA result**
-- Exact-candidate deterministic package/checksum/SBOM/source-package parity: **pending final same-SHA result**
-- PR / code merge: **pending**
+- Exact reviewed candidate: `1724e10ff7a49bca625196400a12d683025ad76d`
+- Exact reviewed tree: `dce78734e83c7508079ef96c9ec51a92a162d28a`
+- Exact-candidate Corrective Integrity: run `31521637624` — SUCCESS
+- Exact-candidate Fresh Eighty-Round: run `31521637548` — SUCCESS
+- Exact-candidate Future Superset 18: run `31521637570` — SUCCESS
+- Exact-candidate deterministic package/checksum/SBOM/source-package parity: job `93879961925` — SUCCESS
+- PR: #21 — merged exact reviewed candidate
+- Code-bearing merge: `f6d9f38491723a17fc5fa674533858eca7f3aaa4`
+- Merge tree: `dce78734e83c7508079ef96c9ec51a92a162d28a`
+- Exact merge Baseline Integrity: run `31521994963` — SUCCESS
+- Exact merge Fresh Eighty-Round: run `31521994939` — SUCCESS
+- Exact merge Future Superset 18: run `31521994911` — SUCCESS
+- Exact merge deterministic package/checksum/SBOM/source-package parity: job `93881170131` — SUCCESS
+- Exact merge PHP 8.1/8.3/8.4 and two fresh post-correction gates: SUCCESS
 - Production authorized: **no**
 - Live installation authorized: **no**
 - Staging accepted: **unverified**
 - Exact deployed version/package parity: **unverified**
 
-Round 10 remains open until Corrective Integrity, Fresh Eighty, Future Superset and deterministic package/source parity all succeed on one exact candidate SHA. Earlier intermediate green results are useful diagnostics but are not promoted to final-candidate evidence after a subsequent repository commit.
+The reviewed code tree has now passed same-SHA candidate, PR-head and exact code-bearing merge verification. This documentation-only evidence closure advances repository history but does not alter the reviewed code tree. Its resulting exact final `main` must still be re-tested before final repository closure is reported.
 
 ## Historical provenance warning
 
