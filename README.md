@@ -30,7 +30,7 @@ The eighth cycle is recorded in `EIGHTH-TEN-ROUND-REVIEW-2026-08-11.md` and star
 
 The eighth corrections make privacy erasure retries page-safe, report/appeal reads fail closed on SQL uncertainty, schema-version evidence truthful after exact-shape repair failure, future mutation request shapes strict before idempotency, committed base-profile updates replay-stable across post-commit reread failure, media queue anomaly evidence persistent, share-link rotation first/replay responses identical, and future lifecycle updates resistant to transient permissive second-read defaults. Materially changed source advances to rc8 and receives a permanent eighth-review CI/package-parity gate.
 
-Exact reviewed-candidate and PR/merge evidence will be recorded only after the current rc8 branch passes its exact-candidate gates; this paragraph is deliberately not a staging/live claim.
+The exact reviewed candidate was `2e9b46ba0e4342e7a0d5e208be000e3c4fafc7e6` with tree `57b16fb3e486bec912443a6b26b2d8e1f1610f87`. Exact-candidate Fresh Eighty `31504483618` and Future Superset 18 `31504483632` succeeded; deterministic package/parity job `93822942584` also succeeded. PR #20 merged that reviewed candidate as code-bearing merge commit `e4f78e1cd6161266e3b6b2e37014ae0257628cc1`. That exact merge commit then passed Baseline Integrity `31504866846`, Fresh Eighty `31504866884`, Future Superset 18 `31504866864`, and deterministic package/checksum/SBOM/source-parity job `93823973818`.
 
 ## Truthful status
 
