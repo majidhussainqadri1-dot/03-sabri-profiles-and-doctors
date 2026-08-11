@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 def text(path): return (ROOT / path).read_text(encoding='utf-8')
@@ -20,7 +21,8 @@ uninstall = text('uninstall.php')
 js = text('assets/js/future-profiles.js')
 ledger = text('EIGHTY-ROUND-REVIEW.md')
 
-require("'1.2.0-rc9'" in main and '80-ROUND-CORRECTIVE-REVIEW' in main and 'FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'FIFTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'SIXTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'EIGHTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'NINTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Candidate identity drifted')
+version = re.search(r"define\( 'SPD_VERSION', '1\.2\.0-rc(\d+)' \)", main)
+require(version and int(version.group(1)) >= 9 and '80-ROUND-CORRECTIVE-REVIEW' in main and 'FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'FIFTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'SIXTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'EIGHTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'NINTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Candidate identity drifted')
 require("set_transient( 'spd_activation_lock'" not in activator, 'Race-prone activation transient returned')
 require("add_option( $key, $value, '', false )" in helpers and 'hash_equals' in helpers, 'Atomic lock lacks owner-safe acquire/release')
 require("acquire_lock( 'migration_batch'" in plugin, 'Migration outer serialization missing')
