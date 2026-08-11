@@ -34,6 +34,7 @@ require("! empty( $profile['_fields_read_failed'] )" in privacy and 'spd_privacy
 
 require('SPD_Schema_Guard::base_ready()' in plugin and 'migration_integrity_guard' in plugin, 'Migration wrapper lacks exact-schema/post-run integrity gate')
 require('migration_integrity_read_failed' in plugin and 'spd_last_migration_error' in plugin and "status='retry'" in plugin and "status='dead'" in plugin, 'Migration completion truth does not account for DB uncertainty/retry/dead state')
+require("function_exists( 'load_plugin_textdomain' )" in plugin and "function_exists( 'add_filter' )" in plugin and "function_exists( 'remove_action' )" in plugin, 'Plugin boot does not remain safe when an isolated/incomplete WordPress runtime loads the source tree')
 
 require('media_privacy_profile_read_failed' in media and "! empty( $profile['_fields_read_failed'] )" in media, 'Media privacy reconciliation does not stop on uncertain profile/field reads')
 require("update_option( 'spd_media_privacy_cursor'" in media, 'Media privacy reconciliation cursor persistence is missing')
