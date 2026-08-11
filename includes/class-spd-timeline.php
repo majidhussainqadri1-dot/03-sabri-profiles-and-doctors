@@ -20,9 +20,10 @@ final class SPD_Timeline {
 		global $wpdb;
 		$repo = SPD_Profile_Repository::instance();
 		if ( is_numeric( $identity ) ) {
-			$wpdb->last_error = '';
+			$db_available = is_object( $wpdb );
+			if ( $db_available ) { $wpdb->last_error = ''; }
 			$profile = $repo->find_by_user_id( absint( $identity ), false );
-			if ( $wpdb->last_error || ( is_array( $profile ) && ! empty( $profile['_fields_read_failed'] ) ) ) {
+			if ( ( $db_available && $wpdb->last_error ) || ( is_array( $profile ) && ! empty( $profile['_fields_read_failed'] ) ) ) {
 				return new WP_Error( 'spd_timeline_profile_store_unavailable', __( 'The profile timeline store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 			}
 		} else {
