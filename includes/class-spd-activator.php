@@ -40,9 +40,13 @@ final class SPD_Activator {
 	}
 
 	public static function repair_owned_resources() {
+		if ( ! class_exists( 'SPD_Schema_Guard' ) ) { require_once SPD_DIR . 'includes/class-spd-schema-guard.php'; }
 		$schema = SPD_DB::install(); if ( is_wp_error( $schema ) ) { return $schema; }
+		if ( ! SPD_Schema_Guard::base_ready() ) { return new WP_Error( 'spd_schema_shape_invalid', __( 'The File 03 base database schema is incomplete after repair.', 'sabri-profiles-doctors' ) ); }
 		$central = SPD_Central_Profile::install_schema(); if ( is_wp_error( $central ) ) { return $central; }
+		if ( ! SPD_Schema_Guard::central_ready() ) { return new WP_Error( 'spd_central_schema_shape_invalid', __( 'The File 03 central-plan database schema is incomplete after repair.', 'sabri-profiles-doctors' ) ); }
 		$future = SPD_Future_Profile::install_schema(); if ( is_wp_error( $future ) ) { return $future; }
+		if ( ! SPD_Schema_Guard::future_ready() ) { return new WP_Error( 'spd_future_schema_shape_invalid', __( 'The File 03 future-profile database schema is incomplete after repair.', 'sabri-profiles-doctors' ) ); }
 		$pages = self::pages(); if ( is_wp_error( $pages ) ) { return $pages; }
 		$schedules = array(
 			'spd_dispatch_outbox'         => array( time() + 300, 'hourly' ),
