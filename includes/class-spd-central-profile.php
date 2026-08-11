@@ -107,37 +107,51 @@ final class SPD_Central_Profile {
 	}
 
 	public static function clinic_projection( $user_id, $viewer_id = 0 ) {
+		$user_id = absint( $user_id );
 		$claim = self::provider_claim( 'sabri_file08_public_clinic_projection_v1', $user_id, $viewer_id, 300 );
-		if ( ! $claim || 'active' !== sanitize_key( (string) ( $claim['status'] ?? '' ) ) || 'public' !== sanitize_key( (string) ( $claim['visibility'] ?? '' ) ) || empty( $claim['owner_version'] ) ) { return array(); }
+		if ( ! $claim || absint( $claim['doctor_user_id'] ?? 0 ) !== $user_id || 'active' !== sanitize_key( (string) ( $claim['status'] ?? '' ) ) || 'public' !== sanitize_key( (string) ( $claim['visibility'] ?? '' ) ) || empty( $claim['owner_version'] ) ) { return array(); }
 		$out = array();
 		foreach ( array( 'name','country','city','timezone','hours','consultation_modes','languages','teleconsult','accessible_facilities','next_slots','services' ) as $key ) {
 			if ( ! isset( $claim[ $key ] ) ) { continue; }
 			$value = $claim[ $key ];
-			if ( is_array( $value ) ) { $value = implode( ', ', array_slice( array_map( 'sanitize_text_field', array_map( 'strval', $value ) ), 0, 50 ) ); }
+			if ( is_array( $value ) ) {
+				$parts = array();
+				foreach ( array_slice( $value, 0, 50 ) as $part ) {
+					if ( ! is_scalar( $part ) ) { continue; }
+					$part = sanitize_text_field( (string) $part );
+					if ( '' !== $part ) { $parts[] = $part; }
+				}
+				$value = implode( ', ', array_values( array_unique( $parts ) ) );
+			} elseif ( ! is_scalar( $value ) ) {
+				continue;
+			}
 			$out[ $key ] = SPD_Helpers::sanitize_multiline( $value, 2000 );
 		}
 		foreach ( array( 'url','appointment_url' ) as $key ) {
-			if ( ! empty( $claim[ $key ] ) && SPD_Helpers::same_origin_url( (string) $claim[ $key ] ) ) { $out[ $key ] = esc_url_raw( $claim[ $key ] ); }
+			if ( ! empty( $claim[ $key ] ) && is_scalar( $claim[ $key ] ) && SPD_Helpers::same_origin_url( (string) $claim[ $key ] ) ) { $out[ $key ] = esc_url_raw( $claim[ $key ] ); }
 		}
 		$out['owner_version'] = sanitize_text_field( (string) $claim['owner_version'] );
 		return $out;
 	}
 
 	public static function review_projection( $user_id, $viewer_id = 0 ) {
+		$user_id = absint( $user_id );
 		$claim = self::provider_claim( 'sabri_file08_profile_reviews_projection_v1', $user_id, $viewer_id, 300 );
-		if ( ! $claim ) { return array(); }
+		if ( ! $claim || absint( $claim['doctor_user_id'] ?? 0 ) !== $user_id || empty( $claim['owner_version'] ) ) { return array(); }
 		$items = array();
 		foreach ( array_slice( (array) ( $claim['items'] ?? array() ), 0, 20 ) as $item ) {
 			if ( ! is_array( $item ) || empty( $item['eligible_consultation'] ) || ! empty( $item['clinical_outcome_rating'] ) ) { continue; }
+			$rating = absint( $item['service_rating'] ?? 0 );
+			if ( $rating < 1 || $rating > 5 ) { continue; }
 			$items[] = array(
 				'id'         => sanitize_text_field( (string) ( $item['id'] ?? '' ) ),
-				'rating'     => min( 5, max( 1, absint( $item['service_rating'] ?? 0 ) ) ),
+				'rating'     => $rating,
 				'text'       => SPD_Helpers::sanitize_multiline( $item['text'] ?? '', 1000 ),
 				'created_at' => sanitize_text_field( (string) ( $item['created_at'] ?? '' ) ),
 				'disputed'   => ! empty( $item['disputed'] ),
 			);
 		}
-		return array( 'items' => $items, 'owner_version' => sanitize_text_field( (string) ( $claim['owner_version'] ?? '' ) ) );
+		return array( 'items' => $items, 'owner_version' => sanitize_text_field( (string) $claim['owner_version'] ) );
 	}
 
 	public static function analytics_projection( $user_id, $viewer_id ) {

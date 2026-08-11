@@ -2,6 +2,10 @@
 defined( 'ABSPATH' ) || exit;
 
 trait SPD_Profile_Events {
+	private function idempotency_abandoned_seconds() {
+		return 900;
+	}
+
 	public function event( $event_name, $aggregate_type, $aggregate_id, array $payload ) {
 		global $wpdb;
 		$table = SPD_DB::table( 'events' );
@@ -51,10 +55,22 @@ trait SPD_Profile_Events {
 		$command  = sanitize_key( $command );
 		$key_hash = hash( 'sha256', $key );
 		$table    = SPD_DB::table( 'idempotency' );
-		$row      = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_id=%d AND command=%s AND idempotency_key=%s LIMIT 1", $actor_id, $command, $key_hash ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		if ( $row && strtotime( (string) $row['expires_at'] . ' UTC' ) <= time() ) {
-			$wpdb->delete( $table, array( 'id' => absint( $row['id'] ) ) );
-			$row = array();
+		$load = static function() use ( $wpdb, $table, $actor_id, $command, $key_hash ) {
+			return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_id=%d AND command=%s AND idempotency_key=%s LIMIT 1", $actor_id, $command, $key_hash ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		};
+		$row = $load();
+		if ( $row ) {
+			$expires = strtotime( (string) $row['expires_at'] . ' UTC' );
+			$updated = strtotime( (string) ( $row['updated_at'] ?: $row['created_at'] ) . ' UTC' );
+			$expired = false !== $expires && $expires <= time();
+			$abandoned = 'started' === ( $row['status'] ?? '' ) && false !== $updated && $updated <= time() - $this->idempotency_abandoned_seconds();
+			if ( $expired || $abandoned ) {
+				$where = array( 'id' => absint( $row['id'] ) );
+				if ( $abandoned && ! $expired ) { $where['status'] = 'started'; }
+				$deleted = $wpdb->delete( $table, $where );
+				if ( 1 === $deleted ) { $row = array(); }
+				else { $row = $load(); }
+			}
 		}
 		if ( $row ) {
 			if ( ! hash_equals( (string) $row['request_hash'], (string) $request_hash ) ) {
@@ -81,9 +97,7 @@ trait SPD_Profile_Events {
 			)
 		);
 		if ( $insert ) { return true; }
-		// A simultaneous request may have won the unique-key race. Re-read and
-		// return the deterministic state instead of producing a false database error.
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_id=%d AND command=%s AND idempotency_key=%s LIMIT 1", $actor_id, $command, $key_hash ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$row = $load();
 		if ( $row && hash_equals( (string) $row['request_hash'], (string) $request_hash ) ) {
 			if ( 'completed' === $row['status'] ) {
 				$response = json_decode( (string) $row['response_json'], true );

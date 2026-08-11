@@ -54,9 +54,8 @@ trait SPD_Profile_Professional {
 			function () use ( $wpdb, $table, $profiles, $profile, $actor_id, $expected_profile_version, $uuid, $clean, $request_hash, $status, $now, $response, $idempotency_key ) {
 				$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$profiles} SET version=version+1,updated_at=%s WHERE id=%d AND version=%d", $now, $profile['id'], $expected_profile_version ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				if ( 1 !== $updated ) { return new WP_Error( 'spd_version_conflict', __( 'This profile changed in another session. Reload and try again.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
-				// A new draft/submission explicitly supersedes the previous local proposal;
-				// approved public truth remains solely in File 09.
-				$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='superseded',version=version+1,updated_at=%s WHERE profile_id=%d AND status IN ('draft','pending_review','rejected')", $now, $profile['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$superseded = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='superseded',version=version+1,updated_at=%s WHERE profile_id=%d AND status IN ('draft','pending_review','rejected')", $now, $profile['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				if ( false === $superseded ) { return new WP_Error( 'spd_professional_supersession_failed', __( 'The previous professional proposal state could not be superseded safely.', 'sabri-profiles-doctors' ), array( 'status' => 500 ) ); }
 				$inserted = $wpdb->insert(
 					$table,
 					array(

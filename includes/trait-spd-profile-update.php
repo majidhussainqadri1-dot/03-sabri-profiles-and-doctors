@@ -21,6 +21,7 @@ trait SPD_Profile_Update {
 		$allowed_input = array_merge( array( 'target_user_id', 'bio', 'country', 'city', 'languages', 'studied_books', 'locale', 'audiences', 'internal_message' ), self::founder_fields() );
 		$unknown = array_diff( array_keys( $input ), $allowed_input );
 		if ( $unknown ) { return new WP_Error( 'spd_unknown_profile_field', __( 'One or more submitted profile fields are not supported.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
+		if ( array_key_exists( 'locale', $input ) && ! SPD_Helpers::valid_locale( $input['locale'] ) ) { return new WP_Error( 'spd_profile_locale_invalid', __( 'Choose a valid profile locale.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		$media_validation = $this->validate_prepared_media_bundle( $target_user_id, $prepared_media );
 		if ( is_wp_error( $media_validation ) ) { return $media_validation; }
 

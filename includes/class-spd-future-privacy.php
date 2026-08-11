@@ -17,10 +17,22 @@ final class SPD_Future_Privacy {
 		return $erasers;
 	}
 
+	private function profile_for_privacy( $user_id ) {
+		global $wpdb;
+		$wpdb->last_error = '';
+		$profile = SPD_Profile_Repository::instance()->find_by_user_id( absint( $user_id ), false );
+		if ( $wpdb->last_error ) {
+			return new WP_Error( 'spd_future_privacy_profile_read_failed', __( 'The profile record could not be read for the privacy request.', 'sabri-profiles-doctors' ) );
+		}
+		return $profile;
+	}
+
 	public function export( $email, $page = 1 ) {
 		if ( absint( $page ) > 1 ) { return array( 'data' => array(), 'done' => true ); }
 		$user = get_user_by( 'email', $email ); if ( ! $user ) { return array( 'data' => array(), 'done' => true ); }
-		$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false ); if ( ! $profile ) { return array( 'data' => array(), 'done' => true ); }
+		$profile = $this->profile_for_privacy( $user->ID );
+		if ( is_wp_error( $profile ) ) { return $profile; }
+		if ( ! $profile ) { return array( 'data' => array(), 'done' => true ); }
 		$data = self::export_profile_data( $profile['id'] );
 		if ( is_wp_error( $data ) ) { return $data; }
 		return array( 'data' => $data ? array( array( 'group_id' => 'sabri-profile-future-domain', 'group_label' => __( 'Sabri Future Professional Profile', 'sabri-profiles-doctors' ), 'item_id' => 'future-profile-' . $profile['public_id'], 'data' => $data ) ) : array(), 'done' => true );
@@ -29,7 +41,9 @@ final class SPD_Future_Privacy {
 	public function erase( $email, $page = 1 ) {
 		if ( absint( $page ) > 1 ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
 		$user = get_user_by( 'email', $email ); if ( ! $user ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
-		$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false ); if ( ! $profile ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
+		$profile = $this->profile_for_privacy( $user->ID );
+		if ( is_wp_error( $profile ) ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( $profile->get_error_message() ), 'done' => false ); }
+		if ( ! $profile ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
 		if ( SPD_Membership_Adapter::is_founder( $user->ID ) ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'The official Founder future-profile record requires an authorized governance decision before removal.', 'sabri-profiles-doctors' ) ), 'done' => true ); }
 		$base_hold = apply_filters( 'spd_profile_legal_hold', false, absint( $user->ID ), $profile );
 		$future_hold = apply_filters( 'spd_future_profile_legal_hold', false, absint( $user->ID ), $profile );

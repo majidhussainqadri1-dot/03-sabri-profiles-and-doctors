@@ -82,7 +82,20 @@ trait SPD_Profile_Public_DTO {
 		if ( ! SPD_Helpers::current_contract_claim( $clinic, '1.0.0', 600 ) || absint( $clinic['doctor_user_id'] ?? 0 ) !== absint( $user_id ) || empty( $clinic['owner_version'] ) || 'active' !== sanitize_key( (string) ( $clinic['status'] ?? '' ) ) || 'public' !== sanitize_key( (string) ( $clinic['visibility'] ?? '' ) ) ) { return array(); }
 		$out = array();
 		foreach ( array( 'name', 'country', 'city', 'consultation_modes', 'languages' ) as $key ) {
-			if ( isset( $clinic[ $key ] ) ) { $out[ $key ] = sanitize_text_field( (string) $clinic[ $key ] ); }
+			if ( ! isset( $clinic[ $key ] ) ) { continue; }
+			if ( is_array( $clinic[ $key ] ) ) {
+				$values = array();
+				foreach ( array_slice( $clinic[ $key ], 0, 50 ) as $value ) {
+					if ( is_scalar( $value ) ) {
+						$value = sanitize_text_field( (string) $value );
+						if ( '' !== $value ) { $values[] = $value; }
+					}
+				}
+				if ( $values ) { $out[ $key ] = implode( ', ', array_values( array_unique( $values ) ) ); }
+			} elseif ( is_scalar( $clinic[ $key ] ) ) {
+				$value = sanitize_text_field( (string) $clinic[ $key ] );
+				if ( '' !== $value ) { $out[ $key ] = $value; }
+			}
 		}
 		if ( ! empty( $clinic['url'] ) && SPD_Helpers::same_origin_url( (string) $clinic['url'] ) ) { $out['url'] = esc_url_raw( $clinic['url'] ); }
 		$out['owner_version'] = sanitize_text_field( (string) ( $clinic['owner_version'] ?? '' ) );

@@ -152,9 +152,11 @@ trait SPD_Profile_Central {
 		if ( ! SPD_Membership_Adapter::is_member_eligible( $delegate_id ) ) { return new WP_Error( 'spd_delegate_ineligible', __( 'The delegate account is not eligible.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		$scopes = array_values( array_intersect( array_map( 'sanitize_key', $scopes ), SPD_Central_Profile::delegation_scopes() ) );
 		if ( ! $scopes ) { return new WP_Error( 'spd_delegate_scope_required', __( 'Choose at least one allowed delegation scope.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
-		$expires = $expires_at ? strtotime( $expires_at ) : false;
-		if ( $expires && $expires <= time() ) { return new WP_Error( 'spd_delegate_expired', __( 'Delegation expiry must be in the future.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
-		$expires_value = $expires ? gmdate( 'Y-m-d H:i:s', $expires ) : null;
+		$expires_at = trim( (string) $expires_at );
+		$expires = '' !== $expires_at ? strtotime( $expires_at ) : false;
+		if ( '' !== $expires_at && false === $expires ) { return new WP_Error( 'spd_delegate_expiry_invalid', __( 'Delegation expiry must be a valid date and time.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
+		if ( false !== $expires && $expires <= time() ) { return new WP_Error( 'spd_delegate_expired', __( 'Delegation expiry must be in the future.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
+		$expires_value = false !== $expires ? gmdate( 'Y-m-d H:i:s', $expires ) : null;
 		$request_hash = hash( 'sha256', SPD_Helpers::json_encode( array( $owner_id, $delegate_id, $scopes, $expires_value ) ) );
 		$idem = $this->idempotency_begin( $owner_id, 'grant_profile_delegate', $idempotency_key, $request_hash, true );
 		if ( is_wp_error( $idem ) ) { return $idem; }
@@ -208,7 +210,7 @@ trait SPD_Profile_Central {
 		$table = SPD_Central_Profile::delegation_table();
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT scopes,expires_at FROM {$table} WHERE owner_user_id=%d AND delegate_user_id=%d AND status='active' LIMIT 1", $owner_id, $delegate_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		if ( ! $row || ( $row['expires_at'] && strtotime( $row['expires_at'] ) <= time() ) ) { return false; }
-		if ( ! SPD_Membership_Adapter::is_member_eligible( $delegate_id ) || ! SPD_Verification_Adapter::is_verified( $owner_id ) ) { return false; }
+		if ( ! SPD_Membership_Adapter::is_member_eligible( $owner_id ) || ! SPD_Membership_Adapter::is_member_eligible( $delegate_id ) || ! SPD_Verification_Adapter::is_verified( $owner_id ) ) { return false; }
 		return in_array( $scope, array_filter( array_map( 'sanitize_key', explode( ',', $row['scopes'] ) ) ), true );
 	}
 

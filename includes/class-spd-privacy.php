@@ -32,7 +32,9 @@ final class SPD_Privacy {
 		$page = max( 1, absint( $page ) );
 		$data = array();
 		if ( 1 === $page ) {
+			$wpdb->last_error = '';
 			$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false );
+			if ( $wpdb->last_error ) { return new WP_Error( 'spd_privacy_export_failed', __( 'Profile data could not be read for export.', 'sabri-profiles-doctors' ) ); }
 			if ( $profile ) {
 				$profile_data = array(
 					array( 'name' => 'Public profile ID', 'value' => $profile['public_id'] ),
@@ -61,6 +63,7 @@ final class SPD_Privacy {
 		}
 
 		$offset  = ( $page - 1 ) * self::PAGE_SIZE;
+		$wpdb->last_error = '';
 		$reports = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT report_uuid,reason,details,status,severity,version,created_at,updated_at FROM " . SPD_DB::table( 'reports' ) . " WHERE reporter_user_id=%d ORDER BY id ASC LIMIT %d OFFSET %d",
@@ -68,6 +71,8 @@ final class SPD_Privacy {
 			),
 			ARRAY_A
 		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_privacy_export_failed', __( 'Profile-report data could not be read for export.', 'sabri-profiles-doctors' ) ); }
+		$wpdb->last_error = '';
 		$professional = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT submission_uuid,payload_json,status,version,created_at,updated_at FROM " . SPD_DB::table( 'professional_submissions' ) . " WHERE submitted_by=%d ORDER BY id ASC LIMIT %d OFFSET %d",
@@ -75,6 +80,7 @@ final class SPD_Privacy {
 			),
 			ARRAY_A
 		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_privacy_export_failed', __( 'Professional-profile proposal data could not be read for export.', 'sabri-profiles-doctors' ) ); }
 		$has_more = count( $reports ) > self::PAGE_SIZE || count( $professional ) > self::PAGE_SIZE;
 		foreach ( array_slice( $reports, 0, self::PAGE_SIZE ) as $report ) {
 			$data[] = array(

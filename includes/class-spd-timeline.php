@@ -22,8 +22,9 @@ final class SPD_Timeline {
 		if ( is_wp_error( $profile ) ) { return $profile; }
 		if ( ! $profile || ! SPD_Authorization::profile_visibility_allows( $profile, $viewer_id ) ) { return new WP_Error( 'spd_timeline_unavailable', __( 'This timeline is private or unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$limit  = min( 50, max( 1, absint( $args['limit'] ?? 20 ) ) );
-		$cursor = self::decode_cursor( $args['cursor'] ?? '' );
 		$filter = sanitize_key( (string) ( $args['provider'] ?? '' ) );
+		$cursor = self::decode_cursor( $args['cursor'] ?? '', $profile['public_id'], $filter );
+		if ( is_wp_error( $cursor ) ) { return $cursor; }
 		$items = array();
 		$health = array();
 		foreach ( self::providers() as $key => $definition ) {
@@ -58,7 +59,7 @@ final class SPD_Timeline {
 		$has_more = count( $items ) > $limit;
 		$items = array_slice( $items, 0, $limit );
 		$next = '';
-		if ( $has_more && $items ) { $last = end( $items ); $next = self::encode_cursor( $last['published_at'], $last['sort_id'] ); }
+		if ( $has_more && $items ) { $last = end( $items ); $next = self::encode_cursor( $last['published_at'], $last['sort_id'], $profile['public_id'], $filter ); }
 		return array( 'contract_version' => SPD_CONTRACT_VERSION, 'profile_public_id' => $profile['public_id'], 'items' => $items, 'next_cursor' => $next, 'has_more' => $has_more, 'provider_health' => $health, 'partial' => (bool) array_intersect( array( 'degraded', 'unavailable', 'circuit_open' ), array_values( $health ) ) );
 	}
 
@@ -89,17 +90,24 @@ final class SPD_Timeline {
 		);
 	}
 
-	private static function encode_cursor( $time, $id ) { return rtrim( strtr( base64_encode( SPD_Helpers::json_encode( array( 't' => $time, 'i' => $id ) ) ), '+/', '-_' ), '=' ); }
-	private static function decode_cursor( $cursor ) {
-		$cursor = (string) $cursor;
-		if ( strlen( $cursor ) > 512 ) { return array(); }
-		$cursor = preg_replace( '/[^A-Za-z0-9_-]/', '', $cursor );
-		if ( ! $cursor ) { return array(); }
-		$raw = strtr( $cursor, '-_', '+/' );
+	private static function encode_cursor( $time, $id, $public_id, $filter ) {
+		$body = rtrim( strtr( base64_encode( SPD_Helpers::json_encode( array( 't' => $time, 'i' => $id, 'p' => $public_id, 'f' => $filter ) ) ), '+/', '-_' ), '=' ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		$sig = substr( hash_hmac( 'sha256', $body, wp_salt( 'auth' ) ), 0, 32 );
+		return $body . '.' . $sig;
+	}
+
+	private static function decode_cursor( $cursor, $public_id, $filter ) {
+		$cursor = trim( (string) $cursor );
+		if ( '' === $cursor ) { return array(); }
+		if ( strlen( $cursor ) > 768 || ! preg_match( '/^([A-Za-z0-9_-]{8,700})\.([0-9a-f]{32})$/', $cursor, $m ) ) { return new WP_Error( 'spd_timeline_cursor_invalid', __( 'The timeline cursor is invalid. Reload the timeline and try again.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
+		if ( ! hash_equals( substr( hash_hmac( 'sha256', $m[1], wp_salt( 'auth' ) ), 0, 32 ), $m[2] ) ) { return new WP_Error( 'spd_timeline_cursor_invalid', __( 'The timeline cursor is invalid. Reload the timeline and try again.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
+		$raw = strtr( $m[1], '-_', '+/' );
 		$raw .= str_repeat( '=', ( 4 - strlen( $raw ) % 4 ) % 4 );
-		$decoded = base64_decode( $raw, true );
+		$decoded = base64_decode( $raw, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		$data = $decoded ? json_decode( $decoded, true ) : null;
-		if ( ! is_array( $data ) || empty( $data['t'] ) || empty( $data['i'] ) || false === strtotime( (string) $data['t'] ) || strlen( (string) $data['i'] ) > 240 ) { return array(); }
+		if ( ! is_array( $data ) || empty( $data['t'] ) || empty( $data['i'] ) || (string) ( $data['p'] ?? '' ) !== (string) $public_id || sanitize_key( (string) ( $data['f'] ?? '' ) ) !== sanitize_key( $filter ) || false === strtotime( (string) $data['t'] ) || strlen( (string) $data['i'] ) > 240 ) {
+			return new WP_Error( 'spd_timeline_cursor_invalid', __( 'The timeline cursor does not belong to this profile or filter.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) );
+		}
 		return array( 't' => gmdate( 'Y-m-d H:i:s', strtotime( (string) $data['t'] ) ), 'i' => sanitize_text_field( (string) $data['i'] ) );
 	}
 	private static function before_cursor( array $item, array $cursor ) { return $item['published_at'] < $cursor['t'] || ( $item['published_at'] === $cursor['t'] && $item['sort_id'] < $cursor['i'] ); }

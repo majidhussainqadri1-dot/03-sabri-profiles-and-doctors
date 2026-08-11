@@ -16,9 +16,7 @@ final class SPD_Media {
 		if ( 'public' !== $visibility || ( ! SPD_Membership_Adapter::is_founder( $user_id ) && ! SPD_Membership_Adapter::public_profile_age_eligible( $user_id ) ) ) {
 			return new WP_Error( 'spd_media_secure_delivery_required', __( 'Avatar and cover uploads require an adult public profile until the approved secure profile-media delivery contract is available.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) );
 		}
-		$rate_key='spd_media_rate_'.$user_id; $count=absint(get_transient($rate_key));
-		if ( $count>=10 ) { return new WP_Error('spd_media_rate_limit',__( 'Too many profile uploads were attempted. Try again later.','sabri-profiles-doctors'),array('status'=>429)); }
-		set_transient($rate_key,$count+1,HOUR_IN_SECONDS);
+		if ( ! SPD_Helpers::consume_rate_limit( 'media_upload_' . $user_id, 10, HOUR_IN_SECONDS ) ) { return new WP_Error('spd_media_rate_limit',__( 'Too many profile uploads were attempted. Try again later.','sabri-profiles-doctors'),array('status'=>429)); }
 		$file=$_FILES[$field];
 		if ( UPLOAD_ERR_OK!==(int)$file['error'] || (int)$file['size']<1 || (int)$file['size']>5*MB_IN_BYTES ) { return new WP_Error('spd_upload',__( 'The image is invalid or exceeds 5 MB.','sabri-profiles-doctors')); }
 		$mimes=array('jpg|jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp');
