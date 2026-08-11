@@ -29,7 +29,7 @@ foreach ( (array) $profiles as $profile ) {
 $deletions_table = $wpdb->prefix . 'spd_deletions';
 if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $deletions_table ) ) === $deletions_table ) {
 	$queued = $wpdb->get_results( "SELECT attachment_id,owner_user_id,purpose FROM {$deletions_table}", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-	foreach ( $queued as $row ) {
+	foreach ( (array) $queued as $row ) {
 		$attachment_refs[ absint( $row['attachment_id'] ) ] = array( 'owner' => absint( $row['owner_user_id'] ), 'purpose' => sanitize_key( $row['purpose'] ) );
 	}
 }
@@ -42,11 +42,29 @@ foreach ( $attachment_refs as $attachment_id => $reference ) {
 	}
 }
 
+$managed_keys = array( 'founder', 'profile', 'account_profile', 'personal_site', 'private_preview' );
+$managed_ids = array();
 $map = (array) get_option( 'spd_page_map', array() );
-foreach ( array( 'founder', 'profile', 'account_profile', 'personal_site', 'private_preview' ) as $key ) {
+foreach ( $managed_keys as $key ) {
 	$page_id = absint( $map[ $key ] ?? 0 );
-	if ( $page_id && $key === get_post_meta( $page_id, '_spd_managed_page_key', true ) ) { wp_delete_post( $page_id, true ); }
+	if ( $page_id && $key === get_post_meta( $page_id, '_spd_managed_page_key', true ) ) { $managed_ids[ $page_id ] = true; }
 }
+// Recover File-03-owned pages by their ownership marker as well as the map. This
+// makes destructive cleanup complete even when the page-map option was lost.
+$placeholders = implode( ',', array_fill( 0, count( $managed_keys ), '%s' ) );
+$sql = $wpdb->prepare(
+	"SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key='_spd_managed_page_key' AND meta_value IN ({$placeholders})",
+	...$managed_keys
+); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+$marked_ids = $wpdb->get_col( $sql );
+foreach ( (array) $marked_ids as $page_id ) {
+	$page_id = absint( $page_id );
+	$key = sanitize_key( (string) get_post_meta( $page_id, '_spd_managed_page_key', true ) );
+	$post = get_post( $page_id );
+	if ( $page_id && in_array( $key, $managed_keys, true ) && $post instanceof WP_Post && 'page' === $post->post_type ) { $managed_ids[ $page_id ] = true; }
+}
+foreach ( array_keys( $managed_ids ) as $page_id ) { wp_delete_post( absint( $page_id ), true ); }
+
 foreach ( array( 'profiles', 'fields', 'slugs', 'media', 'reports', 'events', 'idempotency', 'deletions', 'migration_failures', 'professional_submissions', 'profile_delegations', 'report_appeals', 'profile_translations', 'profile_attestations', 'profile_future_state' ) as $name ) {
 	$table = $wpdb->prefix . 'spd_' . $name;
 	$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -54,10 +72,10 @@ foreach ( array( 'profiles', 'fields', 'slugs', 'media', 'reports', 'events', 'i
 foreach ( array(
 	'spd_page_map', 'spd_version', 'spd_db_version', 'spd_contract_version', 'spd_central_schema_version', 'spd_future_schema_version', 'spd_plan_version',
 	'spd_safe_mode', 'spd_safe_mode_reason', 'spd_safe_mode_changed_at',
-	'spd_migration_cursor', 'spd_migration_completed_at', 'spd_migration_traversal_completed_at',
-	'spd_last_outbox_run', 'spd_last_retention_run', 'spd_last_repair_at', 'spd_last_reconciliation',
+	'spd_migration_cursor', 'spd_migration_completed_at', 'spd_migration_traversal_completed_at', 'spd_last_migration_integrity_error',
+	'spd_last_outbox_run', 'spd_last_retention_run', 'spd_last_retention_error', 'spd_last_repair_at', 'spd_last_reconciliation',
 	'spd_reconciliation_required', 'spd_profile_cache_generation',
-	'spd_media_privacy_cursor', 'spd_media_privacy_cycle_completed_at',
+	'spd_media_privacy_cursor', 'spd_media_privacy_cycle_completed_at', 'spd_last_media_queue_error',
 	'spd_purge_on_uninstall', 'spd_founder_profile_legacy_read_only',
 ) as $option ) {
 	delete_option( $option );
