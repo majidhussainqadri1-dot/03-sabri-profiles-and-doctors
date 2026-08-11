@@ -62,3 +62,5 @@ final class SPD_Slug_Privacy {
 		return array( 'data' => $data, 'done' => count( (array) $rows ) <= 50 );
 	}
 }
+
+( new SPD_Slug_Privacy() )->hooks();
