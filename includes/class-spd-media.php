@@ -39,7 +39,18 @@ final class SPD_Media {
 		$attachment_id=media_handle_upload($field,0,array('post_author'=>$user_id),array('test_form'=>false,'mimes'=>$mimes));
 		if ( is_wp_error($attachment_id) ) { return $attachment_id; }
 		$attachment_id=absint($attachment_id);
-		update_post_meta($attachment_id,self::OWNER_META,$user_id); update_post_meta($attachment_id,self::PURPOSE_META,$purpose); update_post_meta($attachment_id,self::STATE_META,'active'); update_post_meta($attachment_id,self::SCAN_SHA_META,strtolower((string)$scan['sha256']));
+		$required_meta=array(
+			self::OWNER_META=>$user_id,
+			self::PURPOSE_META=>$purpose,
+			self::STATE_META=>'active',
+			self::SCAN_SHA_META=>strtolower((string)$scan['sha256']),
+		);
+		foreach ( $required_meta as $meta_key=>$meta_value ) {
+			if ( false === add_post_meta( $attachment_id, $meta_key, $meta_value, true ) ) {
+				wp_delete_attachment( $attachment_id, true );
+				return new WP_Error( 'spd_media_metadata_persist_failed', __( 'The uploaded image could not be bound to its verified owner and scan evidence, so it was removed.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+			}
+		}
 		$alt=sanitize_text_field((string)($context['alt_text']??''));
 		if ( !$alt ) { $alt=sanitize_text_field(SPD_Membership_Adapter::display_name($user_id)); }
 		if ( $alt ) { update_post_meta($attachment_id,'_wp_attachment_image_alt',$alt); }
