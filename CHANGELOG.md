@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0-rc8 — Eighth fresh ten-round sequential corrective hardening
+
+- Completed a fresh sequential 10-round review from exact `main` baseline `c2c78d774207532e035e738834760b6b7395729e`.
+- Defects were found and corrected in rounds `01, 03, 04, 05, 06, 07, 08, 09, 10`; round `02` was clean after an initially suspected delegation defect was disproved by effective repository composition and the redundant temporary patch was reverted.
+- Made base, central and future WordPress privacy erasers retry-safe across page invocations so `done=false` cannot be followed by a synthetic page-2 completion without retrying unresolved erasure.
+- Made report moderation, persistent report-rate evidence and report-appeal eligibility fail closed on SQL uncertainty instead of interpreting failed reads as zero/not-found/forbidden evidence.
+- Invalidated stale base, central and future schema-version options whenever exact required schema shape cannot be re-proven after repair.
+- Rejected unknown top-level disclosure, translation and reconfirmation mutation fields before idempotency reservation so distinct raw requests cannot collapse to one replay identity.
+- Made committed base-profile update responses replay-stable across post-commit reread failure and surfaced degraded reread evidence to File 24 without changing the committed client result.
+- Latched non-fatal media deletion queue anomalies for the full worker pass so lease-loss/claim-loss evidence is cleared only after a genuinely error-free run.
+- Made share-link rotation compute and transactionally store the complete deterministic URL-bearing response, eliminating first-execution/replay shape divergence and post-commit reread dependency.
+- Materialized future lifecycle-owned state from the strict preflight before mutation so transient lower-layer read defaults cannot reactivate omitted retired/legacy state.
+- Advanced materially changed source identity to `1.2.0-rc8`; repository DB schema remains `1.2.0` and contract remains `1.4.0` because no DDL/contract-version change was introduced.
+- Added `EIGHTH-TEN-ROUND-REVIEW-2026-08-11.md`, `tests/eighth-ten-round-review.py`, permanent eighth-review Fresh CI and rc8 deterministic package/checksum/SBOM/source-parity gating.
+- Updated stale historical QA identity/release-lock assertions only where they incorrectly froze the present candidate to an earlier review, preserving their substantive authorization, privacy, concurrency, provider-degradation, security, determinism and release-boundary invariants.
+- Staging acceptance, exact deployed-package parity, live DB/schema/migration state, browser/WCAG/RTL evidence, backup/restore/rollback, Founder acceptance and live operational verification remain separate gates.
+
 ## 1.2.0-rc7 — Seventh fresh ten-round sequential corrective hardening
 
 - Completed a fresh sequential 10-round review from exact `main` baseline `fdde7311409d68af4bae5917f5a49154cb92c9f4`.
