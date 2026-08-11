@@ -32,9 +32,6 @@ final class SPD_Future_REST {
 		} else {
 			$r = new WP_REST_Response( array( 'data' => $result, 'trace_id' => $trace ), $status );
 		}
-		// Future/profile projections include live eligibility, lifecycle and provider
-		// facts. They are revocation-sensitive and therefore remain no-store until
-		// cross-owner invalidation is proven on staging.
 		$r->header( 'Cache-Control', ( $public ? '' : 'private, ' ) . 'no-store, no-cache, must-revalidate, max-age=0' );
 		$r->header( 'Pragma', 'no-cache' );
 		if ( is_wp_error( $result ) || ! $public ) { $r->header( 'X-Robots-Tag', 'noindex, nofollow, noarchive' ); }
@@ -43,6 +40,11 @@ final class SPD_Future_REST {
 
 	private function dto( $public_id ) { return spd_get_personal_site_profile( (string) $public_id, get_current_user_id() ); }
 	private function idem( WP_REST_Request $r ) { return trim( sanitize_text_field( (string) $r->get_header( 'Idempotency-Key' ) ) ); }
+	private function reject_unknown( array $payload, array $allowed, $code ) {
+		return array_diff( array_keys( $payload ), $allowed )
+			? new WP_Error( sanitize_key( $code ), __( 'One or more submitted fields are not supported for this operation.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) )
+			: true;
+	}
 
 	private function medical_scope_question( $question ) {
 		$q = (string) $question;
@@ -91,7 +93,10 @@ final class SPD_Future_REST {
 		return $this->response( $result );
 	}
 	public function create_disclosure( WP_REST_Request $r ) {
-		$p = (array) $r->get_json_params(); $profile = SPD_Profile_Repository::instance()->find_by_user_id( get_current_user_id(), false );
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'scopes', 'ttl' ), 'spd_unknown_disclosure_field' );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape ); }
+		$profile = SPD_Profile_Repository::instance()->find_by_user_id( get_current_user_id(), false );
 		if ( ! $profile ) { return $this->response( new WP_Error( 'spd_profile_unavailable', __( 'Your profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ) ); }
 		$guard = SPD_Authorization::mutation_guard( $profile, get_current_user_id() ); if ( is_wp_error( $guard ) ) { return $this->response( $guard ); }
 		$payload = array( 'public_id' => $profile['public_id'], 'scopes' => array_values( array_map( 'sanitize_key', (array) ( $p['scopes'] ?? array() ) ) ), 'ttl' => absint( $p['ttl'] ?? 3600 ) );
@@ -118,13 +123,21 @@ final class SPD_Future_REST {
 		return $this->response( $packet, 200, false );
 	}
 	public function translation( WP_REST_Request $r ) {
-		$p = (array) $r->get_json_params(); $profile = SPD_Profile_Repository::instance()->find_by_user_id( get_current_user_id(), false ); if ( ! $profile ) { return $this->response( new WP_Error( 'spd_profile_unavailable', __( 'Your profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ) ); }
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'locale', 'headline', 'bio', 'source' ), 'spd_unknown_translation_field' );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape ); }
+		$profile = SPD_Profile_Repository::instance()->find_by_user_id( get_current_user_id(), false );
+		if ( ! $profile ) { return $this->response( new WP_Error( 'spd_profile_unavailable', __( 'Your profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ) ); }
 		if ( ! SPD_Helpers::valid_locale( $p['locale'] ?? '' ) ) { return $this->response( new WP_Error( 'spd_translation_locale_invalid', __( 'Choose a valid locale.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ) ); }
 		$payload = array( 'public_id' => $profile['public_id'], 'locale' => (string) $p['locale'], 'headline' => (string) ( $p['headline'] ?? '' ), 'bio' => (string) ( $p['bio'] ?? '' ), 'source' => (string) ( $p['source'] ?? 'human' ) );
 		return $this->mutate( $r, 'save_profile_translation', $payload, function() use ( $profile, $payload ) { return SPD_Future_Profile::save_translation( get_current_user_id(), $profile['public_id'], $payload['locale'], $payload['headline'], $payload['bio'], $payload['source'] ); }, 201 );
 	}
 	public function reconfirm( WP_REST_Request $r ) {
-		$p = (array) $r->get_json_params(); $profile = SPD_Profile_Repository::instance()->find_by_user_id( get_current_user_id(), false ); if ( ! $profile ) { return $this->response( new WP_Error( 'spd_profile_unavailable', __( 'Your profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ) ); }
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'field_key', 'days' ), 'spd_unknown_reconfirm_field' );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape ); }
+		$profile = SPD_Profile_Repository::instance()->find_by_user_id( get_current_user_id(), false );
+		if ( ! $profile ) { return $this->response( new WP_Error( 'spd_profile_unavailable', __( 'Your profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ) ); }
 		$payload = array( 'public_id' => $profile['public_id'], 'field_key' => sanitize_key( (string) ( $p['field_key'] ?? '' ) ), 'days' => absint( $p['days'] ?? 365 ) );
 		return $this->mutate( $r, 'reconfirm_profile_field', $payload, function() use ( $profile, $payload ) { return SPD_Future_Profile::reconfirm_field( get_current_user_id(), $profile['public_id'], $payload['field_key'], $payload['days'] ); }, 201 );
 	}
