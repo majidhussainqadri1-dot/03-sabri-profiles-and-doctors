@@ -14,7 +14,7 @@ File 03 owns stable public profile identity, profile fields and audiences, Found
 
 ## Release identity
 
-- Plugin: `1.2.0-rc5`
+- Plugin: `1.2.0-rc6`
 - Database schema: `1.2.0`
 - Contract: `1.4.0`
 - PHP: `8.1`, `8.3`, `8.4`
@@ -24,9 +24,9 @@ Companion minimums are enforced by their versioned adapters in source and must b
 
 ## Review status
 
-The repository has completed the original 80-round corrective review, a second independent fresh 80-round sequential review, the third and fourth fresh 10-round corrective reviews, and the fifth fresh 10-round review recorded in `FIFTH-TEN-ROUND-REVIEW-2026-08-11.md`.
+The repository has completed the original 80-round corrective review, a second independent fresh 80-round sequential review, the third, fourth and fifth fresh 10-round corrective reviews, and the sixth fresh 10-round sequential review recorded in `SIXTH-TEN-ROUND-REVIEW-2026-08-11.md`.
 
-The fifth cycle started from exact `main` `3358472bc374958c66f5e84997b7633f598caa73` (tree `49283b40823aaa31348403588311e1912af5851d`). Defects were found and corrected in rounds **01, 02, 03, 04, 05, 09 and 10**; rounds **06, 07 and 08** were clean. Corrections unify File 26 and REST search projection with the canonical fail-closed lifecycle helper, require exact schema shape for central/future privacy and future-state reads, minimize cross-user appeal privacy export, recover marker-bound orphan media during explicit destructive uninstall, and advance the materially changed candidate to rc5 with a permanent fifth-review CI gate.
+The sixth cycle started from exact `main` `822837daa3cebc4c5ae80410f31511aadf3885b0`. Defects were found and corrected in rounds **01, 02, 03, 04, 05, 07, 09 and 10**; rounds **06 and 08** were clean. Corrections erase reviewer-authored appeal notes with reviewer identity, serialize future erasure behind canonical tombstoning, require exact index semantics for owned schema, enforce strict audience maps, block minor delegates at grant and use time, renew bounded media-deletion retry state, and advance materially changed source to rc6 with a permanent sixth-review CI gate.
 
 ## Truthful status
 
