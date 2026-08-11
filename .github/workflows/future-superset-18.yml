@@ -6,6 +6,7 @@ on:
       - main
       - 'codex/file-03-future-superset-18'
       - 'codex/file-03-eighty-round-corrective-review'
+      - 'codex/file-03-fifth-ten-round-20260811'
   pull_request:
     branches: [main]
 
@@ -81,7 +82,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(sed -n 's/^ \* Version: \(.*\)$/\1/p' sabri-profiles-doctors.php | head -1)"
-          test "$VERSION" = "1.2.0-rc4"
+          test "$VERSION" = "1.2.0-rc5"
           NAME="03-sabri-profiles-and-doctors-$VERSION.zip"
           cmp "$RUNNER_TEMP/a/$NAME" "$RUNNER_TEMP/b/$NAME"
           (cd "$RUNNER_TEMP/a" && sha256sum -c "$NAME.sha256")
@@ -95,7 +96,7 @@ jobs:
           diff -u uninstall.php "$TOP/uninstall.php"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: file03-future-superset-18-1.2.0-rc4-fourth-ten-round
+          name: file03-future-superset-18-1.2.0-rc5-fifth-ten-round
           path: |
             ${{ runner.temp }}/a/*.zip
             ${{ runner.temp }}/a/*.sha256
