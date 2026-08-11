@@ -76,15 +76,59 @@ final class SPD_Plugin {
 	}
 
 	public function run_migration_batch() {
+		if ( ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_Schema_Guard::base_ready() ) {
+			delete_option( 'spd_migration_completed_at' );
+			delete_option( 'spd_migration_traversal_completed_at' );
+			update_option( 'spd_last_migration_error', array( 'code' => 'migration_schema_incomplete', 'at' => SPD_Helpers::now() ), false );
+			SPD_Observability::set_safe_mode( true, 'migration_schema_incomplete' );
+			return;
+		}
 		$token = SPD_Helpers::acquire_lock( 'migration_batch', 10 * MINUTE_IN_SECONDS );
 		if ( ! $token || ! $this->observability ) { return; }
 		try {
 			delete_transient( 'spd_migration_lock' );
 			$this->observability->migrate_profiles_batch();
+			$this->migration_integrity_guard();
 		} finally {
 			delete_transient( 'spd_migration_lock' );
 			SPD_Helpers::release_lock( 'migration_batch', $token );
 		}
+	}
+
+	private function migration_integrity_guard() {
+		global $wpdb;
+		if ( ! SPD_Schema_Guard::base_ready() ) {
+			delete_option( 'spd_migration_completed_at' );
+			delete_option( 'spd_migration_traversal_completed_at' );
+			update_option( 'spd_last_migration_error', array( 'code' => 'migration_schema_incomplete', 'at' => SPD_Helpers::now() ), false );
+			return false;
+		}
+		$cursor = absint( get_option( 'spd_migration_cursor', 0 ) );
+		$wpdb->last_error = '';
+		$remaining_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->users} WHERE ID>%d", $cursor ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$remaining_error = (string) $wpdb->last_error;
+		$failures = SPD_DB::table( 'migration_failures' );
+		$wpdb->last_error = '';
+		$retry_raw = $wpdb->get_var( "SELECT COUNT(*) FROM {$failures} WHERE status='retry'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$retry_error = (string) $wpdb->last_error;
+		$wpdb->last_error = '';
+		$dead_raw = $wpdb->get_var( "SELECT COUNT(*) FROM {$failures} WHERE status='dead'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$dead_error = (string) $wpdb->last_error;
+		if ( '' !== $remaining_error || '' !== $retry_error || '' !== $dead_error ) {
+			delete_option( 'spd_migration_completed_at' );
+			delete_option( 'spd_migration_traversal_completed_at' );
+			update_option( 'spd_last_migration_error', array( 'code' => 'migration_integrity_read_failed', 'at' => SPD_Helpers::now() ), false );
+			if ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) { wp_schedule_event( time() + 60, 'spd_five_minutes', 'spd_migrate_profiles_batch' ); }
+			return false;
+		}
+		$remaining = absint( $remaining_raw );
+		$retry = absint( $retry_raw );
+		$dead = absint( $dead_raw );
+		if ( $remaining ) { delete_option( 'spd_migration_traversal_completed_at' ); }
+		if ( $remaining || $retry || $dead ) { delete_option( 'spd_migration_completed_at' ); }
+		if ( ( $remaining || $retry ) && ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) { wp_schedule_event( time() + 60, 'spd_five_minutes', 'spd_migrate_profiles_batch' ); }
+		delete_option( 'spd_last_migration_error' );
+		return ! $remaining && ! $retry && ! $dead;
 	}
 
 	public function run_retention_cleanup() {
