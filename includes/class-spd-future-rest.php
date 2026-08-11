@@ -50,6 +50,14 @@ final class SPD_Future_REST {
 		return array_diff( array_keys( $payload ), $allowed ) ? new WP_Error( sanitize_key( $code ), __( 'One or more submitted fields are not supported for this operation.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ) : true;
 	}
 
+	private function db_certain_future_result( $result ) {
+		global $wpdb;
+		if ( $wpdb->last_error ) {
+			return new WP_Error( 'spd_future_store_unavailable', __( 'The future-profile store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		return $result;
+	}
+
 	private function owner_profile() {
 		global $wpdb;
 		$wpdb->last_error = '';
@@ -129,14 +137,14 @@ final class SPD_Future_REST {
 		$profile = $this->owner_profile(); if ( is_wp_error( $profile ) ) { return $this->response( $profile ); }
 		if ( ! SPD_Helpers::valid_locale( $p['locale'] ?? '' ) ) { return $this->response( new WP_Error( 'spd_translation_locale_invalid', __( 'Choose a valid locale.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ) ); }
 		$payload = array( 'public_id' => $profile['public_id'], 'locale' => (string) $p['locale'], 'headline' => (string) ( $p['headline'] ?? '' ), 'bio' => (string) ( $p['bio'] ?? '' ), 'source' => (string) ( $p['source'] ?? 'human' ) );
-		return $this->mutate( $r, 'save_profile_translation', $payload, function() use ( $profile, $payload ) { return SPD_Future_Profile::save_translation( get_current_user_id(), $profile['public_id'], $payload['locale'], $payload['headline'], $payload['bio'], $payload['source'] ); }, 201 );
+		return $this->mutate( $r, 'save_profile_translation', $payload, function() use ( $profile, $payload ) { $result = SPD_Future_Profile::save_translation( get_current_user_id(), $profile['public_id'], $payload['locale'], $payload['headline'], $payload['bio'], $payload['source'] ); return $this->db_certain_future_result( $result ); }, 201 );
 	}
 
 	public function reconfirm( WP_REST_Request $r ) {
 		$p = (array) $r->get_json_params(); $shape = $this->reject_unknown( $p, array( 'field_key', 'days' ), 'spd_unknown_reconfirm_field' ); if ( is_wp_error( $shape ) ) { return $this->response( $shape ); }
 		$profile = $this->owner_profile(); if ( is_wp_error( $profile ) ) { return $this->response( $profile ); }
 		$payload = array( 'public_id' => $profile['public_id'], 'field_key' => sanitize_key( (string) ( $p['field_key'] ?? '' ) ), 'days' => absint( $p['days'] ?? 365 ) );
-		return $this->mutate( $r, 'reconfirm_profile_field', $payload, function() use ( $profile, $payload ) { return SPD_Future_Profile::reconfirm_field( get_current_user_id(), $profile['public_id'], $payload['field_key'], $payload['days'] ); }, 201 );
+		return $this->mutate( $r, 'reconfirm_profile_field', $payload, function() use ( $profile, $payload ) { $result = SPD_Future_Profile::reconfirm_field( get_current_user_id(), $profile['public_id'], $payload['field_key'], $payload['days'] ); return $this->db_certain_future_result( $result ); }, 201 );
 	}
 
 	public function future_state( WP_REST_Request $r ) {
@@ -162,6 +170,6 @@ final class SPD_Future_REST {
 			'lifecycle_reason' => array_key_exists( 'lifecycle_reason', $submitted ) ? (string) $submitted['lifecycle_reason'] : (string) ( $current_state['lifecycle_reason'] ?? '' ),
 			'federation_opt_in' => array_key_exists( 'federation_opt_in', $submitted ) ? ( ! empty( $submitted['federation_opt_in'] ) ? 1 : 0 ) : ( ! empty( $current_state['federation_opt_in'] ) ? 1 : 0 ),
 		);
-		return $this->mutate( $r, 'set_future_profile_state', $payload, function() use ( $actor, $r, $payload ) { $mutation = $payload; unset( $mutation['public_id'] ); return SPD_Future_Profile::set_future_state( $actor, $r['public_id'], $mutation ); } );
+		return $this->mutate( $r, 'set_future_profile_state', $payload, function() use ( $actor, $r, $payload ) { $mutation = $payload; unset( $mutation['public_id'] ); $result = SPD_Future_Profile::set_future_state( $actor, $r['public_id'], $mutation ); return $this->db_certain_future_result( $result ); } );
 	}
 }
