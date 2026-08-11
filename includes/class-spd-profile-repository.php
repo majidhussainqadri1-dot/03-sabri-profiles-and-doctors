@@ -63,10 +63,7 @@ final class SPD_Profile_Repository {
 		return $result;
 	}
 
-	/**
-	 * The repository is itself an integration boundary, so malformed visibility
-	 * maps must fail closed even when a caller bypasses the REST adapter.
-	 */
+	/** The repository is itself an integration boundary. */
 	public function update_profile( $actor_id, array $input, $expected_version, $idempotency_key = '', array $prepared_media = array() ) {
 		if ( array_key_exists( 'audiences', $input ) ) {
 			$guard = SPD_Authorization::validate_audience_payload( $input['audiences'], self::visibility_fields() );
@@ -91,10 +88,49 @@ final class SPD_Profile_Repository {
 	}
 
 	/**
-	 * Grant-time delegation authority must be enforced below the REST layer too,
-	 * because repository methods are a reusable integration surface for other
-	 * File 03 adapters and companion modules.
+	 * Share-link rotation stores the complete deterministic response inside the
+	 * transaction. First execution and idempotent replay therefore have exactly
+	 * the same shape and do not depend on a post-commit profile reread.
 	 */
+	public function rotate_share_link( $actor_id, $expected_version, $idempotency_key = '' ) {
+		global $wpdb;
+		$actor_id = absint( $actor_id );
+		$profile = $this->find_by_user_id( $actor_id );
+		if ( is_wp_error( $profile ) ) { return $profile; }
+		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
+		$guard = SPD_Authorization::mutation_guard( $profile, $actor_id );
+		if ( is_wp_error( $guard ) ) { return $guard; }
+		$expected_version = absint( $expected_version );
+		if ( $expected_version !== absint( $profile['version'] ) ) { return new WP_Error( 'spd_version_conflict', __( 'Reload your profile before rotating the share link.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+		$epoch = SPD_Central_Profile::share_epoch( $profile ) + 1;
+		$request_hash = hash( 'sha256', $profile['public_id'] . '|' . $epoch . '|' . $expected_version );
+		$idem = $this->idempotency_begin( $actor_id, 'rotate_share_link', $idempotency_key, $request_hash, true );
+		if ( is_wp_error( $idem ) ) { return $idem; }
+		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
+		$new_version = $expected_version + 1;
+		$future_profile = $profile;
+		$future_profile['fields']['share_epoch'] = array( 'field_value' => (string) $epoch, 'audience' => 'private' );
+		$response = array(
+			'public_id' => $profile['public_id'],
+			'version' => $new_version,
+			'share_url' => SPD_Central_Profile::short_url( $future_profile ),
+		);
+		$profiles = SPD_DB::table( 'profiles' );
+		$result = SPD_DB::transaction( function() use ( $wpdb, $profiles, $profile, $epoch, $expected_version, $new_version, $actor_id, $idempotency_key, $response ) {
+			$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$profiles} SET version=%d,updated_at=%s WHERE id=%d AND version=%d", $new_version, SPD_Helpers::now(), $profile['id'], $expected_version ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( 1 !== $updated ) { return new WP_Error( 'spd_version_conflict', __( 'The profile changed while rotating its share link.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+			if ( ! $this->upsert_field( $profile['id'], 'share_epoch', (string) $epoch, 'private', 'approved', 'file03' ) ) { return new WP_Error( 'spd_share_rotation_failed', __( 'The share-link revision could not be recorded.', 'sabri-profiles-doctors' ) ); }
+			$event = $this->event( 'ProfileShareLinkRotated.v1', 'profile', $profile['public_id'], array( 'version' => $new_version ) );
+			if ( is_wp_error( $event ) ) { return $event; }
+			if ( ! $this->idempotency_complete( $actor_id, 'rotate_share_link', $idempotency_key, $response ) ) { return new WP_Error( 'spd_idempotency_finalize_failed', __( 'The replay-protection result could not be committed.', 'sabri-profiles-doctors' ) ); }
+			return true;
+		} );
+		if ( is_wp_error( $result ) ) { $this->idempotency_fail( $actor_id, 'rotate_share_link', $idempotency_key ); return $result; }
+		$this->purge_profile_cache( $profile );
+		return $response;
+	}
+
+	/** Grant-time delegation authority below REST. */
 	public function grant_delegate( $owner_id, $delegate_id, array $scopes, $expires_at = '', $idempotency_key = '' ) {
 		$delegate_id = absint( $delegate_id );
 		if ( $delegate_id && SPD_Membership_Adapter::is_minor( $delegate_id ) ) {
@@ -103,12 +139,7 @@ final class SPD_Profile_Repository {
 		return $this->central_grant_delegate( $owner_id, $delegate_id, $scopes, $expires_at, $idempotency_key );
 	}
 
-	/**
-	 * Use-time delegation authority. The class-level owner command deliberately
-	 * overrides the trait helper so a delegation cannot mutate a suspended,
-	 * archived or tombstoned profile, nor proceed after a failed field-store
-	 * read. Current File 00 and File 09 authority is revalidated every time.
-	 */
+	/** Use-time delegation authority with current provider revalidation. */
 	public function delegate_can_manage( $owner_id, $delegate_id, $scope ) {
 		global $wpdb;
 		$owner_id = absint( $owner_id );
@@ -126,11 +157,7 @@ final class SPD_Profile_Repository {
 		return in_array( $scope, array_filter( array_map( 'sanitize_key', explode( ',', $row['scopes'] ) ) ), true );
 	}
 
-	/**
-	 * Central-plan safety-report command with DB-certain rate evidence. The class
-	 * override is intentional: SQL uncertainty must never be interpreted as a
-	 * zero report count and thereby permit a write.
-	 */
+	/** Central-plan safety-report command with DB-certain rate evidence. */
 	public function create_safety_report( $public_id, $reporter_user_id, $reason, $details, $idempotency_key = '' ) {
 		global $wpdb;
 		$reporter_user_id = absint( $reporter_user_id );
@@ -173,7 +200,7 @@ final class SPD_Profile_Repository {
 		return $response;
 	}
 
-	/** Appeal eligibility is authorization-sensitive and therefore DB uncertainty is 503, never a synthetic 403/not-found. */
+	/** Appeal eligibility is authorization-sensitive and DB uncertainty is 503. */
 	public function request_report_appeal( $report_uuid, $requester_id, $reason, $idempotency_key = '' ) {
 		global $wpdb;
 		$requester_id = absint( $requester_id );
@@ -206,7 +233,7 @@ final class SPD_Profile_Repository {
 		return $response;
 	}
 
-	/** Narrow public wrappers let additive File 03 owner commands reuse the canonical replay-protection store. */
+	/** Narrow public wrappers let additive File 03 owner commands reuse replay protection. */
 	public function future_idempotency_begin( $actor_id, $command, $key, $request_hash ) { return $this->idempotency_begin( $actor_id, $command, $key, $request_hash, true ); }
 	public function future_idempotency_complete( $actor_id, $command, $key, array $response ) { return $this->idempotency_complete( $actor_id, $command, $key, $response ); }
 	public function future_idempotency_fail( $actor_id, $command, $key ) { $this->idempotency_fail( $actor_id, $command, $key ); }
