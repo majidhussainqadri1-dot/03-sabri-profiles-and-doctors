@@ -48,6 +48,14 @@ final class SPD_Future_Privacy {
 		$base_hold = apply_filters( 'spd_profile_legal_hold', false, absint( $user->ID ), $profile );
 		$future_hold = apply_filters( 'spd_future_profile_legal_hold', false, absint( $user->ID ), $profile );
 		if ( $base_hold || $future_hold ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'Future professional profile data is retained under an active legal or governance hold.', 'sabri-profiles-doctors' ) ), 'done' => true ); }
+		if ( 'tombstoned' !== sanitize_key( (string) ( $profile['state'] ?? '' ) ) ) {
+			return array(
+				'items_removed' => false,
+				'items_retained' => true,
+				'messages' => array( __( 'Future professional state is retained until the canonical base profile has been tombstoned, preventing an erasure-order race from re-enabling public professional features.', 'sabri-profiles-doctors' ) ),
+				'done' => false,
+			);
+		}
 		$result = self::erase_profile_data( $profile['id'] );
 		return array( 'items_removed' => ! empty( $result['removed'] ), 'items_retained' => ! empty( $result['retry'] ), 'messages' => ! empty( $result['retry'] ) ? array( __( 'Future professional profile data could not yet be erased and requires a retry.', 'sabri-profiles-doctors' ) ) : array(), 'done' => empty( $result['retry'] ) );
 	}
