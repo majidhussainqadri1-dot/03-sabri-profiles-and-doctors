@@ -28,7 +28,7 @@ foreach ( $spd_trait_files as $spd_trait_file ) { require_once SPD_DIR . 'includ
 unset( $spd_trait_files, $spd_trait_file );
 
 $spd_files = array(
-	'class-spd-db.php','class-spd-membership-adapter.php','class-spd-verification-adapter.php','class-spd-authorization.php','class-spd-helpers.php','class-spd-provider-guards.php','class-spd-central-profile.php','class-spd-future-profile.php','class-spd-future-privacy.php','class-spd-contracts.php','class-spd-profile-repository.php','class-spd-media.php','class-spd-timeline.php','class-spd-routes.php','class-spd-rest.php','class-spd-central-rest.php','class-spd-future-rest.php','class-spd-frontend.php','class-spd-privacy.php','class-spd-observability.php','class-spd-admin.php','class-spd-activator.php','class-spd-plugin.php',
+	'class-spd-db.php','class-spd-membership-adapter.php','class-spd-verification-adapter.php','class-spd-authorization.php','class-spd-helpers.php','class-spd-provider-guards.php','class-spd-central-profile.php','class-spd-future-profile.php','class-spd-future-privacy.php','class-spd-contracts.php','class-spd-profile-repository.php','class-spd-media.php','class-spd-timeline.php','class-spd-routes.php','class-spd-rest.php','class-spd-central-rest.php','class-spd-future-rest.php','class-spd-frontend.php','class-spd-privacy.php','class-spd-observability.php','class-spd-outbox-dispatcher.php','class-spd-admin.php','class-spd-activator.php','class-spd-plugin.php',
 );
 foreach ( $spd_files as $spd_file ) { require_once SPD_DIR . 'includes/' . $spd_file; }
 unset( $spd_files, $spd_file );
@@ -162,5 +162,6 @@ add_action( 'spd_migrate_profiles_batch', 'spd_migration_integrity_guard', 99 );
 function spd_start_plugin() {
 	SPD_Provider_Guards::register();
 	( new SPD_Plugin() )->run();
+	SPD_Outbox_Dispatcher::replace_legacy_hook();
 }
 add_action( 'plugins_loaded', 'spd_start_plugin', 30 );
