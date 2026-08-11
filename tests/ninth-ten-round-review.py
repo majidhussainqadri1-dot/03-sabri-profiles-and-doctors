@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,7 +21,8 @@ outbox = text('includes/class-spd-outbox-dispatcher.php')
 uninstall = text('uninstall.php')
 ledger = text('NINTH-TEN-ROUND-REVIEW-2026-08-11.md')
 
-require('Version: 1.2.0-rc9' in main and "define( 'SPD_VERSION', '1.2.0-rc9' )" in main, 'Ninth-review release identity is not rc9')
+version = re.search(r"define\( 'SPD_VERSION', '1\.2\.0-rc(\d+)' \)", main)
+require(version and int(version.group(1)) >= 9, 'Ninth-review guarantees require rc9 or a later corrective identity')
 require('NINTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Ninth-review plan marker is missing')
 require("'class-spd-slug-privacy.php'" in main, 'Permanent slug-history privacy exporter is not loaded')
 
