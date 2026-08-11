@@ -61,7 +61,7 @@ final class SPD_Central_REST {
 
 	private function version( WP_REST_Request $r ) {
 		$raw = trim( (string) $r->get_header( 'If-Match' ) );
-		if ( '' !== $raw ) { return preg_match( '/^\"?([1-9][0-9]*)\"?$/', $raw, $m ) ? absint( $m[1] ) : 0; }
+		if ( '' !== $raw ) { return preg_match( '/^"?([1-9][0-9]*)"?$/', $raw, $m ) ? absint( $m[1] ) : 0; }
 		return absint( $r->get_param( 'version' ) );
 	}
 	private function idem( WP_REST_Request $r ) { return trim( sanitize_text_field( (string) $r->get_header( 'Idempotency-Key' ) ) ); }
