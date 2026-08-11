@@ -56,8 +56,13 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 	if ( is_wp_error( $dto ) ) { return $dto; }
 	$profile = SPD_Profile_Repository::instance()->find_by_public_id( $dto['public_id'] );
 	if ( ! $profile ) { return $dto; }
-	$state = spd_read_future_profile_state( $profile['id'] );
+	$base_contacts = (array) ( $dto['contacts'] ?? array() );
+	$base_clinic = (array) ( $dto['clinic'] ?? array() );
 	$dto = SPD_Future_Profile::augment_personal_site_dto( $dto, $profile, $viewer_id );
+	// The explicit, fail-closed read is authoritative for every revocation-sensitive
+	// lifecycle decision. SPD_Future_Profile's convenience projections may make
+	// additional reads, but they cannot re-enable contact/FHIR/appointment state.
+	$state = spd_read_future_profile_state( $profile['id'] );
 	if ( is_wp_error( $state ) ) {
 		$dto['future']['lifecycle'] = array( 'status' => 'unknown', 'active_professional' => false, 'reason' => '', 'changed_at' => '' );
 		$dto['future']['state_degraded'] = true;
@@ -65,9 +70,38 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 		$dto['future']['federation'] = array( 'opt_in' => false, 'transport_owner' => 'external', 'transport_active' => false );
 		$dto['contacts'] = array();
 		if ( isset( $dto['clinic']['appointment_url'] ) ) { unset( $dto['clinic']['appointment_url'] ); }
-	} elseif ( isset( $dto['future']['federation'] ) && is_array( $dto['future']['federation'] ) ) {
-		$dto['future']['federation']['transport_active'] = ! empty( $dto['future']['federation']['inbox'] ) && ! empty( $dto['future']['federation']['outbox'] );
+	} else {
+		$status = sanitize_key( (string) ( $state['professional_lifecycle'] ?? '' ) );
+		if ( ! in_array( $status, array( 'active','retired','legacy' ), true ) ) {
+			$dto['future']['lifecycle'] = array( 'status' => 'unknown', 'active_professional' => false, 'reason' => '', 'changed_at' => '' );
+			$dto['future']['state_degraded'] = true;
+			$dto['future']['contact_relay'] = array();
+			$dto['future']['federation'] = array( 'opt_in' => false, 'transport_owner' => 'external', 'transport_active' => false );
+			$dto['contacts'] = array();
+			if ( isset( $dto['clinic']['appointment_url'] ) ) { unset( $dto['clinic']['appointment_url'] ); }
+		} else {
+			$active = 'active' === $status;
+			$dto['future']['lifecycle'] = array( 'status' => $status, 'active_professional' => $active, 'reason' => SPD_Helpers::sanitize_multiline( (string) ( $state['lifecycle_reason'] ?? '' ), 500 ), 'changed_at' => sanitize_text_field( (string) ( $state['lifecycle_changed_at'] ?? '' ) ) );
+			unset( $dto['future']['state_degraded'] );
+			if ( ! isset( $dto['future']['federation'] ) || ! is_array( $dto['future']['federation'] ) ) { $dto['future']['federation'] = array( 'transport_owner' => 'external', 'transport_active' => false ); }
+			$dto['future']['federation']['opt_in'] = ! empty( $state['federation_opt_in'] );
+			if ( empty( $state['federation_opt_in'] ) ) {
+				unset( $dto['future']['federation']['inbox'], $dto['future']['federation']['outbox'] );
+				$dto['future']['federation']['transport_active'] = false;
+			}
+			if ( ! $active ) {
+				$dto['contacts'] = array();
+				$dto['future']['contact_relay'] = array();
+				if ( isset( $dto['clinic']['appointment_url'] ) ) { unset( $dto['clinic']['appointment_url'] ); }
+			} else {
+				$dto['contacts'] = $base_contacts;
+				$dto['clinic'] = $base_clinic;
+				$dto['future']['contact_relay'] = SPD_Future_Profile::contact_relay( $profile['user_id'], $viewer_id );
+			}
+		}
 	}
+	// Rebuild FHIR only after the authoritative lifecycle decision above.
+	$dto['future']['fhir'] = SPD_Future_Profile::fhir_projection( $dto );
 	return $dto;
 }
 /** File 26 current, public-safe search projection. */
