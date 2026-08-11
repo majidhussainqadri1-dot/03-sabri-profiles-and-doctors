@@ -135,33 +135,40 @@ final class SPD_Privacy {
 			$retained   = true;
 			$messages[] = __( 'Profile-report evidence is retained under an active legal, safety, or governance hold.', 'sabri-profiles-doctors' );
 		} else {
-			$table   = SPD_DB::table( 'reports' );
+			$table = SPD_DB::table( 'reports' );
+			$wpdb->last_error = '';
 			$reports = $wpdb->get_results( $wpdb->prepare( "SELECT id,report_uuid FROM {$table} WHERE reporter_user_id=%d", absint( $user->ID ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$erased = SPD_DB::transaction(
-				function () use ( $wpdb, $table, $reports, $repo, $user ) {
-					foreach ( $reports as $report ) {
-						$changed = $wpdb->update(
-							$table,
-							array( 'reporter_user_id' => 0, 'details' => '', 'decision_note' => '', 'dedupe_hash' => hash( 'sha256', $report['report_uuid'] . ':erased' ), 'updated_at' => SPD_Helpers::now() ),
-							array( 'id' => absint( $report['id'] ), 'reporter_user_id' => absint( $user->ID ) )
-						);
-						if ( false === $changed ) { return new WP_Error( 'spd_report_erasure_failed', __( 'Profile-report data could not be erased.', 'sabri-profiles-doctors' ) ); }
+			if ( $wpdb->last_error ) {
+				$retry = true;
+				$retained = true;
+				$messages[] = __( 'Profile-report data could not be read safely for erasure and requires a retry.', 'sabri-profiles-doctors' );
+			} else {
+				$erased = SPD_DB::transaction(
+					function () use ( $wpdb, $table, $reports, $repo, $user ) {
+						foreach ( $reports as $report ) {
+							$changed = $wpdb->update(
+								$table,
+								array( 'reporter_user_id' => 0, 'details' => '', 'decision_note' => '', 'dedupe_hash' => hash( 'sha256', $report['report_uuid'] . ':erased' ), 'updated_at' => SPD_Helpers::now() ),
+								array( 'id' => absint( $report['id'] ), 'reporter_user_id' => absint( $user->ID ) )
+							);
+							if ( false === $changed ) { return new WP_Error( 'spd_report_erasure_failed', __( 'Profile-report data could not be erased.', 'sabri-profiles-doctors' ) ); }
+						}
+						if ( $reports ) {
+							$event = $repo->event( 'ProfileReporterErased.v1', 'user', (string) absint( $user->ID ), array( 'report_count' => count( $reports ) ) );
+							if ( is_wp_error( $event ) ) { return $event; }
+						}
+						return true;
 					}
-					if ( $reports ) {
-						$event = $repo->event( 'ProfileReporterErased.v1', 'user', (string) absint( $user->ID ), array( 'report_count' => count( $reports ) ) );
-						if ( is_wp_error( $event ) ) { return $event; }
-					}
-					return true;
+				);
+				if ( is_wp_error( $erased ) ) {
+					$retry      = true;
+					$retained   = true;
+					$messages[] = __( 'Some profile-report data could not yet be erased and requires a retry.', 'sabri-profiles-doctors' );
+				} elseif ( $reports ) {
+					$removed    = true;
+					$retained   = true;
+					$messages[] = __( 'Report text and reporter identity were erased; minimal non-identifying workflow records are retained for safety and audit integrity.', 'sabri-profiles-doctors' );
 				}
-			);
-			if ( is_wp_error( $erased ) ) {
-				$retry      = true;
-				$retained   = true;
-				$messages[] = __( 'Some profile-report data could not yet be erased and requires a retry.', 'sabri-profiles-doctors' );
-			} elseif ( $reports ) {
-				$removed    = true;
-				$retained   = true;
-				$messages[] = __( 'Report text and reporter identity were erased; minimal non-identifying workflow records are retained for safety and audit integrity.', 'sabri-profiles-doctors' );
 			}
 		}
 
@@ -170,25 +177,33 @@ final class SPD_Privacy {
 			$messages[] = __( 'Professional-profile proposal data is retained under an active legal or governance hold.', 'sabri-profiles-doctors' );
 		} else {
 			$table = SPD_DB::table( 'professional_submissions' );
-			$count = absint( $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE submitted_by=%d", absint( $user->ID ) ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$erased = SPD_DB::transaction(
-				function () use ( $wpdb, $table, $count, $repo, $user ) {
-					$deleted = $wpdb->delete( $table, array( 'submitted_by' => absint( $user->ID ) ) );
-					if ( false === $deleted ) { return new WP_Error( 'spd_professional_erasure_failed', __( 'Professional-profile proposals could not be erased.', 'sabri-profiles-doctors' ) ); }
-					if ( $count ) {
-						$event = $repo->event( 'ProfileProfessionalSubmissionsErased.v1', 'user', (string) absint( $user->ID ), array( 'submission_count' => $count ) );
-						if ( is_wp_error( $event ) ) { return $event; }
+			$wpdb->last_error = '';
+			$count_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE submitted_by=%d", absint( $user->ID ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( $wpdb->last_error ) {
+				$retry = true;
+				$retained = true;
+				$messages[] = __( 'Professional-profile proposal data could not be read safely for erasure and requires a retry.', 'sabri-profiles-doctors' );
+			} else {
+				$count = absint( $count_raw );
+				$erased = SPD_DB::transaction(
+					function () use ( $wpdb, $table, $count, $repo, $user ) {
+						$deleted = $wpdb->delete( $table, array( 'submitted_by' => absint( $user->ID ) ) );
+						if ( false === $deleted ) { return new WP_Error( 'spd_professional_erasure_failed', __( 'Professional-profile proposals could not be erased.', 'sabri-profiles-doctors' ) ); }
+						if ( $count ) {
+							$event = $repo->event( 'ProfileProfessionalSubmissionsErased.v1', 'user', (string) absint( $user->ID ), array( 'submission_count' => $count ) );
+							if ( is_wp_error( $event ) ) { return $event; }
+						}
+						return true;
 					}
-					return true;
+				);
+				if ( is_wp_error( $erased ) ) {
+					$retry      = true;
+					$retained   = true;
+					$messages[] = __( 'Professional-profile proposal data could not yet be erased and requires a retry.', 'sabri-profiles-doctors' );
+				} elseif ( $count ) {
+					$removed    = true;
+					$messages[] = __( 'File 03 professional-profile proposals were erased. File 09 retains only its independently governed verification record.', 'sabri-profiles-doctors' );
 				}
-			);
-			if ( is_wp_error( $erased ) ) {
-				$retry      = true;
-				$retained   = true;
-				$messages[] = __( 'Professional-profile proposal data could not yet be erased and requires a retry.', 'sabri-profiles-doctors' );
-			} elseif ( $count ) {
-				$removed    = true;
-				$messages[] = __( 'File 03 professional-profile proposals were erased. File 09 retains only its independently governed verification record.', 'sabri-profiles-doctors' );
 			}
 		}
 		return array( 'items_removed' => $removed, 'items_retained' => $retained, 'messages' => $messages, 'done' => ! $retry );

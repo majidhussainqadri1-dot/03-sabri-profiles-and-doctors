@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.2.0-rc3 — Third fresh ten-round corrective hardening
+
+- Completed a fresh 10-round sequential review from exact `main` baseline `ffcd790b831e2ae028c48f8aa664e4c496c115e0`; defects were found in rounds `01, 02, 03, 04, 06, 07, 08, 09, 10`, while round `05` was clean.
+- Synchronized repository truth documentation and preserved the explicit staging/live evidence boundary.
+- Made future/profile REST responses no-store, blocked future mutations in Safe Mode and required fail-closed lifecycle preflight.
+- Bound owner, guardian and delegated writes to native profile state plus current File 00/File 09 authority.
+- Bound idempotency completion/failure to the exact reservation so an abandoned stale request cannot finalize or delete a reclaimed request.
+- Made required upload owner/purpose/state/scan metadata persistence fail closed; an attachment is removed if those bindings cannot be stored.
+- Made one explicit future-state read authoritative for lifecycle/contact/appointment/federation/FHIR projections so a secondary read failure cannot reactivate retired/legacy behavior.
+- Made base and future privacy export/erasure retry on SQL/schema uncertainty instead of treating uncertainty as empty success.
+- Added a post-batch migration integrity gate that independently re-proves remaining users and retry/dead failure counts before migration completion can stand.
+- Added `THIRD-TEN-ROUND-REVIEW-2026-08-11.md`, `tests/third-ten-round-review.py`, and the permanent exact-candidate CI gate; advanced source identity from rc2 to rc3 so materially different source trees cannot share one release identifier.
+- Staging acceptance, exact deployed-package parity, live DB/schema/migration state, browser/WCAG/RTL evidence, backup/restore/rollback and operational acceptance remain separate gates.
+
+## 1.2.0-rc2 — Corrective hardening and second fresh 80-round review
+
+- Completed the original numbered 80-round corrective review and then a second independent fresh 80-round sequential review on the corrected repository state.
+- The second fresh cycle recorded 28 defect-bearing rounds and 52 clean rounds; every discovered repository-level finding was corrected before the following round.
+- Revalidated current File 00 eligibility/suspension and professional authority at decision time; tightened fail-closed profile reads and field-store failures.
+- Added bounded abandoned-idempotency recovery, exact-value lock takeover/release, process-safe rate limiting and migration serialization.
+- Hardened File 08 clinic/review binding, cross-provider identity binding, signed profile/filter-bound timeline cursors and revocation-sensitive no-store behavior.
+- Added media privacy reconciliation after external eligibility changes, stronger delegation expiry/use-time revalidation, SQL-failure-safe privacy export and truthful retention failure evidence.
+- Preserved PHP 8.1 compatibility after the stronger idempotency/cursor/provider-guard contracts and aligned historical regression gates with the hardened implementation.
+- PR #14 merged the reviewed source tree to `main` as `ffcd790b831e2ae028c48f8aa664e4c496c115e0`.
+- Staging acceptance, exact deployed-package parity, live DB/schema/migration state, browser/WCAG/RTL evidence, backup/restore/rollback and operational acceptance remain separate gates.
+
 ## 1.2.0-rc1 — Future Professional Identity & Profile Superset — 18 Enhancements
 
 - Added `F03-FUT-01..18` as a bounded extension of the approved File 03 and central-plan architecture.

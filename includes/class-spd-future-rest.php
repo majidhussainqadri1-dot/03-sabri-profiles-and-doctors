@@ -29,11 +29,15 @@ final class SPD_Future_REST {
 		if ( is_wp_error( $result ) ) {
 			$data = $result->get_error_data(); $code = is_array( $data ) && ! empty( $data['status'] ) ? absint( $data['status'] ) : 400;
 			$r = new WP_REST_Response( array( 'code' => $result->get_error_code(), 'message' => $result->get_error_message(), 'trace_id' => $trace ), $code );
-			$r->header( 'Cache-Control', 'private, no-store' ); $r->header( 'X-Robots-Tag', 'noindex, nofollow, noarchive' );
 		} else {
 			$r = new WP_REST_Response( array( 'data' => $result, 'trace_id' => $trace ), $status );
-			$r->header( 'Cache-Control', $public ? 'public, max-age=60, stale-while-revalidate=120' : 'private, no-store' ); if ( ! $public ) { $r->header( 'X-Robots-Tag', 'noindex, nofollow, noarchive' ); }
 		}
+		// Future/profile projections include live eligibility, lifecycle and provider
+		// facts. They are revocation-sensitive and therefore remain no-store until
+		// cross-owner invalidation is proven on staging.
+		$r->header( 'Cache-Control', ( $public ? '' : 'private, ' ) . 'no-store, no-cache, must-revalidate, max-age=0' );
+		$r->header( 'Pragma', 'no-cache' );
+		if ( is_wp_error( $result ) || ! $public ) { $r->header( 'X-Robots-Tag', 'noindex, nofollow, noarchive' ); }
 		$r->header( 'X-SPD-Trace-ID', $trace ); $r->header( 'X-SPD-Contract-Version', SPD_CONTRACT_VERSION ); return $r;
 	}
 
@@ -46,6 +50,9 @@ final class SPD_Future_REST {
 	}
 
 	private function mutate( WP_REST_Request $r, $command, array $payload, callable $callback, $status = 200 ) {
+		if ( SPD_Observability::safe_mode() ) {
+			return $this->response( new WP_Error( 'spd_safe_mode', __( 'Future-profile changes are temporarily unavailable while the system is in safe mode.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ) );
+		}
 		$repo = SPD_Profile_Repository::instance(); $actor = get_current_user_id(); $key = $this->idem( $r );
 		$hash = hash( 'sha256', SPD_Helpers::json_encode( array( sanitize_key( $command ), $payload ) ) );
 		$idem = $repo->future_idempotency_begin( $actor, $command, $key, $hash );
@@ -125,6 +132,8 @@ final class SPD_Future_REST {
 		$actor = get_current_user_id();
 		$profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) $r['public_id'] );
 		if ( ! $profile ) { return $this->response( new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ) ); }
+		$current_state = spd_read_future_profile_state( absint( $profile['id'] ) );
+		if ( is_wp_error( $current_state ) ) { return $this->response( $current_state ); }
 		$payload = (array) $r->get_json_params();
 		$allowed = array( 'professional_lifecycle', 'lifecycle_reason', 'federation_opt_in' );
 		$unknown = array_diff( array_keys( $payload ), $allowed );

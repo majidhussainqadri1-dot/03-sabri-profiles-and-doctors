@@ -2,8 +2,22 @@
 defined( 'ABSPATH' ) || exit;
 
 trait SPD_Profile_Events {
+	private $spd_idempotency_reservations = array();
+
 	private function idempotency_abandoned_seconds() {
 		return 900;
+	}
+
+	private function idempotency_reservation_slot( $actor_id, $command, $key_hash ) {
+		return absint( $actor_id ) . '|' . sanitize_key( $command ) . '|' . (string) $key_hash;
+	}
+
+	private function remember_idempotency_reservation( $actor_id, $command, $key_hash, $token ) {
+		$this->spd_idempotency_reservations[ $this->idempotency_reservation_slot( $actor_id, $command, $key_hash ) ] = (string) $token;
+	}
+
+	private function idempotency_reservation_marker( $token ) {
+		return SPD_Helpers::json_encode( array( 'reservation_token' => (string) $token ) );
 	}
 
 	public function event( $event_name, $aggregate_type, $aggregate_id, array $payload ) {
@@ -56,20 +70,35 @@ trait SPD_Profile_Events {
 		$key_hash = hash( 'sha256', $key );
 		$table    = SPD_DB::table( 'idempotency' );
 		$load = static function() use ( $wpdb, $table, $actor_id, $command, $key_hash ) {
-			return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_id=%d AND command=%s AND idempotency_key=%s LIMIT 1", $actor_id, $command, $key_hash ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$wpdb->last_error = '';
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE actor_id=%d AND command=%s AND idempotency_key=%s LIMIT 1", $actor_id, $command, $key_hash ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			return $wpdb->last_error ? new WP_Error( 'spd_idempotency_store_unavailable', __( 'Replay protection is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ) : $row;
 		};
 		$row = $load();
+		if ( is_wp_error( $row ) ) { return $row; }
 		if ( $row ) {
+			if ( ! hash_equals( (string) $row['request_hash'], (string) $request_hash ) ) {
+				$expires = strtotime( (string) $row['expires_at'] . ' UTC' );
+				if ( false === $expires || $expires > time() ) {
+					return new WP_Error( 'spd_idempotency_mismatch', __( 'This idempotency key was already used for a different request.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) );
+				}
+			}
 			$expires = strtotime( (string) $row['expires_at'] . ' UTC' );
 			$updated = strtotime( (string) ( $row['updated_at'] ?: $row['created_at'] ) . ' UTC' );
 			$expired = false !== $expires && $expires <= time();
 			$abandoned = 'started' === ( $row['status'] ?? '' ) && false !== $updated && $updated <= time() - $this->idempotency_abandoned_seconds();
 			if ( $expired || $abandoned ) {
-				$where = array( 'id' => absint( $row['id'] ) );
-				if ( $abandoned && ! $expired ) { $where['status'] = 'started'; }
-				$deleted = $wpdb->delete( $table, $where );
+				$deleted = $wpdb->query(
+					$wpdb->prepare(
+						"DELETE FROM {$table} WHERE id=%d AND status=%s AND request_hash=%s AND updated_at=%s",
+						absint( $row['id'] ),
+						(string) $row['status'],
+						(string) $row['request_hash'],
+						(string) ( $row['updated_at'] ?: $row['created_at'] )
+					)
+				); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				if ( 1 === $deleted ) { $row = array(); }
-				else { $row = $load(); }
+				else { $row = $load(); if ( is_wp_error( $row ) ) { return $row; } }
 			}
 		}
 		if ( $row ) {
@@ -83,6 +112,8 @@ trait SPD_Profile_Events {
 			return new WP_Error( 'spd_idempotency_in_progress', __( 'This request is already being processed.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) );
 		}
 		$now = SPD_Helpers::now();
+		$reservation_token = SPD_Helpers::trace_id();
+		$reservation_marker = $this->idempotency_reservation_marker( $reservation_token );
 		$insert = $wpdb->insert(
 			$table,
 			array(
@@ -90,14 +121,19 @@ trait SPD_Profile_Events {
 				'actor_id'         => $actor_id,
 				'command'          => $command,
 				'request_hash'     => $request_hash,
+				'response_json'    => $reservation_marker,
 				'status'           => 'started',
 				'expires_at'       => gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ),
 				'created_at'       => $now,
 				'updated_at'       => $now,
 			)
 		);
-		if ( $insert ) { return true; }
+		if ( $insert ) {
+			$this->remember_idempotency_reservation( $actor_id, $command, $key_hash, $reservation_token );
+			return true;
+		}
 		$row = $load();
+		if ( is_wp_error( $row ) ) { return $row; }
 		if ( $row && hash_equals( (string) $row['request_hash'], (string) $request_hash ) ) {
 			if ( 'completed' === $row['status'] ) {
 				$response = json_decode( (string) $row['response_json'], true );
@@ -110,23 +146,39 @@ trait SPD_Profile_Events {
 
 	private function idempotency_complete( $actor_id, $command, $key, array $response ) {
 		global $wpdb;
-		if ( '' === trim( (string) $key ) ) { return false; }
+		$key = trim( (string) $key );
+		if ( '' === $key ) { return false; }
+		$actor_id = absint( $actor_id );
+		$command = sanitize_key( $command );
+		$key_hash = hash( 'sha256', $key );
+		$slot = $this->idempotency_reservation_slot( $actor_id, $command, $key_hash );
+		$token = (string) ( $this->spd_idempotency_reservations[ $slot ] ?? '' );
+		if ( '' === $token ) { return false; }
 		$json = SPD_Helpers::json_encode( $response );
 		if ( 'null' === $json ) { return false; }
 		$updated = $wpdb->update(
 			SPD_DB::table( 'idempotency' ),
 			array( 'status' => 'completed', 'response_json' => $json, 'updated_at' => SPD_Helpers::now() ),
-			array( 'actor_id' => absint( $actor_id ), 'command' => sanitize_key( $command ), 'idempotency_key' => hash( 'sha256', $key ), 'status' => 'started' )
+			array( 'actor_id' => $actor_id, 'command' => $command, 'idempotency_key' => $key_hash, 'status' => 'started', 'response_json' => $this->idempotency_reservation_marker( $token ) )
 		);
-		return 1 === $updated;
+		if ( 1 === $updated ) { unset( $this->spd_idempotency_reservations[ $slot ] ); return true; }
+		return false;
 	}
 
 	private function idempotency_fail( $actor_id, $command, $key ) {
 		global $wpdb;
-		if ( '' === trim( (string) $key ) ) { return; }
+		$key = trim( (string) $key );
+		if ( '' === $key ) { return; }
+		$actor_id = absint( $actor_id );
+		$command = sanitize_key( $command );
+		$key_hash = hash( 'sha256', $key );
+		$slot = $this->idempotency_reservation_slot( $actor_id, $command, $key_hash );
+		$token = (string) ( $this->spd_idempotency_reservations[ $slot ] ?? '' );
+		if ( '' === $token ) { return; }
 		$wpdb->delete(
 			SPD_DB::table( 'idempotency' ),
-			array( 'actor_id' => absint( $actor_id ), 'command' => sanitize_key( $command ), 'idempotency_key' => hash( 'sha256', $key ), 'status' => 'started' )
+			array( 'actor_id' => $actor_id, 'command' => $command, 'idempotency_key' => $key_hash, 'status' => 'started', 'response_json' => $this->idempotency_reservation_marker( $token ) )
 		);
+		unset( $this->spd_idempotency_reservations[ $slot ] );
 	}
 }

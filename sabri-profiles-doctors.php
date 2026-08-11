@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Profiles and Doctors
  * Plugin URI: https://www.sabrihomeopathy.com/
  * Description: Canonical, privacy-controlled Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
- * Version: 1.2.0-rc2
+ * Version: 1.2.0-rc3
  * Requires at least: 7.0
  * Requires PHP: 8.1
  * Author: Dr. Allamah Majid Hussain Sabri
@@ -13,10 +13,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SPD_VERSION', '1.2.0-rc2' );
+define( 'SPD_VERSION', '1.2.0-rc3' );
 define( 'SPD_DB_VERSION', '1.2.0' );
 define( 'SPD_CONTRACT_VERSION', '1.4.0' );
-define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW' );
+define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW' );
 define( 'SPD_FILE', __FILE__ );
 define( 'SPD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SPD_URL', plugin_dir_url( __FILE__ ) );
@@ -56,8 +56,13 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 	if ( is_wp_error( $dto ) ) { return $dto; }
 	$profile = SPD_Profile_Repository::instance()->find_by_public_id( $dto['public_id'] );
 	if ( ! $profile ) { return $dto; }
-	$state = spd_read_future_profile_state( $profile['id'] );
+	$base_contacts = (array) ( $dto['contacts'] ?? array() );
+	$base_clinic = (array) ( $dto['clinic'] ?? array() );
 	$dto = SPD_Future_Profile::augment_personal_site_dto( $dto, $profile, $viewer_id );
+	// The explicit, fail-closed read is authoritative for every revocation-sensitive
+	// lifecycle decision. SPD_Future_Profile's convenience projections may make
+	// additional reads, but they cannot re-enable contact/FHIR/appointment state.
+	$state = spd_read_future_profile_state( $profile['id'] );
 	if ( is_wp_error( $state ) ) {
 		$dto['future']['lifecycle'] = array( 'status' => 'unknown', 'active_professional' => false, 'reason' => '', 'changed_at' => '' );
 		$dto['future']['state_degraded'] = true;
@@ -65,9 +70,38 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 		$dto['future']['federation'] = array( 'opt_in' => false, 'transport_owner' => 'external', 'transport_active' => false );
 		$dto['contacts'] = array();
 		if ( isset( $dto['clinic']['appointment_url'] ) ) { unset( $dto['clinic']['appointment_url'] ); }
-	} elseif ( isset( $dto['future']['federation'] ) && is_array( $dto['future']['federation'] ) ) {
-		$dto['future']['federation']['transport_active'] = ! empty( $dto['future']['federation']['inbox'] ) && ! empty( $dto['future']['federation']['outbox'] );
+	} else {
+		$status = sanitize_key( (string) ( $state['professional_lifecycle'] ?? '' ) );
+		if ( ! in_array( $status, array( 'active','retired','legacy' ), true ) ) {
+			$dto['future']['lifecycle'] = array( 'status' => 'unknown', 'active_professional' => false, 'reason' => '', 'changed_at' => '' );
+			$dto['future']['state_degraded'] = true;
+			$dto['future']['contact_relay'] = array();
+			$dto['future']['federation'] = array( 'opt_in' => false, 'transport_owner' => 'external', 'transport_active' => false );
+			$dto['contacts'] = array();
+			if ( isset( $dto['clinic']['appointment_url'] ) ) { unset( $dto['clinic']['appointment_url'] ); }
+		} else {
+			$active = 'active' === $status;
+			$dto['future']['lifecycle'] = array( 'status' => $status, 'active_professional' => $active, 'reason' => SPD_Helpers::sanitize_multiline( (string) ( $state['lifecycle_reason'] ?? '' ), 500 ), 'changed_at' => sanitize_text_field( (string) ( $state['lifecycle_changed_at'] ?? '' ) ) );
+			unset( $dto['future']['state_degraded'] );
+			if ( ! isset( $dto['future']['federation'] ) || ! is_array( $dto['future']['federation'] ) ) { $dto['future']['federation'] = array( 'transport_owner' => 'external', 'transport_active' => false ); }
+			$dto['future']['federation']['opt_in'] = ! empty( $state['federation_opt_in'] );
+			if ( empty( $state['federation_opt_in'] ) ) {
+				unset( $dto['future']['federation']['inbox'], $dto['future']['federation']['outbox'] );
+				$dto['future']['federation']['transport_active'] = false;
+			}
+			if ( ! $active ) {
+				$dto['contacts'] = array();
+				$dto['future']['contact_relay'] = array();
+				if ( isset( $dto['clinic']['appointment_url'] ) ) { unset( $dto['clinic']['appointment_url'] ); }
+			} else {
+				$dto['contacts'] = $base_contacts;
+				$dto['clinic'] = $base_clinic;
+				$dto['future']['contact_relay'] = SPD_Future_Profile::contact_relay( $profile['user_id'], $viewer_id );
+			}
+		}
 	}
+	// Rebuild FHIR only after the authoritative lifecycle decision above.
+	$dto['future']['fhir'] = SPD_Future_Profile::fhir_projection( $dto );
 	return $dto;
 }
 /** File 26 current, public-safe search projection. */
@@ -95,6 +129,46 @@ function spd_get_profile_timeline( $identity, array $args = array(), $viewer_id 
 function spd_get_profile_contract_manifest() { return SPD_Contracts::manifest(); }
 /** Delegated authority claim for File 08. This is authorization context, never appointment truth. */
 function spd_delegate_can_manage_profile_scope( $owner_user_id, $delegate_user_id, $scope ) { return SPD_Profile_Repository::instance()->delegate_can_manage( absint( $owner_user_id ), absint( $delegate_user_id ), sanitize_key( $scope ) ); }
+
+/**
+ * Post-batch migration integrity gate. The legacy batch worker predates the
+ * outer process-safe lock and can otherwise interpret an empty result caused
+ * by a transient SQL failure as traversal completion. This guard re-proves
+ * completion from fresh database evidence before allowing a completion marker
+ * or a cleared schedule to stand.
+ */
+function spd_migration_integrity_guard() {
+	global $wpdb;
+	if ( ! SPD_DB::tables_exist() ) { return; }
+	$cursor = absint( get_option( 'spd_migration_cursor', 0 ) );
+	$wpdb->last_error = '';
+	$remaining_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->users} WHERE ID>%d", $cursor ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$read_error = (string) $wpdb->last_error;
+	$wpdb->last_error = '';
+	$retry_raw = $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='retry'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$read_error = $read_error ?: (string) $wpdb->last_error;
+	$wpdb->last_error = '';
+	$dead_raw = $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='dead'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$read_error = $read_error ?: (string) $wpdb->last_error;
+	if ( $read_error ) {
+		delete_option( 'spd_migration_completed_at' );
+		delete_option( 'spd_migration_traversal_completed_at' );
+		update_option( 'spd_last_migration_integrity_error', array( 'code' => 'migration_integrity_read_failed', 'at' => SPD_Helpers::now() ), false );
+		if ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) { wp_schedule_event( time() + 300, 'spd_five_minutes', 'spd_migrate_profiles_batch' ); }
+		do_action( 'sabri_file24_migration_integrity_failure', array( 'owner' => 'file03', 'code' => 'migration_integrity_read_failed', 'at' => SPD_Helpers::now() ) );
+		return;
+	}
+	delete_option( 'spd_last_migration_integrity_error' );
+	$remaining = absint( $remaining_raw );
+	$retry = absint( $retry_raw );
+	$dead = absint( $dead_raw );
+	if ( $remaining || $retry || $dead ) { delete_option( 'spd_migration_completed_at' ); }
+	if ( $remaining || $retry ) {
+		delete_option( 'spd_migration_traversal_completed_at' );
+		if ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) { wp_schedule_event( time() + 300, 'spd_five_minutes', 'spd_migrate_profiles_batch' ); }
+	}
+}
+add_action( 'spd_migrate_profiles_batch', 'spd_migration_integrity_guard', 99 );
 
 function spd_start_plugin() {
 	SPD_Provider_Guards::register();
