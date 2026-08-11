@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0-rc2 — Corrective hardening and second fresh 80-round review
+
+- Completed the original numbered 80-round corrective review and then a second independent fresh 80-round sequential review on the corrected repository state.
+- The second fresh cycle recorded 28 defect-bearing rounds and 52 clean rounds; every discovered repository-level finding was corrected before the following round.
+- Revalidated current File 00 eligibility/suspension and professional authority at decision time; tightened fail-closed profile reads and field-store failures.
+- Added bounded abandoned-idempotency recovery, exact-value lock takeover/release, process-safe rate limiting and migration serialization.
+- Hardened File 08 clinic/review binding, cross-provider identity binding, signed profile/filter-bound timeline cursors and revocation-sensitive no-store behavior.
+- Added media privacy reconciliation after external eligibility changes, stronger delegation expiry/use-time revalidation, SQL-failure-safe privacy export and truthful retention failure evidence.
+- Preserved PHP 8.1 compatibility after the stronger idempotency/cursor/provider-guard contracts and aligned historical regression gates with the hardened implementation.
+- PR #14 merged the reviewed source tree to `main` as `ffcd790b831e2ae028c48f8aa664e4c496c115e0`.
+- Staging acceptance, exact deployed-package parity, live DB/schema/migration state, browser/WCAG/RTL evidence, backup/restore/rollback and operational acceptance remain separate gates.
+
 ## 1.2.0-rc1 — Future Professional Identity & Profile Superset — 18 Enhancements
 
 - Added `F03-FUT-01..18` as a bounded extension of the approved File 03 and central-plan architecture.
