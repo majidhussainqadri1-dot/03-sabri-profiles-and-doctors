@@ -33,8 +33,6 @@ $spd_files = array(
 foreach ( $spd_files as $spd_file ) { require_once SPD_DIR . 'includes/' . $spd_file; }
 unset( $spd_files, $spd_file );
 
-SPD_Provider_Guards::register();
-
 register_activation_hook( SPD_FILE, array( 'SPD_Activator', 'activate' ) );
 register_deactivation_hook( SPD_FILE, array( 'SPD_Activator', 'deactivate' ) );
 
@@ -98,5 +96,8 @@ function spd_get_profile_contract_manifest() { return SPD_Contracts::manifest();
 /** Delegated authority claim for File 08. This is authorization context, never appointment truth. */
 function spd_delegate_can_manage_profile_scope( $owner_user_id, $delegate_user_id, $scope ) { return SPD_Profile_Repository::instance()->delegate_can_manage( absint( $owner_user_id ), absint( $delegate_user_id ), sanitize_key( $scope ) ); }
 
-function spd_start_plugin() { ( new SPD_Plugin() )->run(); }
+function spd_start_plugin() {
+	SPD_Provider_Guards::register();
+	( new SPD_Plugin() )->run();
+}
 add_action( 'plugins_loaded', 'spd_start_plugin', 30 );
