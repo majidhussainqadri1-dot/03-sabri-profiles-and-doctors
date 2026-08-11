@@ -229,7 +229,8 @@ final class SPD_Central_Profile {
 		$repo = SPD_Profile_Repository::instance();
 		$dto = $repo->public_dto( $identity, $viewer_id );
 		if ( is_wp_error( $dto ) ) { return $dto; }
-		$profile = $repo->find_by_public_id( $dto['public_id'] );
+		$profile = $repo->find_by_public_id_strict( $dto['public_id'] );
+		if ( is_wp_error( $profile ) ) { return $profile; }
 		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$dto['extended'] = self::public_extended_fields( $profile, $viewer_id );
 		$dto['credential_card'] = self::credential_card( (array) $dto['professional'] );
