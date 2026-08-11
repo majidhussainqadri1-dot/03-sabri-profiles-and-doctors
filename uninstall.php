@@ -93,7 +93,7 @@ foreach ( array(
 	'spd_page_map', 'spd_version', 'spd_db_version', 'spd_contract_version', 'spd_central_schema_version', 'spd_future_schema_version', 'spd_plan_version',
 	'spd_safe_mode', 'spd_safe_mode_reason', 'spd_safe_mode_changed_at',
 	'spd_migration_cursor', 'spd_migration_completed_at', 'spd_migration_traversal_completed_at', 'spd_last_migration_integrity_error',
-	'spd_last_outbox_run', 'spd_last_retention_run', 'spd_last_retention_error', 'spd_last_repair_at', 'spd_last_reconciliation',
+	'spd_last_outbox_run', 'spd_last_outbox_error', 'spd_last_retention_run', 'spd_last_retention_error', 'spd_last_repair_at', 'spd_last_reconciliation',
 	'spd_reconciliation_required', 'spd_profile_cache_generation',
 	'spd_media_privacy_cursor', 'spd_media_privacy_cycle_completed_at', 'spd_last_media_queue_error',
 	'spd_purge_on_uninstall', 'spd_founder_profile_legacy_read_only',
