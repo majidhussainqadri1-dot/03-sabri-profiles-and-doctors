@@ -54,7 +54,7 @@ check(22, 'Provider result bound', 'MAX_PROVIDER_ITEMS' in timeline and 'count( 
 check(23, 'Timeline owner binding', "author_user_id'] ?? 0" in timeline and 'expected_user_id' in timeline, 'cross-author items are rejected')
 check(24, 'Future timestamp rejection', '$timestamp > time() + 300' in timeline, 'future-dated timeline items are rejected')
 check(25, 'Thumbnail tracking prevention', '$thumbnail && ! SPD_Helpers::same_origin_url' in timeline, 'external thumbnails are dropped')
-check(26, 'Cursor bounds/integrity', 'strlen( $cursor ) > 512' in timeline and 'base64_decode( $raw, true )' in timeline, 'oversized/invalid cursors fail closed')
+check(26, 'Cursor bounds/integrity', 'strlen( $cursor ) > 768' in timeline and "hash_hmac( 'sha256', $body" in timeline and "base64_decode( $raw, true )" in timeline and 'spd_timeline_cursor_invalid' in timeline, 'oversized, tampered, cross-profile or cross-filter cursors fail closed')
 check(27, 'Timeline UI error handling', 'is_wp_error( $profile )' in front_timeline, 'DTO errors cannot cause array-access fatal')
 check(28, 'Clinic verified-doctor gate', '$clinic_raw = $is_verified_doctor ?' in public_dto, 'clinic projection is not shown for ordinary profiles')
 check(29, 'Single verification snapshot', 'SPD_Verification_Adapter::is_verified' not in public_dto and '$is_verified_doctor' in public_dto, 'DTO does not fetch inconsistent verification snapshots')
@@ -68,11 +68,7 @@ check(36, 'JSON failure handling', "return false === $json ? 'null' : $json" in 
 runtime_files = [ROOT / 'sabri-profiles-doctors.php', ROOT / 'uninstall.php', ROOT / 'readme.txt']
 runtime_files += [x for root_name in ('includes', 'assets') for x in (ROOT / root_name).rglob('*') if x.is_file()]
 credential_names = {'wp-config.php', 'credentials.json', 'service-account.json', 'id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519'}
-secret_patterns = [
-    rb'-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----',
-    rb'\bgh[pousr]_[A-Za-z0-9]{20,}\b',
-    rb'\bAKIA[0-9A-Z]{16}\b',
-]
+secret_patterns = [rb'-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----', rb'\bgh[pousr]_[A-Za-z0-9]{20,}\b', rb'\bAKIA[0-9A-Z]{16}\b']
 runtime_clean = all(not any(re.search(pattern, x.read_bytes()) for pattern in secret_patterns) for x in runtime_files)
 names_clean = not any(x.is_file() and x.name.lower() in credential_names for x in ROOT.rglob('*') if '.git' not in x.parts)
 archives_clean = not any(x.is_file() and x.suffix.lower() in {'.zip','.sql','.7z','.rar','.tar','.tgz','.gz'} for x in ROOT.rglob('*') if '.git' not in x.parts)
@@ -85,9 +81,7 @@ failures = [c for c in checks if not c[2]]
 for n, name, ok, detail in checks:
     print(f'Round {n:02d}: {"PASS" if ok else "FAIL"} — {name}: {detail}')
 if len(checks) != 40:
-    print(f'ERROR: expected 40 rounds, got {len(checks)}', file=sys.stderr)
-    sys.exit(2)
+    print(f'ERROR: expected 40 rounds, got {len(checks)}', file=sys.stderr); sys.exit(2)
 if failures:
-    print(f'ERROR: {len(failures)} review rounds failed', file=sys.stderr)
-    sys.exit(1)
+    print(f'ERROR: {len(failures)} review rounds failed', file=sys.stderr); sys.exit(1)
 print('All 40 review rounds passed after their recorded corrections.')
