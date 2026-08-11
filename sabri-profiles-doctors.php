@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Profiles and Doctors
  * Plugin URI: https://www.sabrihomeopathy.com/
  * Description: Canonical, privacy-controlled Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
- * Version: 1.2.0-rc3
+ * Version: 1.2.0-rc4
  * Requires at least: 7.0
  * Requires PHP: 8.1
  * Author: Dr. Allamah Majid Hussain Sabri
@@ -13,10 +13,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SPD_VERSION', '1.2.0-rc3' );
+define( 'SPD_VERSION', '1.2.0-rc4' );
 define( 'SPD_DB_VERSION', '1.2.0' );
 define( 'SPD_CONTRACT_VERSION', '1.4.0' );
-define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW' );
+define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' );
 define( 'SPD_FILE', __FILE__ );
 define( 'SPD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SPD_URL', plugin_dir_url( __FILE__ ) );
@@ -59,9 +59,6 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 	$base_contacts = (array) ( $dto['contacts'] ?? array() );
 	$base_clinic = (array) ( $dto['clinic'] ?? array() );
 	$dto = SPD_Future_Profile::augment_personal_site_dto( $dto, $profile, $viewer_id );
-	// The explicit, fail-closed read is authoritative for every revocation-sensitive
-	// lifecycle decision. SPD_Future_Profile's convenience projections may make
-	// additional reads, but they cannot re-enable contact/FHIR/appointment state.
 	$state = spd_read_future_profile_state( $profile['id'] );
 	if ( is_wp_error( $state ) ) {
 		$dto['future']['lifecycle'] = array( 'status' => 'unknown', 'active_professional' => false, 'reason' => '', 'changed_at' => '' );
@@ -100,7 +97,6 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 			}
 		}
 	}
-	// Rebuild FHIR only after the authoritative lifecycle decision above.
 	$dto['future']['fhir'] = SPD_Future_Profile::fhir_projection( $dto );
 	return $dto;
 }
@@ -130,13 +126,6 @@ function spd_get_profile_contract_manifest() { return SPD_Contracts::manifest();
 /** Delegated authority claim for File 08. This is authorization context, never appointment truth. */
 function spd_delegate_can_manage_profile_scope( $owner_user_id, $delegate_user_id, $scope ) { return SPD_Profile_Repository::instance()->delegate_can_manage( absint( $owner_user_id ), absint( $delegate_user_id ), sanitize_key( $scope ) ); }
 
-/**
- * Post-batch migration integrity gate. The legacy batch worker predates the
- * outer process-safe lock and can otherwise interpret an empty result caused
- * by a transient SQL failure as traversal completion. This guard re-proves
- * completion from fresh database evidence before allowing a completion marker
- * or a cleared schedule to stand.
- */
 function spd_migration_integrity_guard() {
 	global $wpdb;
 	if ( ! SPD_DB::tables_exist() ) { return; }
