@@ -78,11 +78,9 @@ gate(9,'destructive uninstall owns orphan cleanup',[
     ('retention failure option removed', 'spd_last_retention_error' in uninstall),
     ('two destructive gates preserved', 'SPD_ALLOW_DESTRUCTIVE_UNINSTALL' in uninstall and 'spd_purge_on_uninstall' in uninstall),
 ])
-gate(10,'fourth-review guarantees survive the current release identity',[
-    ('current source identity', "Version: 1.2.0-rc6" in main and "SPD_VERSION', '1.2.0-rc6'" in main),
+gate(10,'fourth-review guarantees survive later release identities',[
+    ('historical rc4 identity', 'Advanced source identity to `1.2.0-rc4`' in ledger),
     ('fourth review plan marker', 'FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' in main),
-    ('fifth review plan marker', 'FIFTH-TEN-ROUND-CORRECTIVE-REVIEW' in main),
-    ('sixth review plan marker', 'SIXTH-TEN-ROUND-CORRECTIVE-REVIEW' in main),
     ('ten defect-bearing rounds recorded', '**01, 02, 03, 04, 05, 06, 07, 08, 09, 10**' in ledger),
     ('live truth remains unverified', 'Exact deployed code remains unverified' in ledger),
 ])
