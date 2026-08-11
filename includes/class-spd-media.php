@@ -151,7 +151,7 @@ final class SPD_Media {
 	}
 
 	public static function process_deletion_queue( $limit=25 ) {
-		global $wpdb; $table=SPD_DB::table('deletions'); $limit=min(100,max(1,absint($limit))); $processed=0;
+		global $wpdb; $table=SPD_DB::table('deletions'); $limit=min(100,max(1,absint($limit))); $processed=0; $had_error=false;
 		if ( class_exists( 'SPD_Schema_Guard' ) && ! SPD_Schema_Guard::base_ready() ) { self::record_queue_error( 'deletion_schema_unavailable' ); return 0; }
 		$wpdb->last_error='';
 		$reset=$wpdb->query("UPDATE {$table} SET status='retry',lease_token='',lease_expires=NULL,available_at=UTC_TIMESTAMP(),last_error_code='lease_expired' WHERE status='processing' AND lease_expires<UTC_TIMESTAMP()"); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -168,7 +168,7 @@ final class SPD_Media {
 			$wpdb->last_error='';
 			$row=$wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id=%d AND lease_token=%s",absint($id),$token),ARRAY_A); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			if ( $wpdb->last_error ) { self::record_queue_error( 'deletion_claim_read_failed' ); return $processed; }
-			if ( !$row ) { continue; }
+			if ( !$row ) { $had_error=true; self::record_queue_error( 'deletion_claim_missing' ); continue; }
 			$ok=self::delete_owned(absint($row['attachment_id']),absint($row['owner_user_id']),(string)$row['purpose']); $attempts=absint($row['attempts'])+1;
 			if ( $ok || ! get_post(absint($row['attachment_id'])) ) {
 				$saved=$wpdb->update($table,array('status'=>'delivered','attempts'=>$attempts,'completed_at'=>SPD_Helpers::now(),'lease_token'=>'','lease_expires'=>null),array('id'=>absint($id),'lease_token'=>$token));
@@ -177,10 +177,10 @@ final class SPD_Media {
 				$saved=$wpdb->update($table,array('status'=>$status,'attempts'=>$attempts,'available_at'=>gmdate('Y-m-d H:i:s',time()+min(HOUR_IN_SECONDS,30*(2**min($attempts,6)))),'last_error_code'=>'attachment_delete_failed','lease_token'=>'','lease_expires'=>null),array('id'=>absint($id),'lease_token'=>$token));
 			}
 			if ( false===$saved ) { self::record_queue_error( 'deletion_result_persist_failed' ); return $processed; }
-			if ( 1!==$saved ) { self::record_queue_error( 'deletion_lease_lost' ); continue; }
+			if ( 1!==$saved ) { $had_error=true; self::record_queue_error( 'deletion_lease_lost' ); continue; }
 			$processed++;
 		}
-		delete_option( 'spd_last_media_queue_error' );
+		if ( ! $had_error ) { delete_option( 'spd_last_media_queue_error' ); }
 		return $processed;
 	}
 
