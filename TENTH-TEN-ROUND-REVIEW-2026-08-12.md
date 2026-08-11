@@ -24,11 +24,15 @@ This is a new sequential Review → Fix cycle for File 03 — Profiles and Docto
 | 07 | Defect found and corrected | Future disclosure/translation/reconfirmation owner lookups could map DB uncertainty to 404. A shared DB-certain owner-profile lookup now returns 503 for store uncertainty. |
 | 08 | Defect found and corrected | Successfully persisted retry/dead-letter outcomes for malformed payloads or consumer exceptions were not latched as run-level outbox anomalies and could be followed by clearing `spd_last_outbox_error`. These delivery failures now remain operational evidence until a genuinely clean run. |
 | 09 | Defect found and corrected | Explicit destructive uninstall omitted the current `spd_last_migration_error` operational option introduced by migration-integrity hardening. It is now included without weakening the two-gate purge boundary or touching companion data. |
-| 10 | Defect found and corrected | Material source changes made rc9 release identity and permanent QA/release evidence stale. Source identity advanced to rc10 and a permanent tenth-review gate/CI/package/release-truth closure is required on the exact promoted SHA. |
+| 10 | Defect found and corrected | Material source changes made rc9 release identity and permanent QA/release evidence stale. Source identity advanced to rc10; stale historical fixed-version assertions were converted to forward-compatible `rc9-or-later` historical guarantees without weakening security/privacy/degradation checks. Exact CI then exposed a bootstrap replacement regression that had accidentally removed pre-existing provider-guard startup, outbox dispatcher replacement, lifecycle-aware search, FHIR/federation/timeline/delegation contracts and the legacy post-batch integrity hook; the frozen starting bootstrap was restored and only intentional rc10/Tenth identity deltas retained. Runtime composition also verified the pure contract manifest and safe plugin loading behavior. Permanent Tenth-review, Fresh, Corrective and deterministic package/parity gates remain the release proof. |
 
 **Defect-bearing rounds: 01–10**
 
 **Clean rounds: none**
+
+## Review closure rule
+
+Round 10 is not considered closed merely because an intermediate branch SHA is green. The exact candidate promoted to PR must pass Corrective Integrity, Fresh Eighty, Future Superset 18, PHP 8.1/8.3/8.4, two fresh post-correction review gates and deterministic package/checksum/SBOM/source-package parity on one exact SHA. Any documentation or source commit after that proof creates a new candidate that must be re-tested.
 
 ## Truth boundary
 
