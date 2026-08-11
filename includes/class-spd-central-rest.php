@@ -45,9 +45,6 @@ final class SPD_Central_REST {
 		} else {
 			$r = new WP_REST_Response( array( 'data' => $result, 'trace_id' => $trace ), $success );
 		}
-		// Public personal-site/search DTOs incorporate live eligibility and provider
-		// facts. Until cross-owner HTTP invalidation is accepted in staging, every
-		// response is no-store so revocation/suspension cannot be cached for 60s.
 		$r->header( 'Cache-Control', ( $public ? '' : 'private, ' ) . 'no-store, no-cache, must-revalidate, max-age=0' );
 		$r->header( 'Pragma', 'no-cache' );
 		if ( is_wp_error( $result ) || ! $public ) { $r->header( 'X-Robots-Tag', 'noindex, nofollow, noarchive' ); }
@@ -56,9 +53,7 @@ final class SPD_Central_REST {
 
 	private function version( WP_REST_Request $r ) {
 		$raw = trim( (string) $r->get_header( 'If-Match' ) );
-		if ( '' !== $raw ) {
-			return preg_match( '/^"?([1-9][0-9]*)"?$/', $raw, $m ) ? absint( $m[1] ) : 0;
-		}
+		if ( '' !== $raw ) { return preg_match( '/^"?([1-9][0-9]*)"?$/', $raw, $m ) ? absint( $m[1] ) : 0; }
 		return absint( $r->get_param( 'version' ) );
 	}
 	private function idem( WP_REST_Request $r ) { return trim( sanitize_text_field( (string) $r->get_header( 'Idempotency-Key' ) ) ); }
@@ -75,7 +70,14 @@ final class SPD_Central_REST {
 	}
 	public function rotate_share( WP_REST_Request $r ) { return $this->response( SPD_Profile_Repository::instance()->rotate_share_link( get_current_user_id(), $this->version( $r ), $this->idem( $r ) ) ); }
 	public function delegates() { return $this->response( SPD_Profile_Repository::instance()->list_delegates( get_current_user_id() ) ); }
-	public function grant_delegate( WP_REST_Request $r ) { $p = (array) $r->get_json_params(); return $this->response( SPD_Profile_Repository::instance()->grant_delegate( get_current_user_id(), absint( $p['delegate_user_id'] ?? 0 ), (array) ( $p['scopes'] ?? array() ), sanitize_text_field( (string) ( $p['expires_at'] ?? '' ) ), $this->idem( $r ) ), 201 ); }
+	public function grant_delegate( WP_REST_Request $r ) {
+		$p = (array) $r->get_json_params();
+		$delegate_id = absint( $p['delegate_user_id'] ?? 0 );
+		if ( $delegate_id && SPD_Membership_Adapter::is_minor( $delegate_id ) ) {
+			return $this->response( new WP_Error( 'spd_delegate_minor_forbidden', __( 'A minor account cannot receive delegated profile-management authority.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ) );
+		}
+		return $this->response( SPD_Profile_Repository::instance()->grant_delegate( get_current_user_id(), $delegate_id, (array) ( $p['scopes'] ?? array() ), sanitize_text_field( (string) ( $p['expires_at'] ?? '' ) ), $this->idem( $r ) ), 201 );
+	}
 	public function revoke_delegate( WP_REST_Request $r ) { return $this->response( SPD_Profile_Repository::instance()->revoke_delegate( get_current_user_id(), absint( $r['delegate_id'] ), $this->idem( $r ) ) ); }
 	public function safety_report( WP_REST_Request $r ) { $p = (array) $r->get_json_params(); return $this->response( SPD_Profile_Repository::instance()->create_safety_report( $r['public_id'], get_current_user_id(), $p['reason'] ?? '', $p['details'] ?? '', $this->idem( $r ) ), 201 ); }
 	public function appeal( WP_REST_Request $r ) { $p = (array) $r->get_json_params(); return $this->response( SPD_Profile_Repository::instance()->request_report_appeal( $r['report_uuid'], get_current_user_id(), $p['reason'] ?? '', $this->idem( $r ) ), 201 ); }
