@@ -6,6 +6,7 @@ final class SPD_Plugin {
 
 	public function run() {
 		load_plugin_textdomain( 'sabri-profiles-doctors', false, dirname( plugin_basename( SPD_FILE ) ) . '/languages' );
+		if ( ! class_exists( 'SPD_Central_Privacy' ) ) { require_once SPD_DIR . 'includes/class-spd-central-privacy.php'; }
 		if ( SPD_Membership_Adapter::available() && ( get_option( 'spd_db_version' ) !== SPD_DB_VERSION || ! SPD_DB::tables_exist() ) ) {
 			$schema = SPD_DB::install();
 			if ( is_wp_error( $schema ) ) { $safe = SPD_Observability::set_safe_mode( true, 'schema_install_failed' ); if ( is_wp_error( $safe ) ) { do_action( 'spd_boot_failure', $schema, $safe ); } }
@@ -29,6 +30,7 @@ final class SPD_Plugin {
 		( new SPD_Future_REST() )->hooks();
 		( new SPD_Frontend() )->hooks();
 		( new SPD_Privacy() )->hooks();
+		( new SPD_Central_Privacy() )->hooks();
 		( new SPD_Future_Privacy() )->hooks();
 		$this->observability = new SPD_Observability();
 		$this->observability->hooks();
