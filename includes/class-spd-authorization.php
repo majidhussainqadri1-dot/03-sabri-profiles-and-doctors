@@ -4,6 +4,7 @@ defined( 'ABSPATH' ) || exit;
 final class SPD_Authorization {
 	public static function allowed_audiences() { return array( 'public', 'members', 'contacts', 'private' ); }
 	public static function normalize_audience( $audience ) { $audience = sanitize_key( (string) $audience ); return in_array( $audience, self::allowed_audiences(), true ) ? $audience : 'private'; }
+	public static function profile_mutation_state_allows( array $profile ) { return in_array( sanitize_key( (string) ( $profile['state'] ?? '' ) ), array( 'incomplete', 'active', 'limited' ), true ); }
 
 	public static function is_contact( $owner_id, $viewer_id ) {
 		$owner_id = absint( $owner_id ); $viewer_id = absint( $viewer_id );
@@ -39,7 +40,7 @@ final class SPD_Authorization {
 
 	public static function can_edit_profile( array $profile, $actor_id ) {
 		$actor_id = absint( $actor_id ); $owner_id = absint( $profile['user_id'] ?? 0 );
-		if ( ! $actor_id || ! $owner_id || ! empty( $profile['_fields_read_failed'] ) ) { return false; }
+		if ( ! $actor_id || ! $owner_id || ! empty( $profile['_fields_read_failed'] ) || ! self::profile_mutation_state_allows( $profile ) ) { return false; }
 		if ( 'founder' === ( $profile['profile_type'] ?? '' ) ) { return $actor_id === $owner_id && SPD_Membership_Adapter::can_manage_founder( $actor_id ); }
 		$is_owner = $actor_id === $owner_id; $is_guardian = ! $is_owner && SPD_Membership_Adapter::guardian_can_manage( $actor_id, $owner_id );
 		if ( ! $is_owner && ! $is_guardian ) { return false; }
@@ -61,6 +62,7 @@ final class SPD_Authorization {
 	public static function mutation_guard( array $profile, $actor_id ) {
 		if ( SPD_Observability::safe_mode() ) { return new WP_Error( 'spd_safe_mode', __( 'Profile changes are temporarily unavailable while the system is in safe mode.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		if ( ! empty( $profile['_fields_read_failed'] ) ) { return new WP_Error( 'spd_profile_field_store_unavailable', __( 'Profile visibility data is temporarily unavailable; no changes were made.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		if ( ! self::profile_mutation_state_allows( $profile ) ) { return new WP_Error( 'spd_profile_state_locked', __( 'This profile state does not allow owner or delegated edits. A governed state transition is required first.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
 		if ( ! self::can_edit_profile( $profile, $actor_id ) ) { return new WP_Error( 'spd_forbidden', __( 'You are not authorized to change this profile.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		return true;
 	}
