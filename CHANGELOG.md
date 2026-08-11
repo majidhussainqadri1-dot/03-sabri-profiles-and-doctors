@@ -16,7 +16,7 @@
 - Added exact review-branch Fresh/Future coverage; updated a stale historical media assertion to require the stronger error-family isolation invariant.
 - Added `SECOND-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` and `tests/second-twenty-round-sequential-review.py`.
 - Advanced source identity to `1.2.0-rc12`; DB schema remains `1.2.0`; contract remains `1.4.0` because removal of undeclared internal `attachment_id` is privacy hardening under the existing opaque-public-ID/public-DTO-allowlist contract.
-- Final exact candidate, PR/merge and exact-main evidence remain pending until one post-metadata SHA passes every applicable automated gate.
+- Exact reviewed candidate `96276335b02fd42bea265648ae4a21c255db6d00` passed Corrective/Fresh/Future, PHP 8.1/8.3/8.4, permanent Second-Twenty, two fresh adversarial gates and deterministic package/checksum/SBOM/source-package parity; PR #27 merged it as code-bearing `main` `97cc579f706587490c2f4424efd593bbba9add29`, whose Baseline/Fresh/Future push gates also passed.
 - Staging, deployed-package parity, live DB/migration state, Founder acceptance and operational status remain unverified.
 
 ## 1.2.0-rc11 — Fresh twenty-round sequential corrective hardening
