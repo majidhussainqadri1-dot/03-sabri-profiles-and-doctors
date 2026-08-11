@@ -14,7 +14,7 @@ File 03 owns stable public profile identity, profile fields and audiences, Found
 
 ## Release identity
 
-- Plugin: `1.2.0-rc9`
+- Plugin: `1.2.0-rc10`
 - Database schema: `1.2.0`
 - Contract: `1.4.0`
 - PHP target matrix: `8.1`, `8.3`, `8.4`
@@ -22,21 +22,23 @@ File 03 owns stable public profile identity, profile fields and audiences, Found
 
 Companion minimums are enforced by their versioned adapters in source and must be re-verified against the exact deployed companion builds during staging. Documentation must not freeze a historical companion version as current deployment truth.
 
-## Ninth fresh sequential ten-round review
+## Tenth fresh sequential ten-round review
 
-The ninth cycle started from exact `main` `4a23627b3320b7eb5957e5610da786abdec98c95` and is recorded in `NINTH-TEN-ROUND-REVIEW-2026-08-11.md`. Each round reviewed the corrected state from the previous round; no proven defect was carried into the next round.
+The tenth cycle started from exact `main` `a74583a8498ece843f1d1e9736cee22b2f760a86` (tree `db82223523dbd4ba40183929fe5f7ddd075059ca`) and is recorded in `TENTH-TEN-ROUND-REVIEW-2026-08-12.md`. Each round reviewed the corrected state from the previous round; no proven defect was intentionally carried into the next round.
 
-Defect-bearing rounds: **01, 03, 08, 09, 10**.
+Defect-bearing rounds: **01–10**.
 
-Clean rounds: **02, 04, 05, 06, 07**.
+Clean rounds: **none**.
 
-The ninth cycle makes protected professional-submission reads fail closed on SQL uncertainty; adds DB-certain personal-data export for permanently retained canonical/historical profile slug aliases and explicit erasure-retention disclosure; latches outbox lease anomalies until an anomaly-free run; includes current outbox operational evidence in the explicit two-gate destructive uninstall; and advances release/QA identity to rc9. Round 10 also corrected release-test drift and a slug-privacy bootstrap composition defect found by runtime CI: the exporter class is now registered through the normal plugin boot lifecycle rather than self-registering during source include.
+The tenth cycle distinguishes database uncertainty from genuine missing/private state across central REST, anonymous/public projection and Future owner-only mutations; completes File03-owned profile-field privacy export values; strengthens migration completion truth, media reconciliation and post-commit identity certainty; latches retry/dead-letter outbox delivery failures as operational evidence; and includes current migration-error evidence in the explicit two-gate destructive uninstall. Material changes advance repository identity to rc10 without changing DB schema `1.2.0` or contract `1.4.0`.
 
-The exact final reviewed branch candidate is **not frozen until all applicable workflows succeed on the same SHA**. Candidate QA/PR/merge evidence must therefore be read from `RELEASE-MANIFEST.md` and `STATUS.md` after closure rather than inferred from an earlier rc8 cycle.
+Round 10 also reopened repeatedly when exact CI found release/test drift and a substantive bootstrap replacement regression. The accidental bootstrap replacement had removed pre-existing provider-guard startup, outbox dispatcher replacement, lifecycle-aware search, FHIR/federation/timeline/delegation contracts and the legacy post-batch migration-integrity hook. The frozen starting bootstrap was restored and only intentional rc10/Tenth identity changes retained. Historical fixed-version QA assertions were changed to forward-compatible historical guarantees only where they incorrectly froze a later legitimate corrective release; substantive security, authorization, privacy, concurrency and degradation assertions were not relaxed.
+
+The exact reviewed rc10 candidate is **not frozen until all applicable workflows succeed on the same SHA**. Candidate QA/PR/merge evidence must be read from `RELEASE-MANIFEST.md` and `STATUS.md` after closure rather than inferred from an intermediate branch result.
 
 ## Prior review history
 
-The repository also retains the original 80-round corrective review, a second independent fresh 80-round sequential review, and the third through eighth fresh ten-round review ledgers. Those historical records remain regression evidence; none is allowed to freeze a later legitimate release identity or substitute for current exact-HEAD verification.
+The repository retains the original 80-round corrective review, a second independent fresh 80-round sequential review, and the third through ninth fresh ten-round review ledgers. Those historical records remain regression evidence; none is allowed to freeze a later legitimate release identity or substitute for current exact-HEAD verification.
 
 ## Truthful status
 
