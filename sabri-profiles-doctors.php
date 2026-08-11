@@ -51,6 +51,7 @@ $spd_files = array(
 	'class-spd-verification-adapter.php',
 	'class-spd-authorization.php',
 	'class-spd-helpers.php',
+	'class-spd-provider-guards.php',
 	'class-spd-central-profile.php',
 	'class-spd-future-profile.php',
 	'class-spd-future-privacy.php',
