@@ -49,6 +49,8 @@ function spd_read_future_profile_state( $profile_id ) {
 	return $row ?: array( 'federation_opt_in' => 0, 'professional_lifecycle' => 'active', 'lifecycle_reason' => '', 'lifecycle_changed_at' => '', 'version' => 1, 'updated_at' => '' );
 }
 
+/** Public contract manifest; pure query, available even in isolated composition tests. */
+function spd_get_profile_contract_manifest() { return SPD_Contracts::manifest(); }
 /** Public, versioned query contract for companion modules. */
 function spd_get_public_profile( $identity, $viewer_id = 0 ) { return SPD_Profile_Repository::instance()->public_dto( $identity, absint( $viewer_id ) ); }
 /** Public, versioned personal-site projection, including the future superset. */
