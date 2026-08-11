@@ -161,7 +161,12 @@ final class SPD_Profile_Repository {
 	public function create_safety_report( $public_id, $reporter_user_id, $reason, $details, $idempotency_key = '' ) {
 		global $wpdb;
 		$reporter_user_id = absint( $reporter_user_id );
-		if ( ! $reporter_user_id || ! SPD_Membership_Adapter::is_member_eligible( $reporter_user_id ) ) { return new WP_Error( 'spd_login_required', __( 'An eligible signed-in account is required to report a profile.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
+		if ( ! $reporter_user_id ) { return new WP_Error( 'spd_login_required', __( 'A signed-in account is required to report a profile.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
+		$membership_health = SPD_Membership_Adapter::health();
+		if ( 'available' !== ( $membership_health['status'] ?? '' ) ) { return new WP_Error( 'spd_membership_provider_unavailable', __( 'Membership verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		$reporter_claims = SPD_Membership_Adapter::claims( $reporter_user_id );
+		if ( ! $reporter_claims ) { return new WP_Error( 'spd_membership_claim_unavailable', __( 'Membership verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		if ( empty( $reporter_claims['eligible'] ) || ! empty( $reporter_claims['suspended'] ) ) { return new WP_Error( 'spd_account_ineligible', __( 'This account is not currently eligible to report a profile.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		$profile = $this->find_by_public_id_strict( $public_id );
 		if ( is_wp_error( $profile ) ) { return $profile; }
 		if ( ! $profile || ! SPD_Authorization::profile_visibility_allows( $profile, $reporter_user_id ) ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
