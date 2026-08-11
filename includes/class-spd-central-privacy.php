@@ -159,8 +159,11 @@ final class SPD_Central_Privacy {
 			$table = SPD_Central_Profile::appeals_table();
 			$wpdb->last_error = '';
 			$requester_count_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE requested_by=%d", $user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$requester_count_error = (string) $wpdb->last_error;
+			$wpdb->last_error = '';
 			$reviewer_count_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE reviewer_id=%d", $user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			if ( $wpdb->last_error ) {
+			$reviewer_count_error = (string) $wpdb->last_error;
+			if ( '' !== $requester_count_error || '' !== $reviewer_count_error ) {
 				$retry = true; $retained = true;
 				$messages[] = __( 'Profile appeal data could not be read safely for erasure and requires a retry.', 'sabri-profiles-doctors' );
 			} else {
