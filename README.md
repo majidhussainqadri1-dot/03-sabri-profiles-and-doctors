@@ -21,6 +21,8 @@ File 03 owns stable public profile identity, profile fields and audiences, Found
 - Ledger: `SECOND-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
 - Defect-bearing rounds: `01, 02, 05, 06, 07, 09, 12, 15, 16, 17, 18, 19, 20`
 - Clean rounds: `03, 04, 08, 10, 11, 13, 14`
+- Exact reviewed candidate: `96276335b02fd42bea265648ae4a21c255db6d00`
+- Code-bearing merge: `97cc579f706587490c2f4424efd593bbba9add29`
 
 ## Second twenty-round correction boundary
 
@@ -32,7 +34,7 @@ Removing `media.attachment_id` is privacy hardening of an undeclared internal pr
 
 ## Exact candidate closure status
 
-The rc12 source tree is **pending final same-SHA candidate freeze**. This documentation records the intended release identity and completed sequential findings but does not pre-claim final candidate CI, PR merge, staging acceptance or live deployment. After the last source/test/workflow/documentation change, all applicable automated gates must succeed again on one exact SHA before promotion.
+The exact reviewed candidate `96276335b02fd42bea265648ae4a21c255db6d00` passed Corrective Integrity, Fresh Eighty-Round and Future Superset 18 on the same SHA, including PHP 8.1/8.3/8.4, the permanent second-twenty-round gate, two fresh post-correction adversarial gates and deterministic package/checksum/SBOM/source-package parity. PR #27 merged that exact head into code-bearing `main` `97cc579f706587490c2f4424efd593bbba9add29`, whose Baseline, Fresh and Future push gates also passed. This documentation-only evidence closure does not establish staging or live state; its final merge creates a new repository HEAD that must itself be re-tested.
 
 ## Prior review history
 
