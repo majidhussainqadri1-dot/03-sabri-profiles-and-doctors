@@ -38,6 +38,29 @@ final class SPD_Profile_Repository {
 	use SPD_Profile_Cache;
 	use SPD_Profile_Central;
 
+	/**
+	 * Use-time delegation authority. The class-level owner command deliberately
+	 * overrides the trait helper so a delegation cannot mutate a suspended,
+	 * archived or tombstoned profile, nor proceed after a failed field-store
+	 * read. Current File 00 and File 09 authority is revalidated every time.
+	 */
+	public function delegate_can_manage( $owner_id, $delegate_id, $scope ) {
+		global $wpdb;
+		$owner_id = absint( $owner_id );
+		$delegate_id = absint( $delegate_id );
+		$scope = sanitize_key( $scope );
+		if ( ! $owner_id || ! $delegate_id || ! in_array( $scope, SPD_Central_Profile::delegation_scopes(), true ) || ! SPD_Central_Profile::schema_ready() ) { return false; }
+		$profile = $this->find_by_user_id( $owner_id, false );
+		if ( ! $profile || ! empty( $profile['_fields_read_failed'] ) || ! SPD_Authorization::profile_mutation_state_allows( $profile ) ) { return false; }
+		if ( 'doctor' !== ( $profile['profile_type'] ?? '' ) || SPD_Membership_Adapter::is_minor( $owner_id ) ) { return false; }
+		$table = SPD_Central_Profile::delegation_table();
+		$wpdb->last_error = '';
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT scopes,expires_at FROM {$table} WHERE owner_user_id=%d AND delegate_user_id=%d AND status='active' LIMIT 1", $owner_id, $delegate_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error || ! $row || ( $row['expires_at'] && strtotime( $row['expires_at'] ) <= time() ) ) { return false; }
+		if ( ! SPD_Membership_Adapter::is_member_eligible( $owner_id ) || ! SPD_Membership_Adapter::is_member_eligible( $delegate_id ) || ! SPD_Verification_Adapter::is_verified( $owner_id ) ) { return false; }
+		return in_array( $scope, array_filter( array_map( 'sanitize_key', explode( ',', $row['scopes'] ) ) ), true );
+	}
+
 	/** Narrow public wrappers let additive File 03 owner commands reuse the canonical replay-protection store. */
 	public function future_idempotency_begin( $actor_id, $command, $key, $request_hash ) { return $this->idempotency_begin( $actor_id, $command, $key, $request_hash, true ); }
 	public function future_idempotency_complete( $actor_id, $command, $key, array $response ) { return $this->idempotency_complete( $actor_id, $command, $key, $response ); }
