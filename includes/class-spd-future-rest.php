@@ -21,7 +21,15 @@ final class SPD_Future_REST {
 
 	public function eligible() {
 		if ( ! is_user_logged_in() ) { return new WP_Error( 'spd_login_required', __( 'Authentication is required.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
-		return SPD_Membership_Adapter::is_member_eligible( get_current_user_id() ) ? true : new WP_Error( 'spd_account_ineligible', __( 'This account is not currently eligible.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+		$health = SPD_Membership_Adapter::health();
+		if ( 'available' !== ( $health['status'] ?? '' ) ) {
+			return new WP_Error( 'spd_membership_provider_unavailable', __( 'Membership verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$claims = SPD_Membership_Adapter::claims( get_current_user_id() );
+		if ( ! $claims ) {
+			return new WP_Error( 'spd_membership_claim_unavailable', __( 'Membership verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		return ! empty( $claims['eligible'] ) && empty( $claims['suspended'] ) ? true : new WP_Error( 'spd_account_ineligible', __( 'This account is not currently eligible.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
 	}
 
 	private function response( $result, $status = 200, $public = false ) {
