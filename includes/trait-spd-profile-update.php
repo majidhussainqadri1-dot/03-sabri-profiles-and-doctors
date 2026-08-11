@@ -153,14 +153,25 @@ trait SPD_Profile_Update {
 			}
 			return $result;
 		}
-		$updated_profile = $this->find_by_user_id( $target_user_id, false );
-		$this->purge_profile_cache( $updated_profile );
-		$after = $this->public_dto( $updated_profile['public_id'], $target_user_id );
-		if ( is_wp_error( $after ) ) { $after = array( 'error' => $after->get_error_code(), 'version' => $updated_profile['version'] ); }
+
+		// The transaction and the replay record are already committed here. Use
+		// the known pre-commit identity for invalidation so a transient reread
+		// failure cannot turn a successful first execution into a different client
+		// result than its replay.
+		$this->purge_profile_cache( $profile );
+		$updated_profile = $this->find_by_public_id_strict( $profile['public_id'] );
+		if ( is_wp_error( $updated_profile ) || ! $updated_profile ) {
+			$error_code = is_wp_error( $updated_profile ) ? $updated_profile->get_error_code() : 'spd_post_commit_profile_missing';
+			$after = array( 'error' => $error_code, 'version' => $new_version, 'post_commit_reload' => 'degraded' );
+			update_option( 'spd_last_post_commit_reload_error', array( 'code' => $error_code, 'public_id_hash' => hash( 'sha256', (string) $profile['public_id'] ), 'at' => SPD_Helpers::now() ), false );
+			do_action( 'sabri_file24_profile_post_commit_reload_failure', array( 'owner' => 'file03', 'code' => $error_code, 'public_id_hash' => hash( 'sha256', (string) $profile['public_id'] ), 'at' => SPD_Helpers::now() ) );
+		} else {
+			delete_option( 'spd_last_post_commit_reload_error' );
+			$after = $this->public_dto( $updated_profile['public_id'], $target_user_id );
+			if ( is_wp_error( $after ) ) { $after = array( 'error' => $after->get_error_code(), 'version' => $updated_profile['version'] ); }
+		}
 		$this->audit_diff( $profile, $actor_id, $before, $after, 'profile_update' );
 		SPD_Media::process_deletion_queue( 5 );
-		// Return exactly the response committed in the idempotency record. Clients
-		// may refetch the DTO; first execution and replay must never disagree.
 		return $committed_response;
 	}
 
