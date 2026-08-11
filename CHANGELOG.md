@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.0-rc7 — Seventh fresh ten-round sequential corrective hardening
+
+- Completed a fresh sequential 10-round review from exact `main` baseline `fdde7311409d68af4bae5917f5a49154cb92c9f4`.
+- Defects were found and corrected in rounds `01, 02, 03, 04, 05, 06, 08, 09, 10`; round `07` was clean.
+- Preserved requester/reviewer appeal-erasure database failures independently so one failed count read cannot be hidden by a later successful read.
+- Converged central readiness on `SPD_Schema_Guard::central_ready()` and made base DB-version recording require exact required tables, columns and integrity indexes.
+- Enforced minor-delegate denial and strict audience-map validation at the reusable repository boundary as well as REST.
+- Added strict public-ID and slug lookups for mutation- and lifecycle-sensitive paths so SQL/field-store uncertainty returns a 503-class error instead of looking absent or available.
+- Added a dedicated lease-bound `SPD_Outbox_Dispatcher` that verifies lease reset, queue/claim reads, delivery result persistence and retry/dead persistence while exposing operational failure evidence to File 24.
+- Prevented lifecycle-sensitive personal-site and File 26 search projections from returning unsuppressed contact/appointment data after an uncertain second-stage profile read.
+- Advanced materially changed source identity to `1.2.0-rc7`; repository DB schema remains `1.2.0` and contract remains `1.4.0` because no DDL/contract-version change was introduced.
+- Added `SEVENTH-TEN-ROUND-REVIEW-2026-08-11.md`, `tests/seventh-ten-round-review.py`, permanent seventh-review Fresh CI, and rc7 Future Superset deterministic package/checksum/SBOM/source-parity gating.
+- Converted stale third/fourth/fifth/sixth release-identity assertions into historical-ledger assertions while preserving their substantive authorization, privacy, concurrency, provider-degradation, security, determinism and release-boundary checks; aligned architecture, 80-round, forty-round and adversarial QA with the rc7 tree.
+- Exact reviewed candidate `56b0d315457918d6e89a530807da272f77065e0f` (tree `7c10a713f315e55aa68f12f4bacc7c139806bb33`) passed exact-candidate and PR-head QA; PR #19 merged the same tree as `553a1a006c43e6791b7e71407d0421e851df5bc3`.
+- Staging acceptance, exact deployed-package parity, live DB/schema/migration state, browser/WCAG/RTL evidence, backup/restore/rollback, Founder acceptance and live operational verification remain separate gates.
+
 ## 1.2.0-rc6 — Sixth fresh ten-round sequential corrective hardening
 
 - Completed a fresh sequential 10-round review from exact `main` baseline `822837daa3cebc4c5ae80410f31511aadf3885b0`.
