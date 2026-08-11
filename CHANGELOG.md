@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0-rc3 — Third fresh ten-round corrective hardening
+
+- Completed a fresh 10-round sequential review from exact `main` baseline `ffcd790b831e2ae028c48f8aa664e4c496c115e0`; defects were found in rounds `01, 02, 03, 04, 06, 07, 08, 09, 10`, while round `05` was clean.
+- Synchronized repository truth documentation and preserved the explicit staging/live evidence boundary.
+- Made future/profile REST responses no-store, blocked future mutations in Safe Mode and required fail-closed lifecycle preflight.
+- Bound owner, guardian and delegated writes to native profile state plus current File 00/File 09 authority.
+- Bound idempotency completion/failure to the exact reservation so an abandoned stale request cannot finalize or delete a reclaimed request.
+- Made required upload owner/purpose/state/scan metadata persistence fail closed; an attachment is removed if those bindings cannot be stored.
+- Made one explicit future-state read authoritative for lifecycle/contact/appointment/federation/FHIR projections so a secondary read failure cannot reactivate retired/legacy behavior.
+- Made base and future privacy export/erasure retry on SQL/schema uncertainty instead of treating uncertainty as empty success.
+- Added a post-batch migration integrity gate that independently re-proves remaining users and retry/dead failure counts before migration completion can stand.
+- Added `THIRD-TEN-ROUND-REVIEW-2026-08-11.md`, `tests/third-ten-round-review.py`, and the permanent exact-candidate CI gate; advanced source identity from rc2 to rc3 so materially different source trees cannot share one release identifier.
+- Staging acceptance, exact deployed-package parity, live DB/schema/migration state, browser/WCAG/RTL evidence, backup/restore/rollback and operational acceptance remain separate gates.
+
 ## 1.2.0-rc2 — Corrective hardening and second fresh 80-round review
 
 - Completed the original numbered 80-round corrective review and then a second independent fresh 80-round sequential review on the corrected repository state.
