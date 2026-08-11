@@ -98,11 +98,14 @@ final class SPD_Future_REST {
 	public function federation( WP_REST_Request $r ) { $dto = spd_get_personal_site_profile( $r['public_id'], 0 ); return $this->response( is_wp_error( $dto ) ? $dto : $dto['future']['federation'], 200, true ); }
 	public function embed_card( WP_REST_Request $r ) { $dto = spd_get_personal_site_profile( $r['public_id'], 0 ); return $this->response( is_wp_error( $dto ) ? $dto : $dto['future']['embed_card'], 200, true ); }
 	public function ask_work( WP_REST_Request $r ) {
+		global $wpdb;
 		$viewer = get_current_user_id();
 		if ( ! SPD_Helpers::consume_rate_limit( 'ask_work_' . $viewer, 30, HOUR_IN_SECONDS ) ) { return $this->response( new WP_Error( 'spd_ai_rate_limited', __( 'Too many profile-work questions were submitted. Try again later.', 'sabri-profiles-doctors' ), array( 'status' => 429 ) ) ); }
 		$p = (array) $r->get_json_params(); $question = trim( SPD_Helpers::sanitize_multiline( $p['question'] ?? '', 500 ) );
 		if ( $this->medical_scope_question( $question ) ) { return $this->response( new WP_Error( 'spd_ai_scope_restricted', __( 'This assistant answers only about the professional’s published work; it does not diagnose, prescribe, dose or replace emergency care.', 'sabri-profiles-doctors' ), array( 'status' => 422 ) ) ); }
+		$wpdb->last_error = '';
 		$result = SPD_Future_Profile::ask_about_work( $r['public_id'], $viewer, $question );
+		if ( $wpdb->last_error ) { $result = new WP_Error( 'spd_profile_store_unavailable', __( 'The profile store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		if ( ! is_wp_error( $result ) ) { $answer = trim( (string) ( $result['answer'] ?? '' ) ); $citations = (array) ( $result['citations'] ?? array() ); if ( '' === $answer || ! $citations ) { $result = new WP_Error( 'spd_ai_grounding_incomplete', __( 'The grounded answer did not include sufficient public source evidence.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); } }
 		return $this->response( $result );
 	}
