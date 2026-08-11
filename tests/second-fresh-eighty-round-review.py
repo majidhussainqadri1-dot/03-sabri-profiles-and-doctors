@@ -55,7 +55,9 @@ assert 'no-store, no-cache, must-revalidate, max-age=0' in central_rest
 assert "add_filter( 'rest_post_dispatch', array( $this, 'rest_no_store' )" in plugin
 assert 'function spd_read_future_profile_state' in bootstrap
 assert "'state_degraded'" in bootstrap and "'active_professional' => false" in bootstrap
-assert 'return $state;' in bootstrap and "professional_lifecycle" in bootstrap
+assert '$wpdb->last_error' in bootstrap and 'spd_future_state_read_failed' in bootstrap
+assert '$row = $wpdb->get_row' in bootstrap and "professional_lifecycle" in bootstrap
+assert "return $row ?: array( 'federation_opt_in' => 0, 'professional_lifecycle' => 'active'" in bootstrap
 
 # 28/29/34 — cross-file facts are exact-object bound and malformed claims hide.
 assert "absint( $claim['doctor_user_id'] ?? 0 ) !== $user_id" in central
@@ -97,5 +99,3 @@ assert "acquire_lock( 'migration_batch'" in plugin and 'run_migration_batch' in 
 assert '28 defect-bearing rounds / 52 clean rounds' in ledger
 assert 'Exact deployed code remains unverified' in ledger
 assert 'does not establish Hostinger staging acceptance' in ledger
-
-print('File 03 second fresh 80-round corrective invariants: PASS')
