@@ -88,7 +88,7 @@ This ledger is repository evidence only. It does **not** establish Hostinger sta
 | 76 | SEO/canonical/structured-data safety | CLEAN — canonical output is limited to public context; private context is noindex. |
 | 77 | RTL/accessibility/static UI states | CLEAN AT SOURCE — semantic/keyboard/RTL/reduced-motion source controls remain; real browser/WCAG acceptance is still an external staging gate. |
 | 78 | Browser retry/idempotency behavior | CLEAN — unchanged payload retries retain the same mutation key; edited payload rotates it. |
-| 79 | CI/traceability for this second fresh review | **DEFECT FOUND → FIXED** — the repository had only the previous fresh-80 ledger/gate; this independent 2026-08-11 ledger and invariant test are now added to CI. |
+| 79 | CI/traceability for this second fresh review | **DEFECT FOUND → FIXED** — the repository had only the previous fresh-80 ledger/gate, and the first exact-candidate run also exposed a stale legacy forty-round cursor assertion after the cursor contract was strengthened. The independent 2026-08-11 ledger/invariant gate was added and the legacy regression was updated to require the stronger signed, profile/filter-bound cursor contract rather than weakening the implementation. |
 | 80 | Exact-head/package/status truthfulness | CLEAN AT REPOSITORY REVIEW — no staging/live claim is made; final exact-head CI/package status must be taken from the post-review PR/main runs, not from historical evidence. |
 
 ## Defect-bearing rounds
