@@ -15,9 +15,6 @@ media = text('includes/class-spd-media.php')
 lifecycle = text('includes/trait-spd-profile-lifecycle.php')
 privacy = text('includes/class-spd-privacy.php')
 future_privacy = text('includes/class-spd-future-privacy.php')
-readme = text('README.md')
-wp_readme = text('readme.txt')
-status = text('STATUS.md')
 
 rounds = re.findall(r'^\|\s*(\d{2})\s*\|', ledger, flags=re.M)
 assert rounds == [f'{i:02d}' for i in range(1, 11)], rounds
@@ -26,14 +23,11 @@ actual_defects = set(re.findall(r'^\|\s*(\d{2})\s*\|\s*\*\*DEFECT FOUND → FIXE
 assert actual_defects == expected_defects, (actual_defects, expected_defects)
 assert re.search(r'^\|\s*05\s*\|\s*\*\*CLEAN\*\*', ledger, flags=re.M)
 
-# R01/R10 historical guarantees remain present while current release identity advances.
-assert "Version: 1.2.0-rc6" in bootstrap
-assert "define( 'SPD_VERSION', '1.2.0-rc6' )" in bootstrap
+# R01/R10 historical release evidence remains frozen in the third-review ledger;
+# current release identity is deliberately owned by the newest review gate.
+assert 'Starting plugin identity: `1.2.0-rc2`' in ledger
+assert 'source identity to `1.2.0-rc3`' in ledger
 assert 'THIRD-TEN-ROUND-CORRECTIVE-REVIEW' in bootstrap
-assert 'FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' in bootstrap
-assert 'FIFTH-TEN-ROUND-CORRECTIVE-REVIEW' in bootstrap
-assert 'SIXTH-TEN-ROUND-CORRECTIVE-REVIEW' in bootstrap
-assert '1.2.0-rc6' in readme and 'Stable tag: 1.2.0-rc6' in wp_readme and '1.2.0-rc6' in status
 assert 'Exact deployed code' in ledger and 'unverified' in ledger.lower()
 
 # R02 — revocation-sensitive future REST and all future mutations fail closed.
