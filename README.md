@@ -14,23 +14,29 @@ File 03 owns stable public profile identity, profile fields and audiences, Found
 
 ## Release identity
 
-- Plugin: `1.2.0-rc8`
+- Plugin: `1.2.0-rc9`
 - Database schema: `1.2.0`
 - Contract: `1.4.0`
-- PHP: `8.1`, `8.3`, `8.4`
-- WordPress: `7.0+`
+- PHP target matrix: `8.1`, `8.3`, `8.4`
+- WordPress baseline: `7.0+`
 
 Companion minimums are enforced by their versioned adapters in source and must be re-verified against the exact deployed companion builds during staging. Documentation must not freeze a historical companion version as current deployment truth.
 
-## Review status
+## Ninth fresh sequential ten-round review
 
-The repository has completed the original 80-round corrective review, a second independent fresh 80-round sequential review, and six subsequent fresh 10-round corrective cycles: third, fourth, fifth, sixth, seventh and eighth.
+The ninth cycle started from exact `main` `4a23627b3320b7eb5957e5610da786abdec98c95` and is recorded in `NINTH-TEN-ROUND-REVIEW-2026-08-11.md`. Each round reviewed the corrected state from the previous round; no proven defect was carried into the next round.
 
-The eighth cycle is recorded in `EIGHTH-TEN-ROUND-REVIEW-2026-08-11.md` and started from exact `main` `c2c78d774207532e035e738834760b6b7395729e`. Defects were found and corrected in rounds **01, 03, 04, 05, 06, 07, 08, 09 and 10**; round **02** was clean after an initially suspected delegation issue was disproved by the effective repository composition and its temporary redundant patch was reverted.
+Defect-bearing rounds: **01, 03, 08, 09, 10**.
 
-The eighth corrections make privacy erasure retries page-safe, report/appeal reads fail closed on SQL uncertainty, schema-version evidence truthful after exact-shape repair failure, future mutation request shapes strict before idempotency, committed base-profile updates replay-stable across post-commit reread failure, media queue anomaly evidence persistent, share-link rotation first/replay responses identical, and future lifecycle updates resistant to transient permissive second-read defaults. Materially changed source advances to rc8 and receives a permanent eighth-review CI/package-parity gate.
+Clean rounds: **02, 04, 05, 06, 07**.
 
-The exact reviewed candidate was `2e9b46ba0e4342e7a0d5e208be000e3c4fafc7e6` with tree `57b16fb3e486bec912443a6b26b2d8e1f1610f87`. Exact-candidate Fresh Eighty `31504483618` and Future Superset 18 `31504483632` succeeded; deterministic package/parity job `93822942584` also succeeded. PR #20 merged that reviewed candidate as code-bearing merge commit `e4f78e1cd6161266e3b6b2e37014ae0257628cc1`. That exact merge commit then passed Baseline Integrity `31504866846`, Fresh Eighty `31504866884`, Future Superset 18 `31504866864`, and deterministic package/checksum/SBOM/source-parity job `93823973818`.
+The ninth cycle makes protected professional-submission reads fail closed on SQL uncertainty; adds DB-certain personal-data export for permanently retained canonical/historical profile slug aliases and explicit erasure-retention disclosure; latches outbox lease anomalies until an anomaly-free run; includes current outbox operational evidence in the explicit two-gate destructive uninstall; and advances release/QA identity to rc9. Round 10 also corrected release-test drift and a slug-privacy bootstrap composition defect found by runtime CI: the exporter class is now registered through the normal plugin boot lifecycle rather than self-registering during source include.
+
+The exact final reviewed branch candidate is **not frozen until all applicable workflows succeed on the same SHA**. Candidate QA/PR/merge evidence must therefore be read from `RELEASE-MANIFEST.md` and `STATUS.md` after closure rather than inferred from an earlier rc8 cycle.
+
+## Prior review history
+
+The repository also retains the original 80-round corrective review, a second independent fresh 80-round sequential review, and the third through eighth fresh ten-round review ledgers. Those historical records remain regression evidence; none is allowed to freeze a later legitimate release identity or substitute for current exact-HEAD verification.
 
 ## Truthful status
 
