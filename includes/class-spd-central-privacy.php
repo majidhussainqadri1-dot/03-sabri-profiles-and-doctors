@@ -32,7 +32,7 @@ final class SPD_Central_Privacy {
 	}
 
 	private function schema_guard() {
-		return SPD_Central_Profile::schema_ready()
+		return SPD_Schema_Guard::central_ready()
 			? true
 			: new WP_Error( 'spd_central_privacy_schema_unavailable', __( 'Profile delegation and appeal storage is temporarily unavailable.', 'sabri-profiles-doctors' ) );
 	}
