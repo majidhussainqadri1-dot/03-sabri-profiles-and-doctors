@@ -11,6 +11,7 @@ def require(condition, message):
         raise SystemExit(message)
 
 main = text('sabri-profiles-doctors.php')
+plugin = text('includes/class-spd-plugin.php')
 professional = text('includes/trait-spd-profile-professional.php')
 edit_model = text('includes/trait-spd-profile-edit-model.php')
 slug_privacy = text('includes/class-spd-slug-privacy.php')
@@ -29,6 +30,8 @@ require('is_wp_error( $professional_submission )' in edit_model and 'return $pro
 require('sabri-profile-slug-history' in slug_privacy, 'Slug-history privacy exporter registration is missing')
 require("SPD_DB::table( 'slugs' )" in slug_privacy and '$wpdb->last_error' in slug_privacy, 'Slug-history export is not DB-certain')
 require('Permanent redirect/citation integrity' in slug_privacy, 'Slug-history retention purpose is not disclosed in export')
+require('( new SPD_Slug_Privacy() )->hooks();' not in slug_privacy, 'Slug privacy self-registers during source include instead of plugin boot')
+require('( new SPD_Slug_Privacy() )->hooks();' in plugin, 'Slug privacy is not registered by the plugin boot lifecycle')
 require('historical profile slug aliases are retained' in lifecycle, 'Erasure receipt does not disclose permanent slug-history retention')
 
 require('$had_error = false;' in outbox, 'Outbox worker lacks run-level anomaly latch')
