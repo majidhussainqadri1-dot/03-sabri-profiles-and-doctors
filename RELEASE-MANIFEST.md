@@ -9,14 +9,21 @@
 - Fifth-review starting Git tree: `49283b40823aaa31348403588311e1912af5851d`
 - Review branch: `codex/file-03-fifth-ten-round-20260811`
 - Fifth-review ledger: `FIFTH-TEN-ROUND-REVIEW-2026-08-11.md`
-- Exact reviewed PR candidate: **pending final green CI**
-- PR / merge: **pending**
+- Exact reviewed PR candidate: `70fc971f442a88306f1d09970717240ceb3cb260`
+- Exact reviewed candidate tree: `5a69b9ee103f72d5a8e4e2ab7bbdf87905a539ad`
+- PR / code merge: PR `#17` merged as `eaea01073bc2c4c5ab2737e9fd80f5f777f922b3`
+- Code-merge tree parity: merge tree is exactly `5a69b9ee103f72d5a8e4e2ab7bbdf87905a539ad`
+- Exact-candidate Fresh Eighty-Round: `31481792866` — **SUCCESS**
+- Exact-candidate Future Superset 18: `31481792877` — **SUCCESS**, including PHP 8.1/8.3/8.4, deterministic ZIP, SHA-256, SBOM and source/package parity
+- Exact code-merge `main` Baseline Integrity: `31482071155` — **SUCCESS**
+- Exact code-merge `main` Fresh Eighty-Round: `31482071194` — **SUCCESS**
+- Exact code-merge `main` Future Superset 18: `31482071200` — **SUCCESS**
 - Production authorized: **no**
 - Live installation authorized: **no**
 - Staging accepted: **unverified**
 - Exact deployed version/package parity: **unverified**
 
-The rc5 candidate must pass all applicable repository gates on one exact candidate, including deterministic ZIP generation, SHA-256 verification, SBOM determinism and source/package parity. Any code or release-metadata change after that evidence requires regeneration before promotion.
+The reviewed rc5 source tree has passed repository-level exact-candidate and exact code-merge `main` gates. Documentation-only repository-truth closure commits must themselves be rechecked on the resulting exact current `main` before repository closure is reported. A later source/code or release-metadata change requires regeneration of applicable evidence before promotion.
 
 ## Historical provenance warning
 
