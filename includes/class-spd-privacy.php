@@ -121,7 +121,7 @@ final class SPD_Privacy {
 	public function erase( $email, $page = 1 ) {
 		global $wpdb;
 		$user = get_user_by( 'email', $email );
-		if ( ! $user || absint( $page ) > 1 ) {
+		if ( ! $user ) {
 			return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true );
 		}
 		$repo     = SPD_Profile_Repository::instance();

@@ -120,7 +120,6 @@ final class SPD_Central_Privacy {
 
 	public function erase( $email, $page = 1 ) {
 		global $wpdb;
-		if ( absint( $page ) > 1 ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
 		$user = get_user_by( 'email', $email );
 		if ( ! $user ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
 		$guard = $this->schema_guard();

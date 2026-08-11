@@ -18,8 +18,8 @@ db = text('includes/class-spd-db.php')
 outbox = text('includes/class-spd-outbox-dispatcher.php')
 ledger = text('SEVENTH-TEN-ROUND-REVIEW-2026-08-11.md')
 
-require('Version: 1.2.0-rc7' in main and "define( 'SPD_VERSION', '1.2.0-rc7' )" in main, 'Seventh-review release identity is not rc7')
-require('SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Seventh-review plan marker is missing')
+require('Plugin/source: **1.2.0-rc7**' in ledger, 'Seventh-review historical release identity drifted')
+require('SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Seventh-review plan marker is missing from current source history')
 
 require('$requester_count_error' in central_privacy and '$reviewer_count_error' in central_privacy and "'' !== $requester_count_error || '' !== $reviewer_count_error" in central_privacy, 'Appeal erasure does not preserve independent DB-read uncertainty')
 require('return SPD_Schema_Guard::central_ready();' in central_profile, 'Central schema readiness is not bound to the exact schema guard')

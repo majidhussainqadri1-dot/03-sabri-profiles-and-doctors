@@ -63,10 +63,7 @@ final class SPD_Profile_Repository {
 		return $result;
 	}
 
-	/**
-	 * The repository is itself an integration boundary, so malformed visibility
-	 * maps must fail closed even when a caller bypasses the REST adapter.
-	 */
+	/** The repository is itself an integration boundary. */
 	public function update_profile( $actor_id, array $input, $expected_version, $idempotency_key = '', array $prepared_media = array() ) {
 		if ( array_key_exists( 'audiences', $input ) ) {
 			$guard = SPD_Authorization::validate_audience_payload( $input['audiences'], self::visibility_fields() );
@@ -91,10 +88,49 @@ final class SPD_Profile_Repository {
 	}
 
 	/**
-	 * Grant-time delegation authority must be enforced below the REST layer too,
-	 * because repository methods are a reusable integration surface for other
-	 * File 03 adapters and companion modules.
+	 * Share-link rotation stores the complete deterministic response inside the
+	 * transaction. First execution and idempotent replay therefore have exactly
+	 * the same shape and do not depend on a post-commit profile reread.
 	 */
+	public function rotate_share_link( $actor_id, $expected_version, $idempotency_key = '' ) {
+		global $wpdb;
+		$actor_id = absint( $actor_id );
+		$profile = $this->find_by_user_id( $actor_id );
+		if ( is_wp_error( $profile ) ) { return $profile; }
+		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
+		$guard = SPD_Authorization::mutation_guard( $profile, $actor_id );
+		if ( is_wp_error( $guard ) ) { return $guard; }
+		$expected_version = absint( $expected_version );
+		if ( $expected_version !== absint( $profile['version'] ) ) { return new WP_Error( 'spd_version_conflict', __( 'Reload your profile before rotating the share link.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+		$epoch = SPD_Central_Profile::share_epoch( $profile ) + 1;
+		$request_hash = hash( 'sha256', $profile['public_id'] . '|' . $epoch . '|' . $expected_version );
+		$idem = $this->idempotency_begin( $actor_id, 'rotate_share_link', $idempotency_key, $request_hash, true );
+		if ( is_wp_error( $idem ) ) { return $idem; }
+		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
+		$new_version = $expected_version + 1;
+		$future_profile = $profile;
+		$future_profile['fields']['share_epoch'] = array( 'field_value' => (string) $epoch, 'audience' => 'private' );
+		$response = array(
+			'public_id' => $profile['public_id'],
+			'version' => $new_version,
+			'share_url' => SPD_Central_Profile::short_url( $future_profile ),
+		);
+		$profiles = SPD_DB::table( 'profiles' );
+		$result = SPD_DB::transaction( function() use ( $wpdb, $profiles, $profile, $epoch, $expected_version, $new_version, $actor_id, $idempotency_key, $response ) {
+			$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$profiles} SET version=%d,updated_at=%s WHERE id=%d AND version=%d", $new_version, SPD_Helpers::now(), $profile['id'], $expected_version ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( 1 !== $updated ) { return new WP_Error( 'spd_version_conflict', __( 'The profile changed while rotating its share link.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+			if ( ! $this->upsert_field( $profile['id'], 'share_epoch', (string) $epoch, 'private', 'approved', 'file03' ) ) { return new WP_Error( 'spd_share_rotation_failed', __( 'The share-link revision could not be recorded.', 'sabri-profiles-doctors' ) ); }
+			$event = $this->event( 'ProfileShareLinkRotated.v1', 'profile', $profile['public_id'], array( 'version' => $new_version ) );
+			if ( is_wp_error( $event ) ) { return $event; }
+			if ( ! $this->idempotency_complete( $actor_id, 'rotate_share_link', $idempotency_key, $response ) ) { return new WP_Error( 'spd_idempotency_finalize_failed', __( 'The replay-protection result could not be committed.', 'sabri-profiles-doctors' ) ); }
+			return true;
+		} );
+		if ( is_wp_error( $result ) ) { $this->idempotency_fail( $actor_id, 'rotate_share_link', $idempotency_key ); return $result; }
+		$this->purge_profile_cache( $profile );
+		return $response;
+	}
+
+	/** Grant-time delegation authority below REST. */
 	public function grant_delegate( $owner_id, $delegate_id, array $scopes, $expires_at = '', $idempotency_key = '' ) {
 		$delegate_id = absint( $delegate_id );
 		if ( $delegate_id && SPD_Membership_Adapter::is_minor( $delegate_id ) ) {
@@ -103,12 +139,7 @@ final class SPD_Profile_Repository {
 		return $this->central_grant_delegate( $owner_id, $delegate_id, $scopes, $expires_at, $idempotency_key );
 	}
 
-	/**
-	 * Use-time delegation authority. The class-level owner command deliberately
-	 * overrides the trait helper so a delegation cannot mutate a suspended,
-	 * archived or tombstoned profile, nor proceed after a failed field-store
-	 * read. Current File 00 and File 09 authority is revalidated every time.
-	 */
+	/** Use-time delegation authority with current provider revalidation. */
 	public function delegate_can_manage( $owner_id, $delegate_id, $scope ) {
 		global $wpdb;
 		$owner_id = absint( $owner_id );
@@ -126,7 +157,83 @@ final class SPD_Profile_Repository {
 		return in_array( $scope, array_filter( array_map( 'sanitize_key', explode( ',', $row['scopes'] ) ) ), true );
 	}
 
-	/** Narrow public wrappers let additive File 03 owner commands reuse the canonical replay-protection store. */
+	/** Central-plan safety-report command with DB-certain rate evidence. */
+	public function create_safety_report( $public_id, $reporter_user_id, $reason, $details, $idempotency_key = '' ) {
+		global $wpdb;
+		$reporter_user_id = absint( $reporter_user_id );
+		if ( ! $reporter_user_id || ! SPD_Membership_Adapter::is_member_eligible( $reporter_user_id ) ) { return new WP_Error( 'spd_login_required', __( 'An eligible signed-in account is required to report a profile.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
+		$profile = $this->find_by_public_id_strict( $public_id );
+		if ( is_wp_error( $profile ) ) { return $profile; }
+		if ( ! $profile || ! SPD_Authorization::profile_visibility_allows( $profile, $reporter_user_id ) ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
+		$reason = sanitize_key( $reason );
+		$details = SPD_Helpers::sanitize_multiline( $details, 3000 );
+		if ( ! in_array( $reason, SPD_Central_Profile::report_reasons(), true ) ) { return new WP_Error( 'spd_invalid_report_reason', __( 'Choose a valid report reason.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
+		if ( SPD_Helpers::text_length( $details ) < 10 ) { return new WP_Error( 'spd_report_details_required', __( 'Provide enough detail for a fair review.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
+		$request_hash = hash( 'sha256', SPD_Helpers::json_encode( array( $public_id, $reason, $details ) ) );
+		$idem = $this->idempotency_begin( $reporter_user_id, 'create_safety_report', $idempotency_key, $request_hash, true );
+		if ( is_wp_error( $idem ) ) { return $idem; }
+		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
+		$reports = SPD_DB::table( 'reports' );
+		$wpdb->last_error = '';
+		$count_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$reports} WHERE reporter_user_id=%d AND created_at >= (UTC_TIMESTAMP() - INTERVAL 1 DAY)", $reporter_user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) {
+			$this->idempotency_fail( $reporter_user_id, 'create_safety_report', $idempotency_key );
+			return new WP_Error( 'spd_report_store_unavailable', __( 'Profile reporting is temporarily unavailable because report-rate evidence could not be read safely.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$count = absint( $count_raw );
+		if ( $count >= 5 || ! SPD_Helpers::consume_rate_limit( 'profile_report_' . $reporter_user_id, 5, DAY_IN_SECONDS ) ) { $this->idempotency_fail( $reporter_user_id, 'create_safety_report', $idempotency_key ); return new WP_Error( 'spd_report_rate_limited', __( 'Too many reports were submitted. Try again later.', 'sabri-profiles-doctors' ), array( 'status' => 429 ) ); }
+		$uuid = SPD_Helpers::public_id();
+		$now = SPD_Helpers::now();
+		$critical = in_array( $reason, array( 'harm','child_safety','impersonation','privacy','privacy_breach','scam' ), true );
+		$severity = $critical ? 'high' : 'normal';
+		$dedupe = hash( 'sha256', gmdate( 'Y-m-d' ) . ':' . $profile['id'] . ':' . $reason . ':' . hash( 'sha256', $details ) );
+		$response = array( 'report_uuid' => $uuid, 'status' => 'submitted' );
+		$result = SPD_DB::transaction( function() use ( $wpdb, $reports, $uuid, $profile, $reporter_user_id, $reason, $details, $severity, $now, $dedupe, $response, $idempotency_key ) {
+			$ok = $wpdb->insert( $reports, array( 'report_uuid' => $uuid, 'profile_id' => $profile['id'], 'reporter_user_id' => $reporter_user_id, 'reason' => $reason, 'details' => $details, 'dedupe_hash' => $dedupe, 'status' => 'submitted', 'severity' => $severity, 'version' => 1, 'created_at' => $now, 'updated_at' => $now ) );
+			if ( ! $ok ) { return new WP_Error( 'spd_report_duplicate_or_failed', __( 'This report could not be recorded or may already exist.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+			$event = $this->event( 'ProfileReported.v1', 'report', $uuid, array( 'profile_public_id' => $profile['public_id'], 'reason' => $reason, 'severity' => $severity ) );
+			if ( is_wp_error( $event ) ) { return $event; }
+			if ( ! $this->idempotency_complete( $reporter_user_id, 'create_safety_report', $idempotency_key, $response ) ) { return new WP_Error( 'spd_idempotency_finalize_failed', __( 'The replay-protection result could not be committed.', 'sabri-profiles-doctors' ) ); }
+			return true;
+		} );
+		if ( is_wp_error( $result ) ) { $this->idempotency_fail( $reporter_user_id, 'create_safety_report', $idempotency_key ); return $result; }
+		return $response;
+	}
+
+	/** Appeal eligibility is authorization-sensitive and DB uncertainty is 503. */
+	public function request_report_appeal( $report_uuid, $requester_id, $reason, $idempotency_key = '' ) {
+		global $wpdb;
+		$requester_id = absint( $requester_id );
+		$reason = SPD_Helpers::sanitize_multiline( $reason, 2000 );
+		if ( ! $requester_id || ! SPD_Membership_Adapter::is_member_eligible( $requester_id ) ) { return new WP_Error( 'spd_account_ineligible', __( 'An eligible account is required to appeal a report.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
+		if ( SPD_Helpers::text_length( $reason ) < 10 ) { return new WP_Error( 'spd_appeal_reason_required', __( 'Provide a clear reason for the appeal.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
+		$reports = SPD_DB::table( 'reports' );
+		$report_uuid = sanitize_text_field( $report_uuid );
+		$wpdb->last_error = '';
+		$report = $wpdb->get_row( $wpdb->prepare( "SELECT id,reporter_user_id,status FROM {$reports} WHERE report_uuid=%s LIMIT 1", $report_uuid ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_report_store_unavailable', __( 'The profile-report store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		if ( ! $report || absint( $report['reporter_user_id'] ) !== $requester_id || ! in_array( $report['status'], array( 'rejected','closed','actioned' ), true ) ) { return new WP_Error( 'spd_appeal_unavailable', __( 'This report is not eligible for appeal by this account.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
+		$request_hash = hash( 'sha256', SPD_Helpers::json_encode( array( $report_uuid, $requester_id, $reason ) ) );
+		$idem = $this->idempotency_begin( $requester_id, 'request_report_appeal', $idempotency_key, $request_hash, true );
+		if ( is_wp_error( $idem ) ) { return $idem; }
+		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
+		$table = SPD_Central_Profile::appeals_table();
+		$uuid = SPD_Helpers::public_id();
+		$now = SPD_Helpers::now();
+		$response = array( 'appeal_uuid' => $uuid, 'status' => 'submitted' );
+		$result = SPD_DB::transaction( function() use ( $wpdb, $table, $report, $report_uuid, $requester_id, $reason, $uuid, $now, $response, $idempotency_key ) {
+			$ok = $wpdb->insert( $table, array( 'appeal_uuid' => $uuid, 'report_id' => absint( $report['id'] ), 'requested_by' => $requester_id, 'reason' => $reason, 'status' => 'submitted', 'version' => 1, 'created_at' => $now, 'updated_at' => $now ) );
+			if ( ! $ok ) { return new WP_Error( 'spd_appeal_duplicate_or_failed', __( 'An appeal already exists or could not be recorded.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+			$event = $this->event( 'ProfileReportAppealed.v1', 'report', $report_uuid, array( 'appeal_uuid' => $uuid, 'requested_by' => $requester_id ) );
+			if ( is_wp_error( $event ) ) { return $event; }
+			if ( ! $this->idempotency_complete( $requester_id, 'request_report_appeal', $idempotency_key, $response ) ) { return new WP_Error( 'spd_idempotency_finalize_failed', __( 'The replay-protection result could not be committed.', 'sabri-profiles-doctors' ) ); }
+			return true;
+		} );
+		if ( is_wp_error( $result ) ) { $this->idempotency_fail( $requester_id, 'request_report_appeal', $idempotency_key ); return $result; }
+		return $response;
+	}
+
+	/** Narrow public wrappers let additive File 03 owner commands reuse replay protection. */
 	public function future_idempotency_begin( $actor_id, $command, $key, $request_hash ) { return $this->idempotency_begin( $actor_id, $command, $key, $request_hash, true ); }
 	public function future_idempotency_complete( $actor_id, $command, $key, array $response ) { return $this->idempotency_complete( $actor_id, $command, $key, $response ); }
 	public function future_idempotency_fail( $actor_id, $command, $key ) { $this->idempotency_fail( $actor_id, $command, $key ); }

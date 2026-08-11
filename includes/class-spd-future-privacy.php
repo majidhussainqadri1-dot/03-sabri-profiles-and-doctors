@@ -39,7 +39,6 @@ final class SPD_Future_Privacy {
 	}
 
 	public function erase( $email, $page = 1 ) {
-		if ( absint( $page ) > 1 ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
 		$user = get_user_by( 'email', $email ); if ( ! $user ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
 		$profile = $this->profile_for_privacy( $user->ID );
 		if ( is_wp_error( $profile ) ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( $profile->get_error_message() ), 'done' => false ); }
