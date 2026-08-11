@@ -92,22 +92,25 @@ final class SPD_Central_Privacy {
 			);
 		}
 		foreach ( array_slice( (array) $appeals, 0, self::PAGE_SIZE ) as $row ) {
+			$is_requester = $user_id === absint( $row['requested_by'] );
+			$is_reviewer = $user_id === absint( $row['reviewer_id'] );
+			$role = $is_requester && $is_reviewer ? 'requester_and_reviewer' : ( $is_requester ? 'requester' : 'reviewer' );
+			$appeal_data = array(
+				array( 'name' => 'Appeal ID', 'value' => (string) $row['appeal_uuid'] ),
+				array( 'name' => 'Report ID', 'value' => (string) absint( $row['report_id'] ) ),
+				array( 'name' => 'Relationship role', 'value' => $role ),
+				array( 'name' => 'Status', 'value' => (string) $row['status'] ),
+				array( 'name' => 'Version', 'value' => (string) absint( $row['version'] ) ),
+				array( 'name' => 'Created', 'value' => (string) $row['created_at'] ),
+				array( 'name' => 'Updated', 'value' => (string) $row['updated_at'] ),
+			);
+			if ( $is_requester ) { $appeal_data[] = array( 'name' => 'Reason', 'value' => (string) $row['reason'] ); }
+			if ( ( $is_requester || $is_reviewer ) && '' !== trim( (string) $row['decision_note'] ) ) { $appeal_data[] = array( 'name' => 'Decision note', 'value' => (string) $row['decision_note'] ); }
 			$data[] = array(
 				'group_id'    => 'sabri-profile-appeals',
 				'group_label' => __( 'Profile report appeals', 'sabri-profiles-doctors' ),
 				'item_id'     => 'profile-appeal-' . sanitize_text_field( (string) $row['appeal_uuid'] ),
-				'data'        => array(
-					array( 'name' => 'Appeal ID', 'value' => (string) $row['appeal_uuid'] ),
-					array( 'name' => 'Report ID', 'value' => (string) absint( $row['report_id'] ) ),
-					array( 'name' => 'Requested by user ID', 'value' => (string) absint( $row['requested_by'] ) ),
-					array( 'name' => 'Reason', 'value' => (string) $row['reason'] ),
-					array( 'name' => 'Status', 'value' => (string) $row['status'] ),
-					array( 'name' => 'Reviewer user ID', 'value' => (string) absint( $row['reviewer_id'] ) ),
-					array( 'name' => 'Decision note', 'value' => (string) $row['decision_note'] ),
-					array( 'name' => 'Version', 'value' => (string) absint( $row['version'] ) ),
-					array( 'name' => 'Created', 'value' => (string) $row['created_at'] ),
-					array( 'name' => 'Updated', 'value' => (string) $row['updated_at'] ),
-				),
+				'data'        => $appeal_data,
 			);
 		}
 
