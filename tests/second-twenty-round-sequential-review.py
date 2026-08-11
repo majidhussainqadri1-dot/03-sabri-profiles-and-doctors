@@ -89,8 +89,10 @@ require(branch in fresh, 'Round 19 Fresh Eighty push coverage is missing')
 require(branch in future_workflow, 'Round 19 Future Superset push coverage is missing')
 require("clear_queue_error_family( 'deletion' )" in text('tests/eighth-ten-round-review.py'), 'Round 19 historical QA assertion regressed to unsafe global media-error clearing')
 
-require('Defect-bearing rounds: `01, 02, 05, 06, 07, 09, 12, 15, 16, 17, 18, 19, 20`' in ledger, 'Second twenty-round defect-round ledger drifted')
-require('Clean rounds: `03, 04, 08, 10, 11, 13, 14`' in ledger, 'Second twenty-round clean-round ledger drifted')
+defect_rounds = '01, 02, 05, 06, 07, 09, 12, 15, 16, 17, 18, 19, 20'
+clean_rounds = '03, 04, 08, 10, 11, 13, 14'
+require('Defect-bearing rounds' in ledger and defect_rounds in ledger, 'Second twenty-round defect-round ledger drifted')
+require('Clean rounds' in ledger and clean_rounds in ledger, 'Second twenty-round clean-round ledger drifted')
 require('Exact deployed code remains unverified' in ledger, 'Live/deployed truth boundary is missing from second twenty-round ledger')
 
 print('Second fresh twenty-round sequential corrective invariants passed.')
