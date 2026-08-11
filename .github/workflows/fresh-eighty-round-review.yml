@@ -12,6 +12,7 @@ on:
       - codex/file-03-sixth-ten-round-20260811
       - codex/file-03-seventh-ten-round-20260811
       - codex/file-03-eighth-ten-round-20260811
+      - audit/file-03-ninth-ten-round-20260811
   pull_request:
   workflow_dispatch:
 
@@ -49,6 +50,8 @@ jobs:
         run: python3 tests/seventh-ten-round-review.py
       - name: Eighth ten-round corrective invariants
         run: python3 tests/eighth-ten-round-review.py
+      - name: Ninth ten-round corrective invariants
+        run: python3 tests/ninth-ten-round-review.py
       - name: Future Superset 18 coverage
         run: python3 tests/future-superset-coverage.py
       - name: Latest governing-plan coverage
