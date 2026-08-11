@@ -13,9 +13,10 @@
 | Twenty-round clean | `07, 08, 11, 16` |
 | Frozen starting main | `60207107479c971cae4be379e427e1adb212ea92` · tree `1145214fbcff6afd9bf08289e9a112ffacfc4aaf` |
 | Review branch | `audit/file-03-twentieth-round-sequential-20260812` |
-| Exact reviewed rc11 candidate | **Pending final same-SHA freeze after last repository change** |
-| Exact-candidate automated QA | **Pending final same-SHA closure** |
-| PR / code merge | **Pending** |
+| Exact reviewed rc11 candidate | `9f7f80f7791a94a45c2dff8cbd846b0f0482621b` · tree `7265b5a8f318a6404b621dd027c4c1031c466f3a` |
+| Exact-candidate automated QA | Corrective `31541857922` SUCCESS · Fresh `31541857974` SUCCESS · Future `31541857955` SUCCESS · deterministic package/parity job `93945955914` SUCCESS |
+| PR / code merge | PR #25 merged from the exact reviewed candidate · code-bearing merge `555324eb107e1d684b4028362ec3aa780adb4208` |
+| Exact code-merge QA | Baseline `31542150625` SUCCESS · Fresh `31542150448` SUCCESS · Future `31542150417` SUCCESS · deterministic package/parity job `93946919894` SUCCESS |
 | Correction themes | File00 outage truth across protected REST; DB-certain personal-site/redirect/moderation/timeline/frontend reads; delegation-export minimization; media deletion error latching; selective-disclosure degradation truth; Future TOCTOU DB certainty; File08 delegation projection safety; operational health-query truth; exact-branch CI coverage; permanent twenty-round gate; rc11 release identity |
 | Staging-Accepted | **Pending / unverified** |
 | Live-Deployed | **Unverified** |
@@ -23,10 +24,10 @@
 | Deployment parity | **Unverified** |
 | Operational | **Not established** |
 
-## Truth boundary
+## Repository closure boundary
 
-The final rc11 repository candidate is not promoted from an intermediate green SHA. Any source, test, workflow, release-metadata or documentation change advances repository truth and requires all applicable exact-SHA gates to run again. Repository evidence does not establish Hostinger staging or live state.
+The exact rc11 code candidate and its code-bearing merge have both passed their applicable automated gates. This documentation-only evidence closure does not change runtime/source behavior. The resulting documentation merge becomes a new repository HEAD and must itself be re-tested before being reported as current final repository truth.
 
-Next external gate after repository closure: staging reality freeze → exact deployed package/version/checksum → DB/schema/migration verification → current companion contracts → representative browser/mobile/RTL/WCAG journeys → backup/restore/rollback → Founder acceptance → controlled deployment → live re-test → parity confirmation.
+Repository and CI evidence do not establish Hostinger staging or live state. Next external gate remains: staging reality freeze → exact deployed package/version/checksum → DB/schema/migration verification → current companion contracts → representative browser/mobile/RTL/WCAG journeys → backup/restore/rollback → Founder acceptance → controlled deployment → live re-test → parity confirmation.
 
 **Exact deployed code is currently unverified; repository-based diagnosis is provisional for any live incident.**
