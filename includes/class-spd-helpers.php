@@ -86,12 +86,13 @@ final class SPD_Helpers {
 
 	/**
 	 * Acquire a process-safe, expiring lock backed by the unique WordPress option
-	 * name. The random owner token prevents an expired worker from releasing a
-	 * newer worker's lease.
+	 * name. Expired takeover uses compare-and-swap on the exact old option value,
+	 * so a stale contender can never delete or replace a newer worker's lease.
 	 *
 	 * @return string|false Lock owner token on success, false when already held.
 	 */
 	public static function acquire_lock( $name, $ttl = 600 ) {
+		global $wpdb;
 		$name = sanitize_key( (string) $name );
 		if ( ! $name ) { return false; }
 		$ttl = min( HOUR_IN_SECONDS, max( 10, absint( $ttl ) ) );
@@ -99,25 +100,40 @@ final class SPD_Helpers {
 		$token = self::trace_id();
 		$value = wp_json_encode( array( 'token' => $token, 'expires' => time() + $ttl ) );
 		if ( add_option( $key, $value, '', false ) ) { return $token; }
-		$current = json_decode( (string) get_option( $key, '' ), true );
+		$raw_current = (string) get_option( $key, '' );
+		$current = json_decode( $raw_current, true );
 		if ( ! is_array( $current ) || absint( $current['expires'] ?? 0 ) >= time() ) { return false; }
-		delete_option( $key );
-		return add_option( $key, $value, '', false ) ? $token : false;
+		$updated = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->options} SET option_value=%s WHERE option_name=%s AND option_value=%s",
+				$value,
+				$key,
+				$raw_current
+			)
+		);
+		if ( 1 !== $updated ) { return false; }
+		wp_cache_delete( $key, 'options' );
+		return $token;
 	}
 
 	public static function release_lock( $name, $token ) {
+		global $wpdb;
 		$name = sanitize_key( (string) $name );
 		$token = (string) $token;
 		if ( ! $name || ! $token ) { return false; }
 		$key = 'spd_lock_' . substr( hash( 'sha256', $name ), 0, 32 );
-		$current = json_decode( (string) get_option( $key, '' ), true );
+		$raw_current = (string) get_option( $key, '' );
+		$current = json_decode( $raw_current, true );
 		if ( ! is_array( $current ) || ! hash_equals( (string) ( $current['token'] ?? '' ), $token ) ) { return false; }
-		return delete_option( $key );
+		$deleted = $wpdb->delete( $wpdb->options, array( 'option_name' => $key, 'option_value' => $raw_current ) );
+		if ( 1 !== $deleted ) { return false; }
+		wp_cache_delete( $key, 'options' );
+		return true;
 	}
 
 	/**
 	 * Small fixed-window limiter serialized by the same atomic option lock. It is
-	 * deliberately fail-closed when the counter lock cannot be acquired.
+	 * deliberately fail-closed when either the lock or counter persistence fails.
 	 */
 	public static function consume_rate_limit( $bucket, $limit, $window ) {
 		$bucket = sanitize_key( (string) $bucket );
@@ -136,7 +152,7 @@ final class SPD_Helpers {
 			if ( absint( $record['count'] ?? 0 ) >= $limit ) { return false; }
 			$record['count'] = absint( $record['count'] ?? 0 ) + 1;
 			$ttl = max( 1, absint( $record['expires'] ) - $now );
-			set_transient( $key, wp_json_encode( $record ), $ttl );
+			if ( ! set_transient( $key, wp_json_encode( $record ), $ttl ) ) { return false; }
 			return true;
 		} finally {
 			self::release_lock( 'rate_' . $bucket, $lock );
