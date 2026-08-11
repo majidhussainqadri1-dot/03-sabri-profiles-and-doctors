@@ -40,7 +40,7 @@ for name, src, end in (
     ('central', central_privacy, None),
     ('future', future_privacy, 'public static function export_profile_data'),
 ):
-    erase = section(src, 'public function erase', end)
+    erase = section(src, 'public function erase(', end)
     require("absint( $page ) > 1" not in erase, f'{name} privacy eraser can still terminate retries solely from page number')
     require("'done' => ! $retry" in erase or "'done' => empty( $result['retry'] )" in erase or "'done' => false" in erase, f'{name} privacy eraser lacks retry-aware completion evidence')
 
