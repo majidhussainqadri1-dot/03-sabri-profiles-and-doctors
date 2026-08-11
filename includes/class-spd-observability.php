@@ -42,6 +42,17 @@ final class SPD_Observability {
 		return true;
 	}
 
+	private static function operational_count( $sql, &$query_error ) {
+		global $wpdb;
+		$wpdb->last_error = '';
+		$value = $wpdb->get_var( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		if ( $wpdb->last_error ) {
+			$query_error = true;
+			return null;
+		}
+		return absint( $value );
+	}
+
 	public static function health_report() {
 		global $wpdb;
 		$exists    = SPD_DB::tables_exist();
@@ -50,6 +61,25 @@ final class SPD_Observability {
 		$deletions = SPD_DB::table( 'deletions' );
 		$failures  = SPD_DB::table( 'migration_failures' );
 		$map       = (array) get_option( 'spd_page_map', array() );
+		$query_error = false;
+		$counts = array(
+			'outbox_pending'          => null,
+			'outbox_dead'             => null,
+			'open_reports'            => null,
+			'media_deletions_pending' => null,
+			'media_deletions_dead'    => null,
+			'migration_retry'         => null,
+			'migration_dead'          => null,
+		);
+		if ( $exists ) {
+			$counts['outbox_pending']          = self::operational_count( "SELECT COUNT(*) FROM {$events} WHERE status IN ('pending','retry','processing')", $query_error );
+			$counts['outbox_dead']             = self::operational_count( "SELECT COUNT(*) FROM {$events} WHERE status='dead'", $query_error );
+			$counts['open_reports']            = self::operational_count( "SELECT COUNT(*) FROM {$reports} WHERE status NOT IN ('closed','rejected')", $query_error );
+			$counts['media_deletions_pending'] = self::operational_count( "SELECT COUNT(*) FROM {$deletions} WHERE status IN ('pending','retry','processing')", $query_error );
+			$counts['media_deletions_dead']    = self::operational_count( "SELECT COUNT(*) FROM {$deletions} WHERE status='dead'", $query_error );
+			$counts['migration_retry']         = self::operational_count( "SELECT COUNT(*) FROM {$failures} WHERE status='retry'", $query_error );
+			$counts['migration_dead']          = self::operational_count( "SELECT COUNT(*) FROM {$failures} WHERE status='dead'", $query_error );
+		}
 		return array(
 			'plugin_version'          => SPD_VERSION,
 			'db_version'              => get_option( 'spd_db_version', '' ),
@@ -57,6 +87,7 @@ final class SPD_Observability {
 			'file00'                  => SPD_Membership_Adapter::health(),
 			'file09'                  => SPD_Verification_Adapter::health(),
 			'tables'                  => $exists ? 'available' : 'missing',
+			'health_query_status'     => ! $exists ? 'not_applicable' : ( $query_error ? 'degraded' : 'available' ),
 			'pages'                   => array(
 				'founder'         => ! empty( $map['founder'] ) && get_post_status( $map['founder'] ) ? 'available' : 'missing',
 				'profile'         => ! empty( $map['profile'] ) && get_post_status( $map['profile'] ) ? 'available' : 'missing',
@@ -68,13 +99,13 @@ final class SPD_Observability {
 				'retention'       => wp_next_scheduled( 'spd_retention_cleanup' ) ? 'scheduled' : 'missing',
 				'media_deletions' => wp_next_scheduled( 'spd_process_media_deletions' ) ? 'scheduled' : 'missing',
 			),
-			'outbox_pending'          => $exists ? absint( $wpdb->get_var( "SELECT COUNT(*) FROM {$events} WHERE status IN ('pending','retry','processing')" ) ) : 0, // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			'outbox_dead'             => $exists ? absint( $wpdb->get_var( "SELECT COUNT(*) FROM {$events} WHERE status='dead'" ) ) : 0, // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			'open_reports'            => $exists ? absint( $wpdb->get_var( "SELECT COUNT(*) FROM {$reports} WHERE status NOT IN ('closed','rejected')" ) ) : 0, // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			'media_deletions_pending' => $exists ? absint( $wpdb->get_var( "SELECT COUNT(*) FROM {$deletions} WHERE status IN ('pending','retry','processing')" ) ) : 0, // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			'media_deletions_dead'    => $exists ? absint( $wpdb->get_var( "SELECT COUNT(*) FROM {$deletions} WHERE status='dead'" ) ) : 0, // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			'migration_retry'         => $exists ? absint( $wpdb->get_var( "SELECT COUNT(*) FROM {$failures} WHERE status='retry'" ) ) : 0, // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			'migration_dead'          => $exists ? absint( $wpdb->get_var( "SELECT COUNT(*) FROM {$failures} WHERE status='dead'" ) ) : 0, // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			'outbox_pending'          => $counts['outbox_pending'],
+			'outbox_dead'             => $counts['outbox_dead'],
+			'open_reports'            => $counts['open_reports'],
+			'media_deletions_pending' => $counts['media_deletions_pending'],
+			'media_deletions_dead'    => $counts['media_deletions_dead'],
+			'migration_retry'         => $counts['migration_retry'],
+			'migration_dead'          => $counts['migration_dead'],
 			'provider_health'         => self::provider_health(),
 			'safe_mode'               => self::safe_mode(),
 			'safe_mode_reason'        => get_option( 'spd_safe_mode_reason', '' ),
@@ -317,16 +348,27 @@ final class SPD_Observability {
 		foreach ( array( 'spd_dispatch_outbox' => 'schedule_outbox', 'spd_retention_cleanup' => 'schedule_retention', 'spd_process_media_deletions' => 'schedule_media_deletions', 'spd_migrate_profiles_batch' => 'schedule_migration' ) as $hook => $action ) {
 			if ( ! wp_next_scheduled( $hook ) ) { $plan[] = $action; }
 		}
+		$diagnostic_error = false;
 		if ( SPD_DB::tables_exist() ) {
-			if ( absint( $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'events' ) . " WHERE status='dead'" ) ) ) { $plan[] = 'inspect_dead_letter_outbox'; } // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			if ( absint( $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'deletions' ) . " WHERE status='dead'" ) ) ) { $plan[] = 'inspect_dead_media_deletions'; } // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			if ( absint( $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status IN ('retry','dead')" ) ) ) { $plan[] = 'reconcile_migration_failures'; } // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$events = SPD_DB::table( 'events' );
+			$deletions = SPD_DB::table( 'deletions' );
+			$failures = SPD_DB::table( 'migration_failures' );
+			$outbox_dead = self::operational_count( "SELECT COUNT(*) FROM {$events} WHERE status='dead'", $diagnostic_error );
+			$media_dead = self::operational_count( "SELECT COUNT(*) FROM {$deletions} WHERE status='dead'", $diagnostic_error );
+			$migration_failed = self::operational_count( "SELECT COUNT(*) FROM {$failures} WHERE status IN ('retry','dead')", $diagnostic_error );
+			if ( $diagnostic_error ) { $plan[] = 'diagnose_database_query_failure'; }
+			if ( null !== $outbox_dead && $outbox_dead ) { $plan[] = 'inspect_dead_letter_outbox'; }
+			if ( null !== $media_dead && $media_dead ) { $plan[] = 'inspect_dead_media_deletions'; }
+			if ( null !== $migration_failed && $migration_failed ) { $plan[] = 'reconcile_migration_failures'; }
 			if ( get_option( 'spd_reconciliation_required', false ) ) {
 				$plan[] = 'purge_profile_dto_and_object_cache';
 				$plan[] = 'notify_file26_reindex_reconciliation';
 			}
 		}
 		$plan = array_values( array_unique( $plan ) );
+		if ( $execute && $diagnostic_error ) {
+			return new WP_Error( 'spd_repair_diagnosis_uncertain', __( 'Repair was not executed because File 03 operational database diagnostics are temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
 		if ( $execute && $plan ) {
 			$repair = SPD_Activator::repair_owned_resources();
 			if ( is_wp_error( $repair ) ) {
