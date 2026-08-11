@@ -58,7 +58,9 @@ final class SPD_Outbox_Dispatcher {
 			$payload = json_decode( (string) $row['payload'], true );
 			$attempts = absint( $row['attempts'] ) + 1;
 			if ( ! is_array( $payload ) ) {
+				$had_error = true;
 				if ( ! self::fail_claim( $row, $token, $attempts, 'invalid_payload' ) ) { return; }
+				self::record_error( 'outbox_invalid_payload' );
 				continue;
 			}
 
@@ -74,7 +76,10 @@ final class SPD_Outbox_Dispatcher {
 				if ( false === $saved || $wpdb->last_error ) { self::record_error( 'outbox_delivery_persist_failed' ); return; }
 				if ( 1 !== $saved ) { $had_error = true; self::record_error( 'outbox_delivery_lease_lost' ); continue; }
 			} catch ( Throwable $exception ) {
-				if ( ! self::fail_claim( $row, $token, $attempts, sanitize_key( get_class( $exception ) ) ) ) { return; }
+				$had_error = true;
+				$error_code = sanitize_key( get_class( $exception ) );
+				if ( ! self::fail_claim( $row, $token, $attempts, $error_code ) ) { return; }
+				self::record_error( 'outbox_delivery_failed' );
 			}
 		}
 

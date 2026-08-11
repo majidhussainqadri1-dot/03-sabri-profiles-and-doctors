@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 def read(path): return (ROOT / path).read_text(encoding='utf-8')
@@ -7,9 +8,11 @@ def has(path, token): return token in read(path)
 def lacks(path, token): return token not in read(path)
 def exists(path): return (ROOT / path).exists()
 php = '\n'.join(p.read_text(encoding='utf-8') for p in ROOT.rglob('*.php') if 'tests' not in p.parts)
+main = read('sabri-profiles-doctors.php')
+version = re.search(r"define\( 'SPD_VERSION', '1\.2\.0-rc(\d+)' \)", main)
 
 checks = [
-(1,'Exact corrective candidate version',lambda:has('sabri-profiles-doctors.php',"'1.2.0-rc9'") and has('sabri-profiles-doctors.php','NINTH-TEN-ROUND-CORRECTIVE-REVIEW')),
+(1,'Corrective candidate version preserves rc9-or-later guarantees',lambda:bool(version and int(version.group(1)) >= 9) and 'NINTH-TEN-ROUND-CORRECTIVE-REVIEW' in main),
 (2,'Database version remains additive 1.2.0',lambda:has('sabri-profiles-doctors.php',"SPD_DB_VERSION', '1.2.0")),
 (3,'Contract version remains 1.4.0',lambda:has('sabri-profiles-doctors.php',"SPD_CONTRACT_VERSION', '1.4.0")),
 (4,'Plan identity records 80-round correction',lambda:has('sabri-profiles-doctors.php','80-ROUND-CORRECTIVE-REVIEW')),

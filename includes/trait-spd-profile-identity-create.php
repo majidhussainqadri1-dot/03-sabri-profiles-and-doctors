@@ -45,7 +45,14 @@ trait SPD_Profile_Identity_Create {
 				$event = $this->event( 'PublicProfileUpdated.v1', 'profile', $public_id, array( 'user_id' => $user_id, 'change' => 'created', 'version' => 1 ) ); if ( is_wp_error( $event ) ) { return $event; }
 				return array( 'profile_id' => $profile_id );
 			} );
-			if ( is_wp_error( $result ) ) { return $result; } if ( isset( $result['id'] ) ) { return $this->hydrate( $result ); } return $this->find_by_id( absint( $result['profile_id'] ) );
+			if ( is_wp_error( $result ) ) { return $result; }
+			$created_profile_id = isset( $result['id'] ) ? absint( $result['id'] ) : absint( $result['profile_id'] ?? 0 );
+			$wpdb->last_error = '';
+			$created = $created_profile_id ? $this->find_by_id( $created_profile_id ) : array();
+			if ( $wpdb->last_error || ! is_array( $created ) || ! $created || ! empty( $created['_fields_read_failed'] ) ) {
+				return new WP_Error( 'spd_profile_create_read_failed', __( 'The committed profile identity could not be read safely.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+			}
+			return $created;
 		}
 		$changes = array(); if ( $row['slug'] !== $slug ) { $changes['slug'] = $slug; } if ( $row['profile_type'] !== $type ) { $changes['profile_type'] = $type; } if ( $row['state'] !== $state && SPD_Helpers::state_transition_allowed( $row['state'], $state, 'profile' ) ) { $changes['state'] = $state; } if ( $row['locale'] !== $locale ) { $changes['locale'] = $locale; }
 		if ( $changes ) {
@@ -68,12 +75,17 @@ trait SPD_Profile_Identity_Create {
 				return is_wp_error( $event ) ? $event : true;
 			} );
 			if ( is_wp_error( $result ) ) { return $result; }
-			$row = $this->find_by_id( $row['id'] );
-			if ( is_wp_error( $row ) || ! is_array( $row ) ) { return is_wp_error( $row ) ? $row : new WP_Error( 'spd_profile_refresh_read_failed', __( 'The refreshed profile could not be read safely.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
-			$this->purge_profile_cache( $row );
+		}
+		$wpdb->last_error = '';
+		$final = $this->find_by_id( absint( $row['id'] ) );
+		if ( $wpdb->last_error || ! is_array( $final ) || ! $final || ! empty( $final['_fields_read_failed'] ) ) {
+			return new WP_Error( 'spd_profile_refresh_read_failed', __( 'The refreshed profile could not be read safely.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		if ( $changes ) {
+			$this->purge_profile_cache( $final );
 			update_option( 'spd_reconciliation_required', 1, false );
 		}
-		return $this->hydrate( $row );
+		return $final;
 	}
 
 	private function runtime_state( $user_id, $stored ) { if ( SPD_Membership_Adapter::is_founder( $user_id ) ) { return 'active'; } $status = SPD_Membership_Adapter::status( $user_id ); if ( in_array( $status, array( 'suspended','appeal_review' ), true ) ) { return 'suspended'; } if ( in_array( $status, array( 'rejected','expired','erasure_pending','invalid_application','erased' ), true ) ) { return 'archived'; } if ( SPD_Membership_Adapter::is_minor( $user_id ) && ! SPD_Membership_Adapter::guardian_verified( $user_id ) ) { return 'limited'; } if ( SPD_Membership_Adapter::is_member_eligible( $user_id ) ) { return 'active'; } if ( SPD_Membership_Adapter::is_approved( $user_id ) ) { return 'limited'; } return in_array( $stored, array( 'archived','tombstoned' ), true ) ? $stored : 'incomplete'; }
