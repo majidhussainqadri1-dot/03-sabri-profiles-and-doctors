@@ -36,7 +36,20 @@ final class SPD_Profile_Repository {
 	use SPD_Profile_Lifecycle;
 	use SPD_Profile_Events;
 	use SPD_Profile_Cache;
-	use SPD_Profile_Central;
+	use SPD_Profile_Central { grant_delegate as private central_grant_delegate; }
+
+	/**
+	 * Grant-time delegation authority must be enforced below the REST layer too,
+	 * because repository methods are a reusable integration surface for other
+	 * File 03 adapters and companion modules.
+	 */
+	public function grant_delegate( $owner_id, $delegate_id, array $scopes, $expires_at = '', $idempotency_key = '' ) {
+		$delegate_id = absint( $delegate_id );
+		if ( $delegate_id && SPD_Membership_Adapter::is_minor( $delegate_id ) ) {
+			return new WP_Error( 'spd_delegate_minor_forbidden', __( 'A minor account cannot receive delegated profile-management authority.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+		}
+		return $this->central_grant_delegate( $owner_id, $delegate_id, $scopes, $expires_at, $idempotency_key );
+	}
 
 	/**
 	 * Use-time delegation authority. The class-level owner command deliberately
