@@ -54,8 +54,9 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 	$viewer_id = absint( $viewer_id );
 	$dto = SPD_Central_Profile::personal_site_dto( $identity, $viewer_id );
 	if ( is_wp_error( $dto ) ) { return $dto; }
-	$profile = SPD_Profile_Repository::instance()->find_by_public_id( $dto['public_id'] );
-	if ( ! $profile ) { return $dto; }
+	$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( $dto['public_id'] );
+	if ( is_wp_error( $profile ) ) { return $profile; }
+	if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 	$base_contacts = (array) ( $dto['contacts'] ?? array() );
 	$base_clinic = (array) ( $dto['clinic'] ?? array() );
 	$dto = SPD_Future_Profile::augment_personal_site_dto( $dto, $profile, $viewer_id );
@@ -104,7 +105,8 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 function spd_get_search_projection( $identity ) {
 	$out = SPD_Central_Profile::search_projection( $identity );
 	if ( is_wp_error( $out ) ) { return $out; }
-	$profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) ( $out['canonical_id'] ?? '' ) );
+	$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( (string) ( $out['canonical_id'] ?? '' ) );
+	if ( is_wp_error( $profile ) ) { return $profile; }
 	if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 	$state = spd_read_future_profile_state( $profile['id'] );
 	if ( is_wp_error( $state ) ) { return $state; }
