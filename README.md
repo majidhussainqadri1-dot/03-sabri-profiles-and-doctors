@@ -14,7 +14,7 @@ File 03 owns stable public profile identity, profile fields and audiences, Found
 
 ## Release identity
 
-- Plugin: `1.2.0-rc2`
+- Plugin: `1.2.0-rc3`
 - Database schema: `1.2.0`
 - Contract: `1.4.0`
 - PHP: `8.1`, `8.3`, `8.4`
@@ -24,7 +24,7 @@ Companion minimums are enforced by their versioned adapters in source and must b
 
 ## Review status
 
-The repository has completed the original 80-round corrective review and a second independent fresh 80-round sequential review. The second fresh cycle recorded 28 defect-bearing rounds and 52 clean rounds; every discovered repository-level defect was corrected before the next round. See `SECOND-FRESH-EIGHTY-ROUND-REVIEW-2026-08-11.md`.
+The repository has completed the original 80-round corrective review, a second independent fresh 80-round sequential review, and the third fresh 10-round corrective review recorded in `THIRD-TEN-ROUND-REVIEW-2026-08-11.md`. The third cycle found defects in rounds `01, 02, 03, 04, 06, 07, 08, 09, 10`; round `05` was clean. Every proven repository-level defect was corrected before review closure.
 
 ## Truthful status
 
