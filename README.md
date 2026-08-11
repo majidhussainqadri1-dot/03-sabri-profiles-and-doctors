@@ -14,7 +14,7 @@ File 03 owns stable public profile identity, profile fields and audiences, Found
 
 ## Release identity
 
-- Plugin: `1.2.0-rc7`
+- Plugin: `1.2.0-rc8`
 - Database schema: `1.2.0`
 - Contract: `1.4.0`
 - PHP: `8.1`, `8.3`, `8.4`
@@ -24,11 +24,13 @@ Companion minimums are enforced by their versioned adapters in source and must b
 
 ## Review status
 
-The repository has completed the original 80-round corrective review, a second independent fresh 80-round sequential review, and five subsequent fresh 10-round corrective cycles: third, fourth, fifth, sixth and seventh.
+The repository has completed the original 80-round corrective review, a second independent fresh 80-round sequential review, and six subsequent fresh 10-round corrective cycles: third, fourth, fifth, sixth, seventh and eighth.
 
-The seventh cycle is recorded in `SEVENTH-TEN-ROUND-REVIEW-2026-08-11.md` and started from exact `main` `fdde7311409d68af4bae5917f5a49154cb92c9f4`. Defects were found and corrected in rounds **01, 02, 03, 04, 05, 06, 08, 09 and 10**; round **07** was clean. Corrections preserve independent privacy-erasure DB failure evidence, converge central/base readiness on exact schema proof, enforce repository-level minor-delegate and audience-map boundaries, fail closed on mutation/lifecycle-sensitive identity reads, harden outbox delivery persistence, prevent lifecycle-sensitive public projection during uncertain rereads, and advance materially changed source to rc7 with a permanent seventh-review CI gate.
+The eighth cycle is recorded in `EIGHTH-TEN-ROUND-REVIEW-2026-08-11.md` and started from exact `main` `c2c78d774207532e035e738834760b6b7395729e`. Defects were found and corrected in rounds **01, 03, 04, 05, 06, 07, 08, 09 and 10**; round **02** was clean after an initially suspected delegation issue was disproved by the effective repository composition and its temporary redundant patch was reverted.
 
-The exact reviewed seventh-cycle candidate was `56b0d315457918d6e89a530807da272f77065e0f` with tree `7c10a713f315e55aa68f12f4bacc7c139806bb33`; PR #19 merged that same source tree as `553a1a006c43e6791b7e71407d0421e851df5bc3`.
+The eighth corrections make privacy erasure retries page-safe, report/appeal reads fail closed on SQL uncertainty, schema-version evidence truthful after exact-shape repair failure, future mutation request shapes strict before idempotency, committed base-profile updates replay-stable across post-commit reread failure, media queue anomaly evidence persistent, share-link rotation first/replay responses identical, and future lifecycle updates resistant to transient permissive second-read defaults. Materially changed source advances to rc8 and receives a permanent eighth-review CI/package-parity gate.
+
+Exact reviewed-candidate and PR/merge evidence will be recorded only after the current rc8 branch passes its exact-candidate gates; this paragraph is deliberately not a staging/live claim.
 
 ## Truthful status
 
