@@ -8,17 +8,20 @@
 - Eighth-review starting `main`: `c2c78d774207532e035e738834760b6b7395729e`
 - Review branch: `codex/file-03-eighth-ten-round-20260811`
 - Eighth-review ledger: `EIGHTH-TEN-ROUND-REVIEW-2026-08-11.md`
-- Exact reviewed candidate: **pending exact-candidate QA closure**
-- Exact reviewed tree: **pending exact-candidate QA closure**
-- Exact-candidate Fresh Eighty-Round: **pending**
-- Exact-candidate Future Superset 18 / deterministic package / SHA-256 / SBOM / source-package parity: **pending**
-- PR / code merge: **pending exact-candidate QA closure**
+- Exact reviewed candidate: `2e9b46ba0e4342e7a0d5e208be000e3c4fafc7e6`
+- Exact reviewed tree: `57b16fb3e486bec912443a6b26b2d8e1f1610f87`
+- Exact-candidate Fresh Eighty-Round: `31504483618` — **SUCCESS**
+- Exact-candidate Future Superset 18: `31504483632` — **SUCCESS**
+- Exact-candidate deterministic package/checksum/SBOM/source-package parity job: `93822942584` — **SUCCESS**
+- PR / code merge: PR `#20` merged as `e4f78e1cd6161266e3b6b2e37014ae0257628cc1`
+- Exact code-merge `main` QA: Baseline `31504866846`, Fresh Eighty `31504866884`, Future Superset `31504866864` — all **SUCCESS**
+- Exact code-merge deterministic package/checksum/SBOM/source-package parity job: `93823973818` — **SUCCESS**
 - Production authorized: **no**
 - Live installation authorized: **no**
 - Staging accepted: **unverified**
 - Exact deployed version/package parity: **unverified**
 
-The rc8 source contains the eighth sequential review corrections and permanent QA/package-parity gates. No exact-candidate success, PR merge, staging acceptance or live deployment is asserted here until the corresponding evidence exists on the exact commit being promoted.
+The rc8 exact reviewed candidate and the code-bearing merge commit passed the applicable repository gates. Deterministic package evidence includes two builds, determinism verification, packaged corrective-file/source parity, SHA-256, SBOM and artifact generation. Documentation-only evidence closure after that merge does not establish staging or live deployment.
 
 ## Historical provenance warning
 
