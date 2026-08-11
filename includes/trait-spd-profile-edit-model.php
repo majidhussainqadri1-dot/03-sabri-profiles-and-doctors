@@ -24,6 +24,7 @@ trait SPD_Profile_Edit_Model {
 			}
 		}
 		$professional_submission = 'doctor' === $profile['profile_type'] ? $this->latest_professional_submission( $profile['id'] ) : array();
+		if ( is_wp_error( $professional_submission ) ) { return $professional_submission; }
 		return array(
 			'public_id'        => $profile['public_id'],
 			'target_user_id'   => $target_user_id,
