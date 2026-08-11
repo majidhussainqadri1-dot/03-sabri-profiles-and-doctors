@@ -34,6 +34,26 @@ if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $deletions_table ) )
 	}
 }
 
+// Recover File-03-owned attachments from their immutable ownership/purpose
+// markers too. This closes destructive-cleanup gaps when profile/deletion rows
+// were lost in a partial schema failure. Both markers must be present and the
+// purpose must remain one of File 03's two owned public-image purposes.
+$owned_media_ids = $wpdb->get_col(
+	$wpdb->prepare(
+		"SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key=%s AND CAST(meta_value AS UNSIGNED)>0",
+		'_spd_media_owner_user_id'
+	)
+); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+foreach ( (array) $owned_media_ids as $attachment_id ) {
+	$attachment_id = absint( $attachment_id );
+	$owner = absint( get_post_meta( $attachment_id, '_spd_media_owner_user_id', true ) );
+	$purpose = sanitize_key( (string) get_post_meta( $attachment_id, '_spd_media_purpose', true ) );
+	$post = get_post( $attachment_id );
+	if ( $attachment_id && $owner && in_array( $purpose, array( 'avatar', 'cover' ), true ) && $post instanceof WP_Post && 'attachment' === $post->post_type ) {
+		$attachment_refs[ $attachment_id ] = array( 'owner' => $owner, 'purpose' => $purpose );
+	}
+}
+
 foreach ( $attachment_refs as $attachment_id => $reference ) {
 	$owner          = absint( get_post_meta( $attachment_id, '_spd_media_owner_user_id', true ) );
 	$stored_purpose = sanitize_key( (string) get_post_meta( $attachment_id, '_spd_media_purpose', true ) );

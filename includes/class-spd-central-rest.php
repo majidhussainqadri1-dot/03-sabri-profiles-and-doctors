@@ -63,7 +63,7 @@ final class SPD_Central_REST {
 	}
 	private function idem( WP_REST_Request $r ) { return trim( sanitize_text_field( (string) $r->get_header( 'Idempotency-Key' ) ) ); }
 	public function personal_site( WP_REST_Request $r ) { return $this->response( spd_get_personal_site_profile( $r['public_id'], get_current_user_id() ), 200, ! is_user_logged_in() ); }
-	public function search_projection( WP_REST_Request $r ) { return $this->response( SPD_Central_Profile::search_projection( $r['public_id'] ), 200, true ); }
+	public function search_projection( WP_REST_Request $r ) { return $this->response( spd_get_search_projection( $r['public_id'] ), 200, true ); }
 	public function edit_model() { return $this->response( SPD_Profile_Repository::instance()->central_edit_model( get_current_user_id() ) ); }
 	public function update_personal_site( WP_REST_Request $r ) { $p = (array) $r->get_json_params(); return $this->response( SPD_Profile_Repository::instance()->update_central_profile( get_current_user_id(), $p, $this->version( $r ), $this->idem( $r ) ) ); }
 	public function rotate_share( WP_REST_Request $r ) { return $this->response( SPD_Profile_Repository::instance()->rotate_share_link( get_current_user_id(), $this->version( $r ), $this->idem( $r ) ) ); }

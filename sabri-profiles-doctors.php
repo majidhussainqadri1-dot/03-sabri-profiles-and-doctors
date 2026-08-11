@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Profiles and Doctors
  * Plugin URI: https://www.sabrihomeopathy.com/
  * Description: Canonical, privacy-controlled Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
- * Version: 1.2.0-rc4
+ * Version: 1.2.0-rc5
  * Requires at least: 7.0
  * Requires PHP: 8.1
  * Author: Dr. Allamah Majid Hussain Sabri
@@ -13,10 +13,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SPD_VERSION', '1.2.0-rc4' );
+define( 'SPD_VERSION', '1.2.0-rc5' );
 define( 'SPD_DB_VERSION', '1.2.0' );
 define( 'SPD_CONTRACT_VERSION', '1.4.0' );
-define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' );
+define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW+FIFTH-TEN-ROUND-CORRECTIVE-REVIEW' );
 define( 'SPD_FILE', __FILE__ );
 define( 'SPD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SPD_URL', plugin_dir_url( __FILE__ ) );
@@ -40,7 +40,7 @@ register_deactivation_hook( SPD_FILE, array( 'SPD_Activator', 'deactivate' ) );
 function spd_read_future_profile_state( $profile_id ) {
 	global $wpdb;
 	$profile_id = absint( $profile_id );
-	if ( ! $profile_id || ! SPD_Future_Profile::schema_ready() ) { return new WP_Error( 'spd_future_state_unavailable', __( 'Professional lifecycle state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+	if ( ! $profile_id || ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_Schema_Guard::future_ready() ) { return new WP_Error( 'spd_future_state_unavailable', __( 'Professional lifecycle state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 	$wpdb->last_error = '';
 	$row = $wpdb->get_row( $wpdb->prepare( 'SELECT federation_opt_in,professional_lifecycle,lifecycle_reason,lifecycle_changed_at,version,updated_at FROM ' . SPD_Future_Profile::state_table() . ' WHERE profile_id=%d LIMIT 1', $profile_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_state_read_failed', __( 'Professional lifecycle state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }

@@ -56,7 +56,7 @@ final class SPD_Future_Privacy {
 		global $wpdb;
 		$profile_id = absint( $profile_id );
 		if ( ! $profile_id ) { return array(); }
-		if ( ! SPD_Future_Profile::schema_ready() ) { return new WP_Error( 'spd_future_privacy_schema_unavailable', __( 'Future-profile privacy storage is temporarily unavailable.', 'sabri-profiles-doctors' ) ); }
+		if ( ! SPD_Schema_Guard::future_ready() ) { return new WP_Error( 'spd_future_privacy_schema_unavailable', __( 'Future-profile privacy storage is temporarily unavailable.', 'sabri-profiles-doctors' ) ); }
 		$wpdb->last_error = '';
 		$translations = $wpdb->get_results( $wpdb->prepare( 'SELECT locale,headline,bio,source,status,version,created_at,updated_at FROM ' . SPD_Future_Profile::translations_table() . ' WHERE profile_id=%d ORDER BY id ASC', $profile_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_privacy_export_failed', __( 'Future-profile translation data could not be read for export.', 'sabri-profiles-doctors' ) ); }
@@ -77,7 +77,7 @@ final class SPD_Future_Privacy {
 		global $wpdb;
 		$profile_id = absint( $profile_id );
 		if ( ! $profile_id ) { return array( 'removed' => false, 'retry' => false ); }
-		if ( ! SPD_Future_Profile::schema_ready() ) { return array( 'removed' => false, 'retry' => true, 'error' => new WP_Error( 'spd_future_privacy_schema_unavailable', __( 'Future-profile privacy storage is temporarily unavailable.', 'sabri-profiles-doctors' ) ) ); }
+		if ( ! SPD_Schema_Guard::future_ready() ) { return array( 'removed' => false, 'retry' => true, 'error' => new WP_Error( 'spd_future_privacy_schema_unavailable', __( 'Future-profile privacy storage is temporarily unavailable.', 'sabri-profiles-doctors' ) ) ); }
 		$result = SPD_DB::transaction( function() use ( $wpdb, $profile_id ) {
 			foreach ( array( SPD_Future_Profile::translations_table(), SPD_Future_Profile::attestations_table(), SPD_Future_Profile::state_table() ) as $table ) {
 				$deleted = $wpdb->delete( $table, array( 'profile_id' => $profile_id ) );

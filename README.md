@@ -14,7 +14,7 @@ File 03 owns stable public profile identity, profile fields and audiences, Found
 
 ## Release identity
 
-- Plugin: `1.2.0-rc4`
+- Plugin: `1.2.0-rc5`
 - Database schema: `1.2.0`
 - Contract: `1.4.0`
 - PHP: `8.1`, `8.3`, `8.4`
@@ -24,9 +24,9 @@ Companion minimums are enforced by their versioned adapters in source and must b
 
 ## Review status
 
-The repository has completed the original 80-round corrective review, a second independent fresh 80-round sequential review, the third fresh 10-round corrective review, and the fourth fresh 10-round corrective review recorded in `FOURTH-TEN-ROUND-REVIEW-2026-08-11.md`.
+The repository has completed the original 80-round corrective review, a second independent fresh 80-round sequential review, the third and fourth fresh 10-round corrective reviews, and the fifth fresh 10-round review recorded in `FIFTH-TEN-ROUND-REVIEW-2026-08-11.md`.
 
-The fourth cycle started from exact `main` `1ff55ecd91be68bbf6d68e54c630f78f901992af` and found repository-level defects in **all ten rounds `01–10`**. Corrections cover historical release-truth disambiguation, fallback-route privacy and assets, idempotent managed-page repair, privacy export/erasure for delegations and appeals, exact schema shape/index verification, fail-closed identity/slug reads, fail-closed media reconciliation/deletion queues, ownership-marker uninstall cleanup and rc4 release/QA identity. Every proven repository-level defect is corrected before review closure; final candidate SHA and CI evidence are recorded by the PR/merge process.
+The fifth cycle started from exact `main` `3358472bc374958c66f5e84997b7633f598caa73` (tree `49283b40823aaa31348403588311e1912af5851d`). Defects were found and corrected in rounds **01, 02, 03, 04, 05, 09 and 10**; rounds **06, 07 and 08** were clean. Corrections unify File 26 and REST search projection with the canonical fail-closed lifecycle helper, require exact schema shape for central/future privacy and future-state reads, minimize cross-user appeal privacy export, recover marker-bound orphan media during explicit destructive uninstall, and advance the materially changed candidate to rc5 with a permanent fifth-review CI gate.
 
 ## Truthful status
 

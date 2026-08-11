@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0-rc5 — Fifth fresh ten-round corrective hardening
+
+- Completed a fresh sequential 10-round review from exact `main` baseline `3358472bc374958c66f5e84997b7633f598caa73` (tree `49283b40823aaa31348403588311e1912af5851d`).
+- Defects were found and corrected in rounds `01, 02, 03, 04, 05, 09, 10`; rounds `06, 07, 08` were clean.
+- Unified the File 26 profile-search adapter and public REST search endpoint with the canonical fail-closed future-lifecycle-aware `spd_get_search_projection()` helper.
+- Replaced table-existence-only privacy guards with exact required-column/index guards for central delegation/appeal and future-profile privacy data.
+- Minimized appeal privacy exports by relationship so a reviewer does not receive requester-authored reason/counterparty identifiers merely because the appeal row is shared.
+- Added ownership-marker recovery for orphan File-03 avatar/cover attachments during explicit two-gate destructive uninstall.
+- Made the authoritative future-state safe read require exact future schema readiness rather than table existence alone.
+- Added `FIFTH-TEN-ROUND-REVIEW-2026-08-11.md`, `tests/fifth-ten-round-review.py`, permanent fifth-review CI integration and rc5 deterministic-package identity.
+- Staging acceptance, exact deployed-package parity, live DB/schema/migration state, browser/WCAG/RTL evidence, backup/restore/rollback, Founder acceptance and live operational verification remain separate gates.
+
 ## 1.2.0-rc4 — Fourth fresh ten-round corrective hardening
 
 - Completed a fresh 10-round sequential review from exact `main` baseline `1ff55ecd91be68bbf6d68e54c630f78f901992af`; repository-level defects were found and corrected in **all rounds `01–10`**.

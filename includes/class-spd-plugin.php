@@ -134,11 +134,7 @@ final class SPD_Plugin {
 
 	public function file26_search_projection( $current, $identity ) {
 		if ( null !== $current && ! is_wp_error( $current ) ) { return $current; }
-		$out = SPD_Central_Profile::search_projection( $identity );
-		if ( is_wp_error( $out ) ) { return $out; }
-		$profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) $out['canonical_id'] );
-		if ( $profile ) { $out['professional_lifecycle'] = SPD_Future_Profile::lifecycle( $profile )['status']; }
-		return $out;
+		return spd_get_search_projection( $identity );
 	}
 
 	public function file08_delegation_claim( $claim, $owner_user_id, $delegate_user_id, $scope ) {

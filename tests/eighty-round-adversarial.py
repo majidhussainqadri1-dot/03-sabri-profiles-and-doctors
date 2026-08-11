@@ -22,7 +22,7 @@ ledger = text('EIGHTY-ROUND-REVIEW.md')
 
 # Fresh adversarial gate: intentionally checks negative properties and cross-file coupling,
 # not merely the same positive tokens used by eighty-round-review.py.
-require("'1.2.0-rc4'" in main and '80-ROUND-CORRECTIVE-REVIEW' in main and 'FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Candidate identity drifted')
+require("'1.2.0-rc5'" in main and '80-ROUND-CORRECTIVE-REVIEW' in main and 'FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'FIFTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Candidate identity drifted')
 require("set_transient( 'spd_activation_lock'" not in activator, 'Race-prone activation transient returned')
 require("add_option( $key, $value, '', false )" in helpers and 'hash_equals' in helpers, 'Atomic lock lacks owner-safe acquire/release')
 require("acquire_lock( 'migration_batch'" in plugin, 'Migration outer serialization missing')
@@ -43,6 +43,7 @@ require('canGovernLegacy' in plugin and 'canGovernLegacy' in js, 'Legacy governa
 require("$out['transport_active'] = ! empty( $out['inbox'] ) && ! empty( $out['outbox'] )" in future, 'Federation transport activates without both endpoints')
 require('spd_profile_legal_hold' in privacy and 'spd_future_profile_legal_hold' in privacy, 'Future privacy erasure lost legal/governance hold checks')
 require("'spd_lock_'" in uninstall and "'_transient_spd_rate_'" in uninstall, 'Dynamic corrective state is orphaned by destructive uninstall')
+require("'_spd_media_owner_user_id'" in uninstall and "'_spd_media_purpose'" in uninstall, 'Marker-bound orphan media recovery is missing from destructive uninstall')
 require('Rounds with defects found and corrected' in ledger and '18' in ledger and '62' in ledger, '80-round ledger totals missing')
 require('Exact deployed code remains unverified' in ledger, 'Live/deployed truth boundary missing')
 
