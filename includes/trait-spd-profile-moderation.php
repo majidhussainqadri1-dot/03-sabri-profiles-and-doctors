@@ -78,7 +78,9 @@ trait SPD_Profile_Moderation {
 		if ( is_wp_error( $guard ) ) { return $guard; }
 		$table = SPD_DB::table( 'reports' );
 		$report_uuid = sanitize_text_field( $report_uuid );
+		$wpdb->last_error = '';
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE report_uuid=%s LIMIT 1", $report_uuid ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_report_store_unavailable', __( 'The profile-report store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		if ( ! $row ) { return new WP_Error( 'spd_report_unavailable', __( 'The profile report is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$new_status = sanitize_key( $new_status );
 		$expected_version = absint( $expected_version );
@@ -122,7 +124,13 @@ trait SPD_Profile_Moderation {
 		if ( is_wp_error( $idem ) ) { return $idem; }
 		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
 		$reports = SPD_DB::table( 'reports' );
-		$count = absint( $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$reports} WHERE reporter_user_id=%d AND created_at >= (UTC_TIMESTAMP() - INTERVAL 1 DAY)", $reporter_user_id ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->last_error = '';
+		$count_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$reports} WHERE reporter_user_id=%d AND created_at >= (UTC_TIMESTAMP() - INTERVAL 1 DAY)", $reporter_user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) {
+			$this->idempotency_fail( $reporter_user_id, 'create_report', $idempotency_key );
+			return new WP_Error( 'spd_report_store_unavailable', __( 'Profile reporting is temporarily unavailable because report-rate evidence could not be read safely.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$count = absint( $count_raw );
 		if ( $count >= 5 ) { $this->idempotency_fail( $reporter_user_id, 'create_report', $idempotency_key ); return new WP_Error( 'spd_report_rate_limited', __( 'Too many reports were submitted. Try again later.', 'sabri-profiles-doctors' ), array( 'status' => 429 ) ); }
 		$uuid = SPD_Helpers::public_id();
 		$severity = in_array( $reason, array( 'impersonation', 'privacy_breach' ), true ) ? 'high' : 'normal';
