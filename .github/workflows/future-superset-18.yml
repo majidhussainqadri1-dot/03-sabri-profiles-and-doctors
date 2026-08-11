@@ -3,6 +3,7 @@ name: File 03 Future Superset 18
 on:
   push:
     branches:
+      - main
       - 'codex/file-03-future-superset-18'
       - 'codex/file-03-eighty-round-corrective-review'
   pull_request:
