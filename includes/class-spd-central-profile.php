@@ -92,11 +92,7 @@ final class SPD_Central_Profile {
 	}
 
 	public static function schema_ready() {
-		global $wpdb;
-		foreach ( array( self::delegation_table(), self::appeals_table() ) as $table ) {
-			if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) { return false; }
-		}
-		return true;
+		return SPD_Schema_Guard::central_ready();
 	}
 
 	public static function provider_claim( $filter, $user_id, $viewer_id = 0, $max_age = 300 ) {
