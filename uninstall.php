@@ -26,6 +26,13 @@ foreach ( (array) $profiles as $profile ) {
 	delete_user_meta( absint( $profile['user_id'] ), '_spd_v1_migrated' );
 }
 
+// Recover File-03-owned usermeta independently of the profile table. A partial
+// schema failure must not leave plugin-owned migration/projection residue after
+// an explicitly authorized destructive purge.
+$file03_user_meta_keys = array( '_spd_approved_projection_snapshot_v2', '_spd_profile_visibility', '_spd_public_contact', '_spd_v1_migrated' );
+$user_meta_placeholders = implode( ',', array_fill( 0, count( $file03_user_meta_keys ), '%s' ) );
+$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->usermeta} WHERE meta_key IN ({$user_meta_placeholders})", ...$file03_user_meta_keys ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
 $deletions_table = $wpdb->prefix . 'spd_deletions';
 if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $deletions_table ) ) === $deletions_table ) {
 	$queued = $wpdb->get_results( "SELECT attachment_id,owner_user_id,purpose FROM {$deletions_table}", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -34,10 +41,6 @@ if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $deletions_table ) )
 	}
 }
 
-// Recover File-03-owned attachments from their immutable ownership/purpose
-// markers too. This closes destructive-cleanup gaps when profile/deletion rows
-// were lost in a partial schema failure. Both markers must be present and the
-// purpose must remain one of File 03's two owned public-image purposes.
 $owned_media_ids = $wpdb->get_col(
 	$wpdb->prepare(
 		"SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key=%s AND CAST(meta_value AS UNSIGNED)>0",
@@ -69,8 +72,6 @@ foreach ( $managed_keys as $key ) {
 	$page_id = absint( $map[ $key ] ?? 0 );
 	if ( $page_id && $key === get_post_meta( $page_id, '_spd_managed_page_key', true ) ) { $managed_ids[ $page_id ] = true; }
 }
-// Recover File-03-owned pages by their ownership marker as well as the map. This
-// makes destructive cleanup complete even when the page-map option was lost.
 $placeholders = implode( ',', array_fill( 0, count( $managed_keys ), '%s' ) );
 $sql = $wpdb->prepare(
 	"SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key='_spd_managed_page_key' AND meta_value IN ({$placeholders})",
@@ -101,9 +102,6 @@ foreach ( array(
 	delete_option( $option );
 }
 
-// Corrective synchronization/rate-limiter/circuit-breaker keys are dynamic.
-// They are strictly File-03-owned prefixes and are removed only inside the
-// explicit destructive uninstall gate above.
 $lock_like = $wpdb->esc_like( 'spd_lock_' ) . '%';
 $rate_like = $wpdb->esc_like( '_transient_spd_rate_' ) . '%';
 $rate_timeout_like = $wpdb->esc_like( '_transient_timeout_spd_rate_' ) . '%';
