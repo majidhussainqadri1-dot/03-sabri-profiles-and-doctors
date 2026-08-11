@@ -2,7 +2,7 @@
 defined( 'ABSPATH' ) || exit;
 
 final class SPD_Plugin {
-	private $migration_lock_token = '';
+	private $observability;
 
 	public function run() {
 		load_plugin_textdomain( 'sabri-profiles-doctors', false, dirname( plugin_basename( SPD_FILE ) ) . '/languages' );
@@ -30,11 +30,13 @@ final class SPD_Plugin {
 		( new SPD_Frontend() )->hooks();
 		( new SPD_Privacy() )->hooks();
 		( new SPD_Future_Privacy() )->hooks();
-		( new SPD_Observability() )->hooks();
+		$this->observability = new SPD_Observability();
+		$this->observability->hooks();
+		// Replace the historical transient-only migration callback with a wrapper
+		// whose outer CAS lock is authoritative across concurrent cron requests.
+		remove_action( 'spd_migrate_profiles_batch', array( $this->observability, 'migrate_profiles_batch' ) );
+		add_action( 'spd_migrate_profiles_batch', array( $this, 'run_migration_batch' ), 10 );
 		( new SPD_Admin() )->hooks();
-		add_action( 'admin_post_spd_save_profile', array( $this, 'guard_profile_media_upload_rate' ), 1 );
-		add_action( 'spd_migrate_profiles_batch', array( $this, 'before_migration_batch' ), 0 );
-		add_action( 'spd_migrate_profiles_batch', array( $this, 'after_migration_batch' ), 99 );
 		add_action( 'template_redirect', array( $this, 'private_headers' ), 0 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );
@@ -44,40 +46,32 @@ final class SPD_Plugin {
 		add_filter( 'sabri_shell_route_contexts', array( $this, 'shell_contexts' ) );
 		add_filter( 'sabri_file26_profile_search_projection_v1', array( $this, 'file26_search_projection' ), 10, 2 );
 		add_filter( 'sabri_file08_profile_delegation_claim_v1', array( $this, 'file08_delegation_claim' ), 10, 4 );
+		add_filter( 'rest_post_dispatch', array( $this, 'rest_no_store' ), 100, 3 );
 	}
 
 	public function private_headers() { ( new SPD_Routes() )->private_headers(); }
 
-	public function guard_profile_media_upload_rate() {
-		if ( ! is_user_logged_in() ) { return; }
-		$user_id = get_current_user_id();
-		foreach ( array( 'avatar', 'cover' ) as $purpose ) {
-			if ( empty( $_FILES[ $purpose ]['name'] ) ) { continue; }
-			if ( ! SPD_Helpers::consume_rate_limit( 'media_upload_' . $user_id, 10, HOUR_IN_SECONDS ) ) {
-				wp_die( esc_html__( 'Too many profile uploads were attempted. Try again later.', 'sabri-profiles-doctors' ), '', array( 'response' => 429, 'back_link' => true ) );
-			}
+	public function rest_no_store( $response, $server, $request ) {
+		unset( $server );
+		if ( ! $request instanceof WP_REST_Request || 0 !== strpos( (string) $request->get_route(), '/sabri-profiles/v1/' ) ) { return $response; }
+		if ( is_object( $response ) && method_exists( $response, 'header' ) ) {
+			$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+			$response->header( 'Pragma', 'no-cache' );
 		}
+		return $response;
 	}
 
-	/**
-	 * Serialize migration requests before the historical transient guard runs.
-	 * A contending request sets the compatibility transient so the legacy runner
-	 * returns without touching the migration cursor. The owner token remains the
-	 * authoritative lock and is released only by this request at priority 99.
-	 */
-	public function before_migration_batch() {
-		$this->migration_lock_token = SPD_Helpers::acquire_lock( 'migration_batch', 10 * MINUTE_IN_SECONDS );
-		if ( ! $this->migration_lock_token ) {
-			set_transient( 'spd_migration_lock', 1, 10 * MINUTE_IN_SECONDS );
-			return;
-		}
-		delete_transient( 'spd_migration_lock' );
-	}
-
-	public function after_migration_batch() {
-		if ( $this->migration_lock_token ) {
-			SPD_Helpers::release_lock( 'migration_batch', $this->migration_lock_token );
-			$this->migration_lock_token = '';
+	public function run_migration_batch() {
+		$token = SPD_Helpers::acquire_lock( 'migration_batch', 10 * MINUTE_IN_SECONDS );
+		if ( ! $token || ! $this->observability ) { return; }
+		try {
+			// Compatibility transient is now strictly inner-process state. The outer
+			// CAS lock prevents a competing request from reaching this legacy guard.
+			delete_transient( 'spd_migration_lock' );
+			$this->observability->migrate_profiles_batch();
+		} finally {
+			delete_transient( 'spd_migration_lock' );
+			SPD_Helpers::release_lock( 'migration_batch', $token );
 		}
 	}
 
