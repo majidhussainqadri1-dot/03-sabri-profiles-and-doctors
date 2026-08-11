@@ -6,6 +6,23 @@ final class SPD_Authorization {
 	public static function normalize_audience( $audience ) { $audience = sanitize_key( (string) $audience ); return in_array( $audience, self::allowed_audiences(), true ) ? $audience : 'private'; }
 	public static function profile_mutation_state_allows( array $profile ) { return in_array( sanitize_key( (string) ( $profile['state'] ?? '' ) ), array( 'incomplete', 'active', 'limited' ), true ); }
 
+	public static function validate_audience_payload( $payload, array $allowed_fields ) {
+		if ( ! is_array( $payload ) ) {
+			return new WP_Error( 'spd_audiences_invalid', __( 'Profile audiences must be submitted as a field-to-audience map.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) );
+		}
+		$allowed_fields = array_values( array_unique( array_map( 'sanitize_key', $allowed_fields ) ) );
+		foreach ( $payload as $field_key => $audience ) {
+			if ( ! is_string( $field_key ) || $field_key !== sanitize_key( $field_key ) || ! in_array( $field_key, $allowed_fields, true ) ) {
+				return new WP_Error( 'spd_unknown_audience_field', __( 'One or more submitted audience fields are not supported.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) );
+			}
+			$audience = sanitize_key( (string) $audience );
+			if ( ! in_array( $audience, self::allowed_audiences(), true ) ) {
+				return new WP_Error( 'spd_audience_invalid', __( 'One or more submitted audience values are invalid.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) );
+			}
+		}
+		return true;
+	}
+
 	public static function is_contact( $owner_id, $viewer_id ) {
 		$owner_id = absint( $owner_id ); $viewer_id = absint( $viewer_id );
 		if ( ! $owner_id || ! $viewer_id ) { return false; }
