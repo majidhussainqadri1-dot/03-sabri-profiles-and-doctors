@@ -8,14 +8,18 @@
 - Sixth-review starting `main`: `822837daa3cebc4c5ae80410f31511aadf3885b0`
 - Review branch: `codex/file-03-sixth-ten-round-20260811`
 - Sixth-review ledger: `SIXTH-TEN-ROUND-REVIEW-2026-08-11.md`
-- Exact reviewed PR candidate: **pending final green CI**
-- PR / code merge: **pending**
+- Exact reviewed PR candidate: `d1cac1bcac2b1be08d5a9f1f1116fcb50e64f17e`
+- Exact reviewed tree: `0c02a25d25a82c3f51c40dc21e1eb70a7730dfe7`
+- Exact-candidate Fresh Eighty-Round: `31486109961` — **SUCCESS**
+- Exact-candidate Future Superset 18: `31486109985` — **SUCCESS**, including PHP 8.1/8.3/8.4, deterministic ZIP, SHA-256, SBOM and source/package parity
+- PR / code merge: PR `#18` merged as `8d49935be24482f7885e0a967ac39cf679d36684`; merge tree exactly equals reviewed tree `0c02a25d25a82c3f51c40dc21e1eb70a7730dfe7`
+- Exact code-merge `main` QA: Baseline `31486447101`, Fresh Eighty `31486447170`, Future Superset `31486447165` — all **SUCCESS**
 - Production authorized: **no**
 - Live installation authorized: **no**
 - Staging accepted: **unverified**
 - Exact deployed version/package parity: **unverified**
 
-The rc6 candidate must pass all applicable repository gates on one exact candidate, including PHP/runtime/security regression, the sixth-review invariants, deterministic ZIP generation, SHA-256 verification, SBOM determinism and source/package parity. Any code or release-metadata change after that evidence requires regeneration before promotion.
+The rc6 repository candidate passed the applicable repository gates on the exact reviewed source tree and again on the code-bearing merge tree, including PHP/runtime/security regression, sixth-review invariants, deterministic ZIP generation, SHA-256 verification, SBOM determinism and source/package parity. Documentation-only evidence closure after that merge does not establish staging or live deployment.
 
 ## Historical provenance warning
 
