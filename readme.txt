@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials,
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.0-rc7
+Stable tag: 1.2.0-rc8
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -13,7 +13,7 @@ Canonical Founder, member and doctor profile domain for the Sabri Social Homeopa
 
 File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.2.0-rc7 preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements and all prior corrective hardening. The seventh fresh ten-round sequential review strengthens independent privacy-erasure DB certainty, exact central/base schema readiness, repository-level audience and delegation boundaries, mutation-sensitive identity reads, fail-closed outbox persistence and lifecycle-sensitive public projections.
+1.2.0-rc8 preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements and all prior corrective hardening. The eighth fresh ten-round sequential review makes privacy erasure retries page-safe, report/appeal reads fail closed, schema-version evidence truthful after exact-shape failure, future mutation shapes strict, post-commit replay behavior deterministic, media queue errors persistent for anomalous runs, share-link rotation replay-identical and future lifecycle writes resistant to transient second-read defaults.
 
 The approved 18 enhancements remain:
 
@@ -52,6 +52,20 @@ This remains a repository candidate. Source and automated-QA evidence are separa
 6. Do not promote to live until Founder approval and exact package/deployment parity are recorded.
 
 == Changelog ==
+
+= 1.2.0-rc8 =
+* Eighth fresh ten-round sequential review from exact main `c2c78d774207532e035e738834760b6b7395729e`.
+* Defect-bearing rounds: 01, 03, 04, 05, 06, 07, 08, 09, 10. Clean round: 02.
+* Keeps base, central and future privacy erasers retryable across WordPress page invocations after `done=false`.
+* Makes report moderation, persistent report-rate evidence and appeal eligibility fail closed on SQL uncertainty.
+* Invalidates stale base/central/future schema-version options when exact schema repair proof fails.
+* Rejects unknown future disclosure/translation/reconfirmation fields before idempotency reservation.
+* Preserves committed profile-update responses across post-commit reread failure with File 24-facing operational evidence.
+* Latches media deletion queue anomalies until a genuinely clean worker pass.
+* Makes share-link rotation first execution and idempotent replay return the same deterministic URL-bearing response.
+* Materializes future lifecycle state from a strict preflight so transient second-read defaults cannot reactivate omitted retired/legacy state.
+* Adds `EIGHTH-TEN-ROUND-REVIEW-2026-08-11.md` and `tests/eighth-ten-round-review.py` to permanent CI.
+* Preserves staging/live/operational separation; no live deployment claim is made.
 
 = 1.2.0-rc7 =
 * Seventh fresh ten-round sequential review from exact main `fdde7311409d68af4bae5917f5a49154cb92c9f4`.
