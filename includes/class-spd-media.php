@@ -8,6 +8,11 @@ final class SPD_Media {
 	const SCAN_SHA_META='_spd_media_scan_sha256';
 	const SCAN_CONTRACT_MIN='1.0.0';
 
+	private static function record_queue_error( $code ) {
+		update_option( 'spd_last_media_queue_error', array( 'code' => sanitize_key( $code ), 'at' => SPD_Helpers::now() ), false );
+		do_action( 'sabri_file24_media_queue_failure', array( 'owner' => 'file03', 'code' => sanitize_key( $code ), 'at' => SPD_Helpers::now() ) );
+	}
+
 	public static function prepare_upload( $user_id, $field, $purpose, array $context=array() ) {
 		$user_id=absint($user_id); $purpose=sanitize_key($purpose);
 		if ( empty($_FILES[$field]['name']) ) { return array(); }
@@ -27,7 +32,6 @@ final class SPD_Media {
 		$minw='avatar'===$purpose?200:640; $minh=200;
 		if ( (int)$dimensions[0]<$minw || (int)$dimensions[1]<$minh ) { return new WP_Error('spd_upload_small',__( 'The image dimensions are too small for this profile placement.','sabri-profiles-doctors')); }
 
-		// Re-encode first; the safety provider must scan the exact bytes that enter WordPress.
 		if ( ! self::strip_metadata($file['tmp_name']) ) { return new WP_Error('spd_metadata_removal_failed',__( 'The image could not be safely re-encoded.','sabri-profiles-doctors')); }
 		$rechecked=wp_check_filetype_and_ext($file['tmp_name'],$file['name'],$mimes);
 		if ( empty($rechecked['type']) || $rechecked['type']!==$checked['type'] ) { return new WP_Error('spd_upload_reencode_mismatch',__( 'The re-encoded image did not retain a valid type.','sabri-profiles-doctors')); }
@@ -79,7 +83,9 @@ final class SPD_Media {
 
 	public static function state( $profile_id, $purpose ) {
 		global $wpdb; $table=SPD_DB::table('media');
+		$wpdb->last_error='';
 		$state=$wpdb->get_var($wpdb->prepare("SELECT state FROM {$table} WHERE profile_id=%d AND purpose=%s LIMIT 1",absint($profile_id),sanitize_key($purpose))); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) { return 'unknown'; }
 		return $state?sanitize_key($state):'removed';
 	}
 
@@ -92,19 +98,14 @@ final class SPD_Media {
 		return false===$insert?new WP_Error('spd_deletion_queue_failed',__( 'The media deletion could not be queued.','sabri-profiles-doctors')):true;
 	}
 
-
-	/**
-	 * WordPress upload URLs are public objects. Until CF-04/another approved
-	 * secure-delivery provider is activated, File 03 permits those objects only
-	 * for profiles that are currently anonymous-public. This periodic reconciler
-	 * closes exposure after an external File 00 eligibility/suspension change.
-	 */
 	public static function reconcile_storage_privacy( $limit = 100 ) {
 		global $wpdb;
-		if ( ! SPD_DB::tables_exist() ) { return 0; }
+		if ( class_exists( 'SPD_Schema_Guard' ) && ! SPD_Schema_Guard::base_ready() ) { self::record_queue_error( 'media_privacy_schema_unavailable' ); return 0; }
+		if ( ! SPD_DB::tables_exist() ) { self::record_queue_error( 'media_privacy_tables_missing' ); return 0; }
 		$limit  = min( 500, max( 1, absint( $limit ) ) );
 		$table  = SPD_DB::table( 'profiles' );
 		$cursor = absint( get_option( 'spd_media_privacy_cursor', 0 ) );
+		$wpdb->last_error='';
 		$ids = $wpdb->get_col(
 			$wpdb->prepare(
 				"SELECT id FROM {$table} WHERE id>%d AND (avatar_id>0 OR cover_id>0) ORDER BY id ASC LIMIT %d",
@@ -112,14 +113,15 @@ final class SPD_Media {
 				$limit
 			)
 		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error || ! is_array( $ids ) ) { self::record_queue_error( 'media_privacy_scan_failed' ); return 0; }
 		$changed = 0;
 		$repo    = SPD_Profile_Repository::instance();
 		foreach ( $ids as $profile_id ) {
 			$profile_id = absint( $profile_id );
-			$cursor = max( $cursor, $profile_id );
-			update_option( 'spd_media_privacy_cursor', $cursor, false );
 			$profile = $repo->find_by_id( $profile_id );
-			if ( ! $profile || SPD_Authorization::profile_visibility_allows( $profile, 0 ) ) { continue; }
+			if ( is_wp_error( $profile ) ) { self::record_queue_error( 'media_privacy_profile_read_failed' ); return $changed; }
+			if ( ! $profile ) { $cursor = max( $cursor, $profile_id ); update_option( 'spd_media_privacy_cursor', $cursor, false ); continue; }
+			if ( SPD_Authorization::profile_visibility_allows( $profile, 0 ) ) { $cursor = max( $cursor, $profile_id ); update_option( 'spd_media_privacy_cursor', $cursor, false ); continue; }
 			$old = array( 'avatar' => absint( $profile['avatar_id'] ), 'cover' => absint( $profile['cover_id'] ) );
 			$result = SPD_DB::transaction(
 				function () use ( $wpdb, $table, $profile, $old, $repo ) {
@@ -136,30 +138,49 @@ final class SPD_Media {
 					return is_wp_error( $event ) ? $event : true;
 				}
 			);
-			if ( ! is_wp_error( $result ) ) { $repo->purge_profile_cache( $profile ); $changed++; }
+			if ( is_wp_error( $result ) ) { self::record_queue_error( 'media_privacy_reconcile_failed' ); return $changed; }
+			$repo->purge_profile_cache( $profile ); $changed++;
+			$cursor = max( $cursor, $profile_id ); update_option( 'spd_media_privacy_cursor', $cursor, false );
 		}
 		if ( count( $ids ) < $limit ) {
 			update_option( 'spd_media_privacy_cursor', 0, false );
 			update_option( 'spd_media_privacy_cycle_completed_at', SPD_Helpers::now(), false );
 		}
+		delete_option( 'spd_last_media_queue_error' );
 		return $changed;
 	}
 
 	public static function process_deletion_queue( $limit=25 ) {
 		global $wpdb; $table=SPD_DB::table('deletions'); $limit=min(100,max(1,absint($limit))); $processed=0;
-		$wpdb->query("UPDATE {$table} SET status='retry',lease_token='',lease_expires=NULL,available_at=UTC_TIMESTAMP(),last_error_code='lease_expired' WHERE status='processing' AND lease_expires<UTC_TIMESTAMP()"); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( class_exists( 'SPD_Schema_Guard' ) && ! SPD_Schema_Guard::base_ready() ) { self::record_queue_error( 'deletion_schema_unavailable' ); return 0; }
+		$wpdb->last_error='';
+		$reset=$wpdb->query("UPDATE {$table} SET status='retry',lease_token='',lease_expires=NULL,available_at=UTC_TIMESTAMP(),last_error_code='lease_expired' WHERE status='processing' AND lease_expires<UTC_TIMESTAMP()"); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( false===$reset || $wpdb->last_error ) { self::record_queue_error( 'deletion_lease_reset_failed' ); return 0; }
+		$wpdb->last_error='';
 		$ids=$wpdb->get_col("SELECT id FROM {$table} WHERE status IN ('pending','retry') AND available_at<=UTC_TIMESTAMP() ORDER BY id ASC LIMIT {$limit}"); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error || ! is_array( $ids ) ) { self::record_queue_error( 'deletion_queue_read_failed' ); return 0; }
 		foreach ( $ids as $id ) {
 			$token=hash('sha256',SPD_Helpers::trace_id().':'.$id); $lease=gmdate('Y-m-d H:i:s',time()+300);
+			$wpdb->last_error='';
 			$claimed=$wpdb->query($wpdb->prepare("UPDATE {$table} SET status='processing',lease_token=%s,lease_expires=%s WHERE id=%d AND status IN ('pending','retry') AND available_at<=UTC_TIMESTAMP()",$token,$lease,absint($id))); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( false===$claimed || $wpdb->last_error ) { self::record_queue_error( 'deletion_claim_failed' ); return $processed; }
 			if ( 1!==$claimed ) { continue; }
+			$wpdb->last_error='';
 			$row=$wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id=%d AND lease_token=%s",absint($id),$token),ARRAY_A); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( $wpdb->last_error ) { self::record_queue_error( 'deletion_claim_read_failed' ); return $processed; }
 			if ( !$row ) { continue; }
 			$ok=self::delete_owned(absint($row['attachment_id']),absint($row['owner_user_id']),(string)$row['purpose']); $attempts=absint($row['attempts'])+1;
-			if ( $ok || ! get_post(absint($row['attachment_id'])) ) { $wpdb->update($table,array('status'=>'delivered','attempts'=>$attempts,'completed_at'=>SPD_Helpers::now(),'lease_token'=>'','lease_expires'=>null),array('id'=>absint($id),'lease_token'=>$token)); }
-			else { $status=$attempts>=8?'dead':'retry'; $wpdb->update($table,array('status'=>$status,'attempts'=>$attempts,'available_at'=>gmdate('Y-m-d H:i:s',time()+min(HOUR_IN_SECONDS,30*(2**min($attempts,6)))),'last_error_code'=>'attachment_delete_failed','lease_token'=>'','lease_expires'=>null),array('id'=>absint($id),'lease_token'=>$token)); }
+			if ( $ok || ! get_post(absint($row['attachment_id'])) ) {
+				$saved=$wpdb->update($table,array('status'=>'delivered','attempts'=>$attempts,'completed_at'=>SPD_Helpers::now(),'lease_token'=>'','lease_expires'=>null),array('id'=>absint($id),'lease_token'=>$token));
+			} else {
+				$status=$attempts>=8?'dead':'retry';
+				$saved=$wpdb->update($table,array('status'=>$status,'attempts'=>$attempts,'available_at'=>gmdate('Y-m-d H:i:s',time()+min(HOUR_IN_SECONDS,30*(2**min($attempts,6)))),'last_error_code'=>'attachment_delete_failed','lease_token'=>'','lease_expires'=>null),array('id'=>absint($id),'lease_token'=>$token));
+			}
+			if ( false===$saved ) { self::record_queue_error( 'deletion_result_persist_failed' ); return $processed; }
+			if ( 1!==$saved ) { self::record_queue_error( 'deletion_lease_lost' ); continue; }
 			$processed++;
 		}
+		delete_option( 'spd_last_media_queue_error' );
 		return $processed;
 	}
 
@@ -184,5 +205,5 @@ final class SPD_Media {
 		return false;
 	}
 
-	public static function complete_scan() { return false; /* Public ingestion is synchronous and fail-closed in rc2. */ }
+	public static function complete_scan() { return false; /* Public ingestion is synchronous and fail-closed in rc3. */ }
 }
