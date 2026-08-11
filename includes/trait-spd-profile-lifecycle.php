@@ -9,7 +9,10 @@ trait SPD_Profile_Lifecycle {
 	}
 
 	public function erase_profile( $user_id ) {
-		global $wpdb;$user_id=absint($user_id);$profile=$this->find_by_user_id($user_id,false);
+		global $wpdb;$user_id=absint($user_id);
+		$wpdb->last_error='';
+		$profile=$this->find_by_user_id($user_id,false);
+		if($wpdb->last_error){return array('removed'=>false,'retained'=>true,'retry'=>true,'messages'=>array(__( 'Profile data could not be read safely for erasure; retry is required.','sabri-profiles-doctors')));}
 		if(!$profile){return array('removed'=>false,'retained'=>false,'messages'=>array());}
 		if(apply_filters('spd_profile_legal_hold',false,$user_id,$profile)){return array('removed'=>false,'retained'=>true,'messages'=>array(__( 'Profile data is retained under an active legal or governance hold.','sabri-profiles-doctors')));}
 		if(SPD_Membership_Adapter::is_founder($user_id)){return array('removed'=>false,'retained'=>true,'messages'=>array(__( 'The official Founder profile requires an authorized governance decision before removal.','sabri-profiles-doctors')));}
