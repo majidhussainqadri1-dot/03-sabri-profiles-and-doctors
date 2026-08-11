@@ -2,7 +2,9 @@
 defined( 'ABSPATH' ) || exit;
 
 trait SPD_Profile_Events {
-	const IDEMPOTENCY_ABANDONED_SECONDS = 900;
+	private function idempotency_abandoned_seconds() {
+		return 900;
+	}
 
 	public function event( $event_name, $aggregate_type, $aggregate_id, array $payload ) {
 		global $wpdb;
@@ -61,7 +63,7 @@ trait SPD_Profile_Events {
 			$expires = strtotime( (string) $row['expires_at'] . ' UTC' );
 			$updated = strtotime( (string) ( $row['updated_at'] ?: $row['created_at'] ) . ' UTC' );
 			$expired = false !== $expires && $expires <= time();
-			$abandoned = 'started' === ( $row['status'] ?? '' ) && false !== $updated && $updated <= time() - self::IDEMPOTENCY_ABANDONED_SECONDS;
+			$abandoned = 'started' === ( $row['status'] ?? '' ) && false !== $updated && $updated <= time() - $this->idempotency_abandoned_seconds();
 			if ( $expired || $abandoned ) {
 				$where = array( 'id' => absint( $row['id'] ) );
 				if ( $abandoned && ! $expired ) { $where['status'] = 'started'; }
