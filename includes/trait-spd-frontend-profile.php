@@ -7,9 +7,12 @@ trait SPD_Frontend_Profile {
 		if ( ! $founder_id ) {
 			return $this->notice( __( 'The canonical Founder identity is not configured.', 'sabri-profiles-doctors' ), 'warning' );
 		}
-		$profile = SPD_Profile_Repository::instance()->find_by_user_id( $founder_id );
+		$profile = SPD_Profile_Repository::instance()->find_by_user_id( $founder_id, false );
 		if ( is_wp_error( $profile ) ) {
 			return $this->notice( $profile->get_error_message(), 'error' );
+		}
+		if ( ! $profile ) {
+			return $this->notice( __( 'The canonical Founder profile is not available yet.', 'sabri-profiles-doctors' ), 'warning' );
 		}
 		return $this->render_profile( $profile['public_id'] );
 	}
@@ -50,18 +53,14 @@ trait SPD_Frontend_Profile {
 				</div>
 				<div class="spd-hero__text"><span class="spd-badge spd-badge--<?php echo esc_attr( $dto['badge']['key'] ); ?>"><?php echo $dto['badge']['verified'] ? '<span aria-hidden="true">✓</span> ' : ''; ?><?php echo esc_html( $dto['badge']['label'] ); ?></span><h1 id="spd-profile-name"><?php echo esc_html( $dto['display_name'] ); ?></h1><p><?php echo esc_html( $this->profile_subtitle( $dto ) ); ?></p></div>
 			</section>
-
 			<nav class="spd-profile-nav" aria-label="<?php esc_attr_e( 'Profile sections', 'sabri-profiles-doctors' ); ?>"><a aria-current="page" href="<?php echo esc_url( $dto['canonical_url'] ); ?>"><?php esc_html_e( 'Profile', 'sabri-profiles-doctors' ); ?></a><a href="<?php echo esc_url( $dto['timeline_url'] ); ?>"><?php esc_html_e( 'Timeline', 'sabri-profiles-doctors' ); ?></a><?php if ( is_user_logged_in() && ! $is_owner ) : ?><a href="<?php echo esc_url( $dto['report_url'] ); ?>"><?php esc_html_e( 'Report', 'sabri-profiles-doctors' ); ?></a><?php endif; ?></nav>
-
 			<?php echo $this->contact_actions( $dto ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 			<?php if ( $is_owner ) : ?><div class="spd-actions"><a class="spd-btn spd-btn--secondary" href="<?php echo esc_url( home_url( '/account/profile/' ) ); ?>"><?php esc_html_e( 'Edit profile and privacy', 'sabri-profiles-doctors' ); ?></a><a class="spd-btn" href="<?php echo esc_url( home_url( '/account/profile/personal-site/' ) ); ?>"><?php esc_html_e( 'Manage personal website', 'sabri-profiles-doctors' ); ?></a><a class="spd-btn spd-btn--secondary" href="<?php echo esc_url( home_url( '/account/profile/preview/' ) ); ?>"><?php esc_html_e( 'Private preview', 'sabri-profiles-doctors' ); ?></a></div><?php endif; ?>
-
 			<div class="spd-grid">
 				<?php if ( 'founder' === $dto['profile_type'] ) : foreach ( $this->founder_labels() as $key => $label ) : if ( ! empty( $dto['founder'][ $key ] ) ) : ?><section class="spd-card spd-card--verified"><h2><?php echo esc_html( $label ); ?></h2><p><?php echo nl2br( esc_html( $dto['founder'][ $key ] ) ); ?></p></section><?php endif; endforeach; endif; ?>
 				<?php foreach ( $this->field_labels() as $key => $label ) : if ( ! empty( $dto['fields'][ $key ] ) ) : ?><section class="spd-card"><h2><?php echo esc_html( $label ); ?></h2><p><?php echo nl2br( esc_html( $dto['fields'][ $key ] ) ); ?></p></section><?php endif; endforeach; ?>
 				<?php foreach ( $this->professional_labels() as $key => $label ) : if ( ! empty( $dto['professional'][ $key ] ) ) : ?><section class="spd-card spd-card--verified"><h2><?php echo esc_html( $label ); ?></h2><p><?php echo nl2br( esc_html( (string) $dto['professional'][ $key ] ) ); ?></p></section><?php endif; endforeach; ?>
 			</div>
-
 			<?php echo $this->personal_site_sections( $dto, false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 			<?php echo $this->future_profile_sections( $dto, $is_owner ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 			<?php if ( $is_owner ) : ?><form class="spd-inline-form spd-share-rotation" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="spd_rotate_share"><input type="hidden" name="version" value="<?php echo esc_attr( $dto['version'] ); ?>"><input type="hidden" name="idempotency_key" value="<?php echo esc_attr( wp_generate_uuid4() ); ?>"><?php wp_nonce_field( 'spd_rotate_share', 'spd_share_nonce' ); ?><button class="spd-btn spd-btn--secondary" type="submit"><?php esc_html_e( 'Revoke and rotate share/QR link', 'sabri-profiles-doctors' ); ?></button></form><?php endif; ?>
