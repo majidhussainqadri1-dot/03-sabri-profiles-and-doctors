@@ -6,6 +6,7 @@ final class SPD_Routes {
 		add_action( 'init', array( $this, 'rewrites' ) );
 		add_filter( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'template_redirect', array( $this, 'redirects' ), 1 );
+		add_action( 'send_headers', array( $this, 'private_headers' ), 20 );
 		add_filter( 'wp_robots', array( $this, 'robots' ) );
 		add_action( 'wp_head', array( $this, 'canonical' ), 1 );
 	}
@@ -73,9 +74,28 @@ final class SPD_Routes {
 		return 'public';
 	}
 
+	private function is_file03_dynamic_route() {
+		$map = (array) get_option( 'spd_page_map', array() );
+		if ( get_query_var( 'spd_public_id' ) || get_query_var( 'spd_alias' ) || get_query_var( 'spd_share' ) ) { return true; }
+		foreach ( array( 'founder', 'profile', 'account_profile', 'personal_site', 'private_preview' ) as $key ) {
+			if ( ! empty( $map[ $key ] ) && is_page( absint( $map[ $key ] ) ) ) { return true; }
+		}
+		return false;
+	}
+
 	public function private_headers() {
-		if ( 'private' !== $this->current_context() ) { return; }
-		nocache_headers(); header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0', true ); header( 'Pragma: no-cache', true ); header( 'X-Robots-Tag: noindex, nofollow, noarchive', true ); header( 'Referrer-Policy: no-referrer', true ); header( 'X-Frame-Options: SAMEORIGIN', true ); header( 'X-Content-Type-Options: nosniff', true ); header( 'Permissions-Policy: camera=(), microphone=(), geolocation=()', true );
+		if ( ! $this->is_file03_dynamic_route() ) { return; }
+		$private = 'private' === $this->current_context();
+		nocache_headers();
+		header( 'Cache-Control: ' . ( $private ? 'private, ' : '' ) . 'no-store, no-cache, must-revalidate, max-age=0', true );
+		header( 'Pragma: no-cache', true );
+		header( 'X-Content-Type-Options: nosniff', true );
+		header( 'X-Frame-Options: SAMEORIGIN', true );
+		header( 'Permissions-Policy: camera=(), microphone=(), geolocation=()', true );
+		if ( $private ) {
+			header( 'X-Robots-Tag: noindex, nofollow, noarchive', true );
+			header( 'Referrer-Policy: no-referrer', true );
+		}
 	}
 
 	public function robots( $robots ) { if ( 'private' === $this->current_context() ) { $robots['noindex'] = true; $robots['nofollow'] = true; $robots['noarchive'] = true; } return $robots; }
