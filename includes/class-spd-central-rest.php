@@ -42,13 +42,15 @@ final class SPD_Central_REST {
 		if ( is_wp_error( $result ) ) {
 			$data = $result->get_error_data(); $status = is_array( $data ) && ! empty( $data['status'] ) ? absint( $data['status'] ) : 400;
 			$r = new WP_REST_Response( array( 'code' => $result->get_error_code(), 'message' => $result->get_error_message(), 'trace_id' => $trace ), $status );
-			$r->header( 'Cache-Control', 'private, no-store' );
-			$r->header( 'X-Robots-Tag', 'noindex, nofollow, noarchive' );
 		} else {
 			$r = new WP_REST_Response( array( 'data' => $result, 'trace_id' => $trace ), $success );
-			$r->header( 'Cache-Control', $public ? 'public, max-age=60, stale-while-revalidate=120' : 'private, no-store' );
-			if ( ! $public ) { $r->header( 'X-Robots-Tag', 'noindex, nofollow, noarchive' ); }
 		}
+		// Public personal-site/search DTOs incorporate live eligibility and provider
+		// facts. Until cross-owner HTTP invalidation is accepted in staging, every
+		// response is no-store so revocation/suspension cannot be cached for 60s.
+		$r->header( 'Cache-Control', ( $public ? '' : 'private, ' ) . 'no-store, no-cache, must-revalidate, max-age=0' );
+		$r->header( 'Pragma', 'no-cache' );
+		if ( is_wp_error( $result ) || ! $public ) { $r->header( 'X-Robots-Tag', 'noindex, nofollow, noarchive' ); }
 		$r->header( 'X-SPD-Trace-ID', $trace ); $r->header( 'X-SPD-Contract-Version', SPD_CONTRACT_VERSION ); return $r;
 	}
 
