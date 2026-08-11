@@ -118,9 +118,19 @@ final class SPD_Media {
 		$repo    = SPD_Profile_Repository::instance();
 		foreach ( $ids as $profile_id ) {
 			$profile_id = absint( $profile_id );
+			$wpdb->last_error = '';
 			$profile = $repo->find_by_id( $profile_id );
-			if ( is_wp_error( $profile ) ) { self::record_queue_error( 'media_privacy_profile_read_failed' ); return $changed; }
-			if ( ! $profile ) { $cursor = max( $cursor, $profile_id ); update_option( 'spd_media_privacy_cursor', $cursor, false ); continue; }
+			if ( is_wp_error( $profile ) || $wpdb->last_error || ( is_array( $profile ) && ! empty( $profile['_fields_read_failed'] ) ) ) {
+				self::record_queue_error( 'media_privacy_profile_read_failed' );
+				return $changed;
+			}
+			if ( ! $profile ) {
+				// The ID came from the same profiles table scan. Treat a vanished row as a
+				// concurrent deletion; advancing is safe only after a DB-certain reread.
+				$cursor = max( $cursor, $profile_id );
+				update_option( 'spd_media_privacy_cursor', $cursor, false );
+				continue;
+			}
 			if ( SPD_Authorization::profile_visibility_allows( $profile, 0 ) ) { $cursor = max( $cursor, $profile_id ); update_option( 'spd_media_privacy_cursor', $cursor, false ); continue; }
 			$old = array( 'avatar' => absint( $profile['avatar_id'] ), 'cover' => absint( $profile['cover_id'] ) );
 			$result = SPD_DB::transaction(
