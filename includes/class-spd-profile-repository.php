@@ -49,7 +49,7 @@ final class SPD_Profile_Repository {
 		$owner_id = absint( $owner_id );
 		$delegate_id = absint( $delegate_id );
 		$scope = sanitize_key( $scope );
-		if ( ! $owner_id || ! $delegate_id || ! in_array( $scope, SPD_Central_Profile::delegation_scopes(), true ) || ! SPD_Central_Profile::schema_ready() ) { return false; }
+		if ( ! $owner_id || ! $delegate_id || ! in_array( $scope, SPD_Central_Profile::delegation_scopes(), true ) || ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_Schema_Guard::central_ready() ) { return false; }
 		$profile = $this->find_by_user_id( $owner_id, false );
 		if ( ! $profile || ! empty( $profile['_fields_read_failed'] ) || ! SPD_Authorization::profile_mutation_state_allows( $profile ) ) { return false; }
 		if ( 'doctor' !== ( $profile['profile_type'] ?? '' ) || SPD_Membership_Adapter::is_minor( $owner_id ) ) { return false; }
