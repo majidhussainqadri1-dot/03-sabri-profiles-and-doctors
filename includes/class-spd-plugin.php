@@ -5,6 +5,12 @@ final class SPD_Plugin {
 	private $observability;
 
 	public function run() {
+		// File loading is also exercised by an isolated composition contract. If the
+		// surrounding WordPress hook/localization runtime is incomplete, loading
+		// classes and public contracts must remain safe and side-effect free rather
+		// than fatalling on the first missing core function. A real WordPress
+		// request always provides these functions before plugin execution.
+		if ( ! function_exists( 'load_plugin_textdomain' ) || ! function_exists( 'add_filter' ) || ! function_exists( 'remove_action' ) ) { return; }
 		load_plugin_textdomain( 'sabri-profiles-doctors', false, dirname( plugin_basename( SPD_FILE ) ) . '/languages' );
 		if ( ! class_exists( 'SPD_Schema_Guard' ) ) { require_once SPD_DIR . 'includes/class-spd-schema-guard.php'; }
 		if ( ! class_exists( 'SPD_Central_Privacy' ) ) { require_once SPD_DIR . 'includes/class-spd-central-privacy.php'; }
