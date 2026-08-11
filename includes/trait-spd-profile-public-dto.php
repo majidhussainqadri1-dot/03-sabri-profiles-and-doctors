@@ -117,7 +117,6 @@ trait SPD_Profile_Public_DTO {
 			$url = wp_get_attachment_image_url( $id, 'large' );
 			if ( ! $url || ! SPD_Helpers::same_origin_url( $url ) ) { continue; }
 			$out[ $purpose ] = array(
-				'attachment_id' => $id,
 				'url'           => esc_url_raw( $url ),
 				'alt'           => sanitize_text_field( (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) ),
 				'focal_x'       => (float) $profile[ $purpose . '_focal_x' ],
