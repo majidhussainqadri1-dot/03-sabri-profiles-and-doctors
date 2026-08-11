@@ -15,7 +15,8 @@ final class SPD_Activator {
 		try {
 			$repair = self::repair_owned_resources();
 			if ( is_wp_error( $repair ) ) { throw new RuntimeException( $repair->get_error_message() ); }
-			self::migrate_legacy_options();
+			$legacy = self::migrate_legacy_options();
+			if ( is_wp_error( $legacy ) ) { throw new RuntimeException( $legacy->get_error_message() ); }
 			update_option( 'spd_version', SPD_VERSION, false );
 			update_option( 'spd_contract_version', SPD_CONTRACT_VERSION, false );
 			update_option( 'spd_plan_version', SPD_PLAN_VERSION, false );
@@ -119,7 +120,12 @@ final class SPD_Activator {
 	private static function migrate_legacy_options() {
 		$profile = (array) get_option( 'spd_founder_profile', array() );
 		foreach ( array( 'name', 'location', 'phone', 'whatsapp', 'photo_id', 'cover_id' ) as $legacy_key ) { unset( $profile[ $legacy_key ] ); }
-		update_option( 'spd_founder_profile_legacy_read_only', $profile, false ); delete_option( 'spd_founder_profile' );
+		$persisted = update_option( 'spd_founder_profile_legacy_read_only', $profile, false );
+		if ( false === $persisted && (array) get_option( 'spd_founder_profile_legacy_read_only', array() ) !== $profile ) {
+			return new WP_Error( 'spd_legacy_option_migration_failed', __( 'Legacy Founder profile data could not be preserved safely, so the original record was left unchanged.', 'sabri-profiles-doctors' ) );
+		}
+		delete_option( 'spd_founder_profile' );
 		$admin = get_role( 'administrator' ); if ( $admin ) { $admin->remove_cap( 'manage_sabri_doctors' ); }
+		return true;
 	}
 }

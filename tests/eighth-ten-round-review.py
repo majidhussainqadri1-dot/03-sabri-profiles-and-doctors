@@ -61,7 +61,9 @@ require('reject_unknown' in future_rest, 'Shared future mutation unknown-field g
 require('spd_last_post_commit_reload_error' in update and 'sabri_file24_profile_post_commit_reload_failure' in update, 'Post-commit profile reload uncertainty is not operationally recorded')
 require("$updated_profile = $this->find_by_public_id_strict( $profile['public_id'] )" in update and 'return $committed_response;' in update, 'Base update does not preserve committed replay result across post-commit reread failure')
 
-require('$had_error=false' in media and "record_queue_error( 'deletion_lease_lost' )" in media and "if ( ! $had_error ) { delete_option( 'spd_last_media_queue_error' ); }" in media, 'Media deletion anomalies can still be cleared by the same run')
+require('$had_error=false' in media and "record_queue_error( 'deletion_lease_lost' )" in media, 'Media deletion anomaly latching regressed')
+require("clear_queue_error_family( 'deletion' )" in media, 'Media deletion clean-up is not isolated to deletion-family errors')
+require("clear_queue_error_family( 'privacy' )" in media, 'Media privacy clean-up is not isolated to privacy-family errors')
 
 rotate = section(repo, 'public function rotate_share_link', 'public function grant_delegate')
 require("'share_url' => SPD_Central_Profile::short_url( $future_profile )" in rotate, 'Share-link rotation does not build the deterministic URL before commit')

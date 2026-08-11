@@ -1,23 +1,23 @@
-# File 03 Status — 1.2.0-rc11
+# File 03 Status — 1.2.0-rc12
 
 | Status | Evidence / decision |
 |---|---|
 | Specified | File 03 amended plan + central governing plan + `FUTURE-SUPERSET-18.md` |
-| Repository identity | Plugin `1.2.0-rc11` · DB schema `1.2.0` · contract `1.4.0` |
-| Coded | Repository-owned File 03 scope plus `F03-FUT-01..18` and corrective changes recorded in all review ledgers |
-| First 80-round corrective review | 80 rounds completed; 18 defect-bearing / 62 clean |
-| Second fresh 80-round review | 28 defect-bearing / 52 clean |
-| Third–Tenth fresh reviews | Historical ledgers retained as regression evidence |
-| Fresh 20-round sequential review | `TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` |
-| Twenty-round defect-bearing | `01, 02, 03, 04, 05, 06, 09, 10, 12, 13, 14, 15, 17, 18, 19, 20` |
-| Twenty-round clean | `07, 08, 11, 16` |
-| Frozen starting main | `60207107479c971cae4be379e427e1adb212ea92` · tree `1145214fbcff6afd9bf08289e9a112ffacfc4aaf` |
-| Review branch | `audit/file-03-twentieth-round-sequential-20260812` |
-| Exact reviewed rc11 candidate | `9f7f80f7791a94a45c2dff8cbd846b0f0482621b` · tree `7265b5a8f318a6404b621dd027c4c1031c466f3a` |
-| Exact-candidate automated QA | Corrective `31541857922` SUCCESS · Fresh `31541857974` SUCCESS · Future `31541857955` SUCCESS · deterministic package/parity job `93945955914` SUCCESS |
-| PR / code merge | PR #25 merged from the exact reviewed candidate · code-bearing merge `555324eb107e1d684b4028362ec3aa780adb4208` |
-| Exact code-merge QA | Baseline `31542150625` SUCCESS · Fresh `31542150448` SUCCESS · Future `31542150417` SUCCESS · deterministic package/parity job `93946919894` SUCCESS |
-| Correction themes | File00 outage truth across protected REST; DB-certain personal-site/redirect/moderation/timeline/frontend reads; delegation-export minimization; media deletion error latching; selective-disclosure degradation truth; Future TOCTOU DB certainty; File08 delegation projection safety; operational health-query truth; exact-branch CI coverage; permanent twenty-round gate; rc11 release identity |
+| Repository identity | Plugin `1.2.0-rc12` · DB schema `1.2.0` · contract `1.4.0` |
+| Coded | Repository-owned File 03 scope plus `F03-FUT-01..18` and corrective changes recorded in review ledgers |
+| Prior review history | Original/fresh 80-round and third–tenth ten-round ledgers retained as historical regression evidence |
+| First 20-round sequential review | `TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` |
+| Second 20-round sequential review | `SECOND-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` |
+| Second twenty-round defect-bearing | `01, 02, 05, 06, 07, 09, 12, 15, 16, 17, 18, 19, 20` |
+| Second twenty-round clean | `03, 04, 08, 10, 11, 13, 14` |
+| Frozen starting main | `a34e4e2b808134237ae9945759745595685c8733` · tree `c0d41641c66cb897c1073dbb40943c5cf9093d44` |
+| Review branch | `audit/file-03-second-twenty-round-20260812` |
+| Round 19 corrected-head QA | `fb041e0a3ea35085165c560720440e635d5b0540`: Fresh `31545524631` SUCCESS · Future `31545524616` SUCCESS |
+| Contract decision | `1.4.0` retained: removal of undeclared internal WordPress `attachment_id` from public media DTO is privacy hardening under the existing opaque-public-ID/public-DTO-allowlist contract, not a documented public field removal |
+| Final exact rc12 candidate | **Pending freeze after all release metadata/tests/workflows are finalized** |
+| Final exact-candidate automated QA | **Pending same-SHA verification** |
+| PR / merge | **Pending** |
+| Correction themes | File00 provider/claim truth at moderation/report/appeal boundaries; public DTO internal-PK minimization; Ask Work DB-degraded truth; media worker error isolation; safe legacy option migration; orphan File03 usermeta destructive cleanup; read-only public Founder rendering; redacted active worker errors; exact-branch CI and permanent second-twenty gate; rc12 release identity |
 | Staging-Accepted | **Pending / unverified** |
 | Live-Deployed | **Unverified** |
 | Live DB / migration | **Unverified** |
@@ -26,8 +26,8 @@
 
 ## Repository closure boundary
 
-The exact rc11 code candidate and its code-bearing merge have both passed their applicable automated gates. This documentation-only evidence closure does not change runtime/source behavior. The resulting documentation merge becomes a new repository HEAD and must itself be re-tested before being reported as current final repository truth.
+This document intentionally does not pre-claim final rc12 candidate CI or merge. Any source, test, workflow, release-metadata or documentation change creates a new candidate. The exact final candidate must pass all applicable automated gates, PHP 8.1/8.3/8.4, the permanent second-twenty-round gate, two fresh post-correction gates and deterministic package/checksum/SBOM/source-package parity on one exact SHA before promotion.
 
-Repository and CI evidence do not establish Hostinger staging or live state. Next external gate remains: staging reality freeze → exact deployed package/version/checksum → DB/schema/migration verification → current companion contracts → representative browser/mobile/RTL/WCAG journeys → backup/restore/rollback → Founder acceptance → controlled deployment → live re-test → parity confirmation.
+Repository and CI evidence do not establish Hostinger staging or live state. External acceptance remains: staging reality freeze → exact installed package/version/checksum → DB/schema/migration verification → current companion contracts → representative browser/mobile/RTL/WCAG journeys → backup/restore/rollback → Founder acceptance → controlled deployment → live re-test → parity confirmation.
 
 **Exact deployed code is currently unverified; repository-based diagnosis is provisional for any live incident.**

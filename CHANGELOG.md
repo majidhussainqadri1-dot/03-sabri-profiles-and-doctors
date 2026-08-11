@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.2.0-rc12 — Second fresh twenty-round sequential corrective hardening
+
+- Started from exact `main` `a34e4e2b808134237ae9945759745595685c8733` (tree `c0d41641c66cb897c1073dbb40943c5cf9093d44`).
+- Defect-bearing rounds: `01, 02, 05, 06, 07, 09, 12, 15, 16, 17, 18, 19, 20`.
+- Clean rounds: `03, 04, 08, 10, 11, 13, 14`.
+- Revalidated File 00 provider/claim truth inside moderation, base report, central safety-report and report-appeal domain boundaries so dependency uncertainty remains 503 rather than fabricated account state.
+- Removed undeclared internal WordPress `attachment_id` from anonymous/public profile-media DTOs; public media retains only presentation-safe fields.
+- Preserved Future Ask Work profile-store failures as 503 instead of 404.
+- Isolated privacy-reconciliation and media-deletion worker error clearing so one clean worker cannot erase another worker’s real failure evidence.
+- Prevented legacy Founder option deletion until the read-only migration target is proven persisted.
+- Extended explicit destructive uninstall to recover exact File03-owned usermeta independently of profile-table completeness, while keeping default uninstall non-destructive.
+- Made public Founder rendering read-only so an anonymous GET cannot ensure/create a missing profile record.
+- Added redacted active worker error code/timestamp evidence to System Check without exposing SQL/PII/secrets.
+- Added exact review-branch Fresh/Future coverage; updated a stale historical media assertion to require the stronger error-family isolation invariant.
+- Added `SECOND-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` and `tests/second-twenty-round-sequential-review.py`.
+- Advanced source identity to `1.2.0-rc12`; DB schema remains `1.2.0`; contract remains `1.4.0` because removal of undeclared internal `attachment_id` is privacy hardening under the existing opaque-public-ID/public-DTO-allowlist contract.
+- Final exact candidate, PR/merge and exact-main evidence remain pending until one post-metadata SHA passes every applicable automated gate.
+- Staging, deployed-package parity, live DB/migration state, Founder acceptance and operational status remain unverified.
+
 ## 1.2.0-rc11 — Fresh twenty-round sequential corrective hardening
 
 - Started from exact `main` `60207107479c971cae4be379e427e1adb212ea92` (tree `1145214fbcff6afd9bf08289e9a112ffacfc4aaf`).

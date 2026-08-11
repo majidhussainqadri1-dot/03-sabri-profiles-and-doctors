@@ -13,6 +13,13 @@ final class SPD_Media {
 		do_action( 'sabri_file24_media_queue_failure', array( 'owner' => 'file03', 'code' => sanitize_key( $code ), 'at' => SPD_Helpers::now() ) );
 	}
 
+	private static function clear_queue_error_family( $family ) {
+		$current = get_option( 'spd_last_media_queue_error', array() );
+		$code = is_array( $current ) ? sanitize_key( (string) ( $current['code'] ?? '' ) ) : '';
+		if ( 'privacy' === $family && 0 === strpos( $code, 'media_privacy_' ) ) { delete_option( 'spd_last_media_queue_error' ); }
+		if ( 'deletion' === $family && ( 0 === strpos( $code, 'deletion_' ) || 'attachment_delete_failed' === $code ) ) { delete_option( 'spd_last_media_queue_error' ); }
+	}
+
 	public static function prepare_upload( $user_id, $field, $purpose, array $context=array() ) {
 		$user_id=absint($user_id); $purpose=sanitize_key($purpose);
 		if ( empty($_FILES[$field]['name']) ) { return array(); }
@@ -125,8 +132,6 @@ final class SPD_Media {
 				return $changed;
 			}
 			if ( ! $profile ) {
-				// The ID came from the same profiles table scan. Treat a vanished row as a
-				// concurrent deletion; advancing is safe only after a DB-certain reread.
 				$cursor = max( $cursor, $profile_id );
 				update_option( 'spd_media_privacy_cursor', $cursor, false );
 				continue;
@@ -156,7 +161,7 @@ final class SPD_Media {
 			update_option( 'spd_media_privacy_cursor', 0, false );
 			update_option( 'spd_media_privacy_cycle_completed_at', SPD_Helpers::now(), false );
 		}
-		delete_option( 'spd_last_media_queue_error' );
+		self::clear_queue_error_family( 'privacy' );
 		return $changed;
 	}
 
@@ -192,7 +197,7 @@ final class SPD_Media {
 			if ( 1!==$saved ) { $had_error=true; self::record_queue_error( 'deletion_lease_lost' ); continue; }
 			$processed++;
 		}
-		if ( ! $had_error ) { delete_option( 'spd_last_media_queue_error' ); }
+		if ( ! $had_error ) { self::clear_queue_error_family( 'deletion' ); }
 		return $processed;
 	}
 
