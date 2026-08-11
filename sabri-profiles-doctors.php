@@ -130,6 +130,46 @@ function spd_get_profile_contract_manifest() { return SPD_Contracts::manifest();
 /** Delegated authority claim for File 08. This is authorization context, never appointment truth. */
 function spd_delegate_can_manage_profile_scope( $owner_user_id, $delegate_user_id, $scope ) { return SPD_Profile_Repository::instance()->delegate_can_manage( absint( $owner_user_id ), absint( $delegate_user_id ), sanitize_key( $scope ) ); }
 
+/**
+ * Post-batch migration integrity gate. The legacy batch worker predates the
+ * outer process-safe lock and can otherwise interpret an empty result caused
+ * by a transient SQL failure as traversal completion. This guard re-proves
+ * completion from fresh database evidence before allowing a completion marker
+ * or a cleared schedule to stand.
+ */
+function spd_migration_integrity_guard() {
+	global $wpdb;
+	if ( ! SPD_DB::tables_exist() ) { return; }
+	$cursor = absint( get_option( 'spd_migration_cursor', 0 ) );
+	$wpdb->last_error = '';
+	$remaining_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->users} WHERE ID>%d", $cursor ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$read_error = (string) $wpdb->last_error;
+	$wpdb->last_error = '';
+	$retry_raw = $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='retry'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$read_error = $read_error ?: (string) $wpdb->last_error;
+	$wpdb->last_error = '';
+	$dead_raw = $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='dead'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$read_error = $read_error ?: (string) $wpdb->last_error;
+	if ( $read_error ) {
+		delete_option( 'spd_migration_completed_at' );
+		delete_option( 'spd_migration_traversal_completed_at' );
+		update_option( 'spd_last_migration_integrity_error', array( 'code' => 'migration_integrity_read_failed', 'at' => SPD_Helpers::now() ), false );
+		if ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) { wp_schedule_event( time() + 300, 'spd_five_minutes', 'spd_migrate_profiles_batch' ); }
+		do_action( 'sabri_file24_migration_integrity_failure', array( 'owner' => 'file03', 'code' => 'migration_integrity_read_failed', 'at' => SPD_Helpers::now() ) );
+		return;
+	}
+	delete_option( 'spd_last_migration_integrity_error' );
+	$remaining = absint( $remaining_raw );
+	$retry = absint( $retry_raw );
+	$dead = absint( $dead_raw );
+	if ( $remaining || $retry || $dead ) { delete_option( 'spd_migration_completed_at' ); }
+	if ( $remaining || $retry ) {
+		delete_option( 'spd_migration_traversal_completed_at' );
+		if ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) { wp_schedule_event( time() + 300, 'spd_five_minutes', 'spd_migrate_profiles_batch' ); }
+	}
+}
+add_action( 'spd_migrate_profiles_batch', 'spd_migration_integrity_guard', 99 );
+
 function spd_start_plugin() {
 	SPD_Provider_Guards::register();
 	( new SPD_Plugin() )->run();
