@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Profiles and Doctors
  * Plugin URI: https://www.sabrihomeopathy.com/
  * Description: Canonical, privacy-controlled Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
- * Version: 1.2.0-rc6
+ * Version: 1.2.0-rc7
  * Requires at least: 7.0
  * Requires PHP: 8.1
  * Author: Dr. Allamah Majid Hussain Sabri
@@ -13,10 +13,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SPD_VERSION', '1.2.0-rc6' );
+define( 'SPD_VERSION', '1.2.0-rc7' );
 define( 'SPD_DB_VERSION', '1.2.0' );
 define( 'SPD_CONTRACT_VERSION', '1.4.0' );
-define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW+FIFTH-TEN-ROUND-CORRECTIVE-REVIEW+SIXTH-TEN-ROUND-CORRECTIVE-REVIEW' );
+define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW+FIFTH-TEN-ROUND-CORRECTIVE-REVIEW+SIXTH-TEN-ROUND-CORRECTIVE-REVIEW+SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW' );
 define( 'SPD_FILE', __FILE__ );
 define( 'SPD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SPD_URL', plugin_dir_url( __FILE__ ) );
@@ -28,7 +28,7 @@ foreach ( $spd_trait_files as $spd_trait_file ) { require_once SPD_DIR . 'includ
 unset( $spd_trait_files, $spd_trait_file );
 
 $spd_files = array(
-	'class-spd-db.php','class-spd-membership-adapter.php','class-spd-verification-adapter.php','class-spd-authorization.php','class-spd-helpers.php','class-spd-provider-guards.php','class-spd-central-profile.php','class-spd-future-profile.php','class-spd-future-privacy.php','class-spd-contracts.php','class-spd-profile-repository.php','class-spd-media.php','class-spd-timeline.php','class-spd-routes.php','class-spd-rest.php','class-spd-central-rest.php','class-spd-future-rest.php','class-spd-frontend.php','class-spd-privacy.php','class-spd-observability.php','class-spd-admin.php','class-spd-activator.php','class-spd-plugin.php',
+	'class-spd-db.php','class-spd-membership-adapter.php','class-spd-verification-adapter.php','class-spd-authorization.php','class-spd-helpers.php','class-spd-provider-guards.php','class-spd-central-profile.php','class-spd-future-profile.php','class-spd-future-privacy.php','class-spd-contracts.php','class-spd-profile-repository.php','class-spd-media.php','class-spd-timeline.php','class-spd-routes.php','class-spd-rest.php','class-spd-central-rest.php','class-spd-future-rest.php','class-spd-frontend.php','class-spd-privacy.php','class-spd-observability.php','class-spd-outbox-dispatcher.php','class-spd-admin.php','class-spd-activator.php','class-spd-plugin.php',
 );
 foreach ( $spd_files as $spd_file ) { require_once SPD_DIR . 'includes/' . $spd_file; }
 unset( $spd_files, $spd_file );
@@ -54,8 +54,9 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 	$viewer_id = absint( $viewer_id );
 	$dto = SPD_Central_Profile::personal_site_dto( $identity, $viewer_id );
 	if ( is_wp_error( $dto ) ) { return $dto; }
-	$profile = SPD_Profile_Repository::instance()->find_by_public_id( $dto['public_id'] );
-	if ( ! $profile ) { return $dto; }
+	$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( $dto['public_id'] );
+	if ( is_wp_error( $profile ) ) { return $profile; }
+	if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 	$base_contacts = (array) ( $dto['contacts'] ?? array() );
 	$base_clinic = (array) ( $dto['clinic'] ?? array() );
 	$dto = SPD_Future_Profile::augment_personal_site_dto( $dto, $profile, $viewer_id );
@@ -104,7 +105,8 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 function spd_get_search_projection( $identity ) {
 	$out = SPD_Central_Profile::search_projection( $identity );
 	if ( is_wp_error( $out ) ) { return $out; }
-	$profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) ( $out['canonical_id'] ?? '' ) );
+	$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( (string) ( $out['canonical_id'] ?? '' ) );
+	if ( is_wp_error( $profile ) ) { return $profile; }
 	if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 	$state = spd_read_future_profile_state( $profile['id'] );
 	if ( is_wp_error( $state ) ) { return $state; }
@@ -162,5 +164,6 @@ add_action( 'spd_migrate_profiles_batch', 'spd_migration_integrity_guard', 99 );
 function spd_start_plugin() {
 	SPD_Provider_Guards::register();
 	( new SPD_Plugin() )->run();
+	SPD_Outbox_Dispatcher::replace_legacy_hook();
 }
 add_action( 'plugins_loaded', 'spd_start_plugin', 30 );

@@ -9,7 +9,7 @@ def exists(path): return (ROOT / path).exists()
 php = '\n'.join(p.read_text(encoding='utf-8') for p in ROOT.rglob('*.php') if 'tests' not in p.parts)
 
 checks = [
-(1,'Exact corrective candidate version',lambda:has('sabri-profiles-doctors.php',"'1.2.0-rc6'")),
+(1,'Exact corrective candidate version',lambda:has('sabri-profiles-doctors.php',"'1.2.0-rc7'")),
 (2,'Database version remains additive 1.2.0',lambda:has('sabri-profiles-doctors.php',"SPD_DB_VERSION', '1.2.0")),
 (3,'Contract version remains 1.4.0',lambda:has('sabri-profiles-doctors.php',"SPD_CONTRACT_VERSION', '1.4.0")),
 (4,'Plan identity records 80-round correction',lambda:has('sabri-profiles-doctors.php','80-ROUND-CORRECTIVE-REVIEW')),
@@ -33,7 +33,7 @@ checks = [
 (22,'Base mutation idempotency required',lambda:has('includes/trait-spd-profile-events.php','spd_idempotency_required')),
 (23,'Future mutation callback is transactional',lambda:has('includes/class-spd-future-rest.php','SPD_DB::transaction( function() use ( $repo, $actor, $command, $key, $callback )')),
 (24,'Future replay finalization is transactional',lambda:has('includes/class-spd-future-rest.php','future_idempotency_complete( $actor, $command, $key, $mutation )')),
-(25,'Outbox has leases and bounded attempts',lambda:has('includes/class-spd-observability.php','lease_token') and has('includes/class-spd-observability.php','OUTBOX_MAX_ATTEMPTS')),
+(25,'Outbox has fail-closed leases and bounded attempts',lambda:has('includes/class-spd-outbox-dispatcher.php','lease_token') and has('includes/class-spd-outbox-dispatcher.php','MAX_ATTEMPTS') and has('includes/class-spd-outbox-dispatcher.php','outbox_delivery_persist_failed')),
 (26,'Public/private DTO paths separated',lambda:exists('includes/trait-spd-profile-public-dto.php') and exists('includes/trait-spd-profile-edit-model.php')),
 (27,'Private edit model implemented',lambda:has('includes/trait-spd-profile-edit-model.php','edit_model')),
 (28,'Audience-aware cache layer present',lambda:exists('includes/trait-spd-profile-cache.php') and 'cache' in read('includes/trait-spd-profile-cache.php').lower()),

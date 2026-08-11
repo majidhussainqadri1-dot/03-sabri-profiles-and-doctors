@@ -40,7 +40,8 @@ final class SPD_REST {
 	public function update_profile( WP_REST_Request $r ) {
 		$t = SPD_Helpers::trace_id();
 		$repo = SPD_Profile_Repository::instance();
-		$profile = $repo->find_by_public_id( $r['public_id'] );
+		$profile = $repo->find_by_public_id_strict( $r['public_id'] );
+		if ( is_wp_error( $profile ) ) { return $this->response( $profile, $t ); }
 		if ( ! $profile || ! SPD_Authorization::can_edit_profile( $profile, get_current_user_id() ) ) { return $this->response( new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ), $t ); }
 		$params = (array) $r->get_json_params();
 		if ( array_key_exists( 'audiences', $params ) ) {

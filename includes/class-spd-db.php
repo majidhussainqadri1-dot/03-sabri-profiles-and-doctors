@@ -167,8 +167,8 @@ final class SPD_DB {
 			PRIMARY KEY (id), UNIQUE KEY submission_uuid (submission_uuid), KEY profile_state (profile_id,status), KEY submitter (submitted_by,created_at)
 		) {$c};";
 		foreach ( $sql as $statement ) { dbDelta( $statement ); }
-		if ( ! self::tables_exist() ) {
-			return new WP_Error( 'spd_schema_install_failed', __( 'One or more File 03 database tables could not be installed or upgraded.', 'sabri-profiles-doctors' ) );
+		if ( ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_Schema_Guard::base_ready() ) {
+			return new WP_Error( 'spd_schema_install_failed', __( 'One or more File 03 database tables, required columns, or integrity indexes could not be installed or upgraded.', 'sabri-profiles-doctors' ) );
 		}
 		if ( false === update_option( 'spd_db_version', SPD_DB_VERSION, false ) && SPD_DB_VERSION !== (string) get_option( 'spd_db_version', '' ) ) {
 			return new WP_Error( 'spd_schema_version_failed', __( 'The File 03 database version could not be recorded.', 'sabri-profiles-doctors' ) );

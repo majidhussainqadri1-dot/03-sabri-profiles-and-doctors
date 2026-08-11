@@ -29,14 +29,79 @@ final class SPD_Profile_Repository {
 	use SPD_Profile_Identity_Read;
 	use SPD_Profile_Public_DTO;
 	use SPD_Profile_Edit_Model;
-	use SPD_Profile_Update;
+	use SPD_Profile_Update { update_profile as private base_update_profile; }
 	use SPD_Profile_Professional;
 	use SPD_Profile_Media;
 	use SPD_Profile_Moderation;
 	use SPD_Profile_Lifecycle;
 	use SPD_Profile_Events;
 	use SPD_Profile_Cache;
-	use SPD_Profile_Central;
+	use SPD_Profile_Central {
+		grant_delegate as private central_grant_delegate;
+		update_central_profile as private central_update_profile;
+	}
+
+	/** Explicit fail-closed lookup for security- or mutation-sensitive callers. */
+	public function find_by_public_id_strict( $public_id ) {
+		global $wpdb;
+		$wpdb->last_error = '';
+		$result = $this->find_by_public_id( $public_id );
+		if ( $wpdb->last_error || ( is_array( $result ) && ! empty( $result['_fields_read_failed'] ) ) ) {
+			return new WP_Error( 'spd_profile_read_failed', __( 'The profile store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		return $result;
+	}
+
+	/** Explicit fail-closed slug lookup so an uncertain registry read is never availability evidence. */
+	public function find_by_slug_strict( $slug ) {
+		global $wpdb;
+		$wpdb->last_error = '';
+		$result = $this->find_by_slug( $slug );
+		if ( $wpdb->last_error || ( is_array( $result ) && ! empty( $result['_fields_read_failed'] ) ) ) {
+			return new WP_Error( 'spd_slug_lookup_failed', __( 'The profile address registry is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		return $result;
+	}
+
+	/**
+	 * The repository is itself an integration boundary, so malformed visibility
+	 * maps must fail closed even when a caller bypasses the REST adapter.
+	 */
+	public function update_profile( $actor_id, array $input, $expected_version, $idempotency_key = '', array $prepared_media = array() ) {
+		if ( array_key_exists( 'audiences', $input ) ) {
+			$guard = SPD_Authorization::validate_audience_payload( $input['audiences'], self::visibility_fields() );
+			if ( is_wp_error( $guard ) ) { return $guard; }
+		}
+		return $this->base_update_profile( $actor_id, $input, $expected_version, $idempotency_key, $prepared_media );
+	}
+
+	public function update_central_profile( $actor_id, array $input, $expected_version, $idempotency_key = '' ) {
+		if ( array_key_exists( 'audiences', $input ) ) {
+			$guard = SPD_Authorization::validate_audience_payload( $input['audiences'], SPD_Central_Profile::extended_fields() );
+			if ( is_wp_error( $guard ) ) { return $guard; }
+		}
+		if ( array_key_exists( 'custom_slug', $input ) ) {
+			$slug = sanitize_title( (string) $input['custom_slug'] );
+			if ( '' !== $slug ) {
+				$registry = $this->find_by_slug_strict( $slug );
+				if ( is_wp_error( $registry ) ) { return $registry; }
+			}
+		}
+		return $this->central_update_profile( $actor_id, $input, $expected_version, $idempotency_key );
+	}
+
+	/**
+	 * Grant-time delegation authority must be enforced below the REST layer too,
+	 * because repository methods are a reusable integration surface for other
+	 * File 03 adapters and companion modules.
+	 */
+	public function grant_delegate( $owner_id, $delegate_id, array $scopes, $expires_at = '', $idempotency_key = '' ) {
+		$delegate_id = absint( $delegate_id );
+		if ( $delegate_id && SPD_Membership_Adapter::is_minor( $delegate_id ) ) {
+			return new WP_Error( 'spd_delegate_minor_forbidden', __( 'A minor account cannot receive delegated profile-management authority.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+		}
+		return $this->central_grant_delegate( $owner_id, $delegate_id, $scopes, $expires_at, $idempotency_key );
+	}
 
 	/**
 	 * Use-time delegation authority. The class-level owner command deliberately
