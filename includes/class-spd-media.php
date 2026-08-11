@@ -183,6 +183,8 @@ final class SPD_Media {
 			if ( $ok || ! get_post(absint($row['attachment_id'])) ) {
 				$saved=$wpdb->update($table,array('status'=>'delivered','attempts'=>$attempts,'completed_at'=>SPD_Helpers::now(),'lease_token'=>'','lease_expires'=>null),array('id'=>absint($id),'lease_token'=>$token));
 			} else {
+				$had_error=true;
+				self::record_queue_error( 'attachment_delete_failed' );
 				$status=$attempts>=8?'dead':'retry';
 				$saved=$wpdb->update($table,array('status'=>$status,'attempts'=>$attempts,'available_at'=>gmdate('Y-m-d H:i:s',time()+min(HOUR_IN_SECONDS,30*(2**min($attempts,6)))),'last_error_code'=>'attachment_delete_failed','lease_token'=>'','lease_expires'=>null),array('id'=>absint($id),'lease_token'=>$token));
 			}
