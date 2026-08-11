@@ -52,7 +52,7 @@ final class SPD_Profile_Repository {
 		if ( ! $owner_id || ! $delegate_id || ! in_array( $scope, SPD_Central_Profile::delegation_scopes(), true ) || ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_Schema_Guard::central_ready() ) { return false; }
 		$profile = $this->find_by_user_id( $owner_id, false );
 		if ( ! $profile || ! empty( $profile['_fields_read_failed'] ) || ! SPD_Authorization::profile_mutation_state_allows( $profile ) ) { return false; }
-		if ( 'doctor' !== ( $profile['profile_type'] ?? '' ) || SPD_Membership_Adapter::is_minor( $owner_id ) ) { return false; }
+		if ( 'doctor' !== ( $profile['profile_type'] ?? '' ) || SPD_Membership_Adapter::is_minor( $owner_id ) || SPD_Membership_Adapter::is_minor( $delegate_id ) ) { return false; }
 		$table = SPD_Central_Profile::delegation_table();
 		$wpdb->last_error = '';
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT scopes,expires_at FROM {$table} WHERE owner_user_id=%d AND delegate_user_id=%d AND status='active' LIMIT 1", $owner_id, $delegate_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
