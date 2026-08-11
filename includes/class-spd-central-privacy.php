@@ -172,8 +172,8 @@ final class SPD_Central_Privacy {
 						if ( false === $changed ) { return new WP_Error( 'spd_appeal_requester_erasure_failed', __( 'Profile appeal requester data could not be erased.', 'sabri-profiles-doctors' ) ); }
 					}
 					if ( $reviewer_count ) {
-						$changed = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET reviewer_id=0,updated_at=%s WHERE reviewer_id=%d", SPD_Helpers::now(), $user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-						if ( false === $changed ) { return new WP_Error( 'spd_appeal_reviewer_erasure_failed', __( 'Profile appeal reviewer identity could not be erased.', 'sabri-profiles-doctors' ) ); }
+						$changed = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET reviewer_id=0,decision_note='',updated_at=%s WHERE reviewer_id=%d", SPD_Helpers::now(), $user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+						if ( false === $changed ) { return new WP_Error( 'spd_appeal_reviewer_erasure_failed', __( 'Profile appeal reviewer identity and authored decision note could not be erased.', 'sabri-profiles-doctors' ) ); }
 					}
 					return true;
 				} );
@@ -181,7 +181,7 @@ final class SPD_Central_Privacy {
 				elseif ( $requester_count || $reviewer_count ) {
 					$removed = true;
 					$retained = true;
-					$messages[] = __( 'Appeal requester text and user identifiers were erased; the minimal non-identifying appeal workflow record is retained for safety and audit integrity.', 'sabri-profiles-doctors' );
+					$messages[] = __( 'Appeal requester text, reviewer-authored decision text and user identifiers were erased; the minimal non-identifying appeal workflow record is retained for safety and audit integrity.', 'sabri-profiles-doctors' );
 				}
 			}
 		}
