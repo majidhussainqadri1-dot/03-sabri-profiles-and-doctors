@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials,
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.0-rc9
+Stable tag: 1.2.0-rc10
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -13,7 +13,7 @@ Canonical Founder, member and doctor profile domain for the Sabri Social Homeopa
 
 File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.2.0-rc9 preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements and all prior corrective hardening. The ninth fresh ten-round sequential review makes professional-submission reads fail closed on SQL uncertainty, exports retained canonical/historical slug aliases with their permanent redirect/citation-integrity purpose, latches outbox lease anomalies until an anomaly-free run, and keeps destructive uninstall cleanup aligned with current File-03 operational evidence. Release identity and permanent regression gates are advanced without changing DB schema 1.2.0 or contract 1.4.0.
+1.2.0-rc10 preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements and all prior corrective hardening. The tenth fresh ten-round sequential review distinguishes profile-store uncertainty from real not-found/privacy states across central, public and future-owner paths; completes File03-owned privacy export values; strengthens migration completion truth, media reconciliation and post-commit identity certainty; latches all retry/dead-letter outbox delivery failures as operational evidence; and keeps destructive uninstall aligned with current File03-owned migration evidence. Release identity and permanent regression gates advance without changing DB schema 1.2.0 or contract 1.4.0.
 
 The approved 18 enhancements remain:
 
@@ -53,7 +53,21 @@ This remains a repository candidate. Source and automated-QA evidence are separa
 
 == Changelog ==
 
+= 1.2.0-rc10 =
+* Tenth fresh ten-round sequential review from exact main `a74583a8498ece843f1d1e9736cee22b2f760a86`.
+* Defect-bearing rounds: 01–10. Clean rounds: none.
+* Makes central personal-site REST, anonymous/public DTO and Future owner-only profile mutations distinguish database uncertainty from genuine missing/private profile state.
+* Extends WordPress personal-data export to include File03-owned profile field values as well as their audiences while preserving DB-certain failure semantics.
+* Adds exact-base-schema and independent post-run migration integrity reconciliation before completion truth can survive.
+* Stops media privacy reconciliation on uncertain profile/field reads without advancing its cursor or starting destructive removal.
+* Reduces identity create/refresh completion to one DB-certain hydrated post-commit read.
+* Latches malformed-payload and consumer-exception outbox retries/dead letters as operational evidence until a genuinely clean dispatch run.
+* Includes current `spd_last_migration_error` in explicit two-gate destructive uninstall cleanup.
+* Adds `TENTH-TEN-ROUND-REVIEW-2026-08-12.md` and `tests/tenth-ten-round-review.py` to permanent CI and advances source identity to rc10.
+* Preserves staging/live/operational separation; no live deployment claim is made.
+
 = 1.2.0-rc9 =
+* Historical predecessor metadata: Stable tag: 1.2.0-rc9.
 * Ninth fresh ten-round sequential review from exact main `4a23627b3320b7eb5957e5610da786abdec98c95`.
 * Defect-bearing rounds: 01, 03, 08, 09, 10. Clean rounds: 02, 04, 05, 06, 07.
 * Makes protected professional-submission state reads return DB uncertainty instead of authoritative “no submission”.
