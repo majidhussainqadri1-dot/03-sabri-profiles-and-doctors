@@ -57,16 +57,30 @@ final class SPD_Central_REST {
 		return absint( $r->get_param( 'version' ) );
 	}
 	private function idem( WP_REST_Request $r ) { return trim( sanitize_text_field( (string) $r->get_header( 'Idempotency-Key' ) ) ); }
+	private function profile_store_certain( $result ) {
+		global $wpdb;
+		if ( $wpdb->last_error && is_wp_error( $result ) && 'spd_profile_unavailable' === $result->get_error_code() ) {
+			return new WP_Error( 'spd_profile_store_unavailable', __( 'The profile store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		return $result;
+	}
 	public function personal_site( WP_REST_Request $r ) { return $this->response( spd_get_personal_site_profile( $r['public_id'], get_current_user_id() ), 200, ! is_user_logged_in() ); }
 	public function search_projection( WP_REST_Request $r ) { return $this->response( spd_get_search_projection( $r['public_id'] ), 200, true ); }
-	public function edit_model() { return $this->response( SPD_Profile_Repository::instance()->central_edit_model( get_current_user_id() ) ); }
+	public function edit_model() {
+		global $wpdb;
+		$wpdb->last_error = '';
+		return $this->response( $this->profile_store_certain( SPD_Profile_Repository::instance()->central_edit_model( get_current_user_id() ) ) );
+	}
 	public function update_personal_site( WP_REST_Request $r ) {
+		global $wpdb;
 		$p = (array) $r->get_json_params();
 		if ( array_key_exists( 'audiences', $p ) ) {
 			$audience_guard = SPD_Authorization::validate_audience_payload( $p['audiences'], SPD_Central_Profile::extended_fields() );
 			if ( is_wp_error( $audience_guard ) ) { return $this->response( $audience_guard ); }
 		}
-		return $this->response( SPD_Profile_Repository::instance()->update_central_profile( get_current_user_id(), $p, $this->version( $r ), $this->idem( $r ) ) );
+		$wpdb->last_error = '';
+		$result = SPD_Profile_Repository::instance()->update_central_profile( get_current_user_id(), $p, $this->version( $r ), $this->idem( $r ) );
+		return $this->response( $this->profile_store_certain( $result ) );
 	}
 	public function rotate_share( WP_REST_Request $r ) { return $this->response( SPD_Profile_Repository::instance()->rotate_share_link( get_current_user_id(), $this->version( $r ), $this->idem( $r ) ) ); }
 	public function delegates() { return $this->response( SPD_Profile_Repository::instance()->list_delegates( get_current_user_id() ) ); }
