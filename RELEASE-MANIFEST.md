@@ -11,11 +11,21 @@
 - Review ledger: `SECOND-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
 - Defect-bearing rounds: `01, 02, 05, 06, 07, 09, 12, 15, 16, 17, 18, 19, 20`
 - Clean rounds: `03, 04, 08, 10, 11, 13, 14`
-- Round 19 corrected-head Fresh Eighty-Round: run `31545524631` — **SUCCESS**
-- Round 19 corrected-head Future Superset 18: run `31545524616` — **SUCCESS**
-- Final exact reviewed candidate: **pending after release metadata/tests/workflows freeze**
-- Final exact-candidate Corrective/Fresh/Future/PHP/package evidence: **pending same-SHA verification**
-- PR / merge: **pending**
+- Final exact reviewed candidate: `96276335b02fd42bea265648ae4a21c255db6d00`
+- Candidate tree: `c5fee38ec9587fa67bdd3f7e0d265257ee908b71`
+- Exact-candidate Corrective Integrity: `31546528055` — **SUCCESS**
+- Exact-candidate Fresh Eighty-Round: `31546527984` — **SUCCESS**
+- Exact-candidate Future Superset 18: `31546527994` — **SUCCESS**
+- Candidate PHP 8.1 / 8.3 / 8.4: **SUCCESS**
+- Candidate permanent Second-Twenty gate: **SUCCESS**
+- Candidate two fresh post-correction adversarial gates: **SUCCESS**
+- Candidate deterministic double build / SHA-256 / SBOM / source-package parity: **SUCCESS**
+- PR #27: **merged** from exact head `96276335b02fd42bea265648ae4a21c255db6d00`
+- Code-bearing merge commit: `97cc579f706587490c2f4424efd593bbba9add29`
+- Code-bearing merge tree: `c5fee38ec9587fa67bdd3f7e0d265257ee908b71`
+- Code-bearing `main` Baseline Integrity: `31546721884` — **SUCCESS**
+- Code-bearing `main` Fresh Eighty-Round: `31546721891` — **SUCCESS**
+- Code-bearing `main` Future Superset 18: `31546721910` — **SUCCESS**
 - Production authorized: **no**
 - Live installation authorized: **no**
 - Staging accepted: **unverified**
@@ -27,7 +37,7 @@ The second fresh twenty-round cycle strengthens File 00 authorization truth at m
 
 DB schema remains `1.2.0`. Public contract remains `1.4.0`: `attachment_id` was an undeclared internal WordPress primary key, while the machine-readable contract already specifies opaque public identity and public DTO allowlists. Its removal is privacy hardening rather than a documented public-contract field removal.
 
-The exact rc12 candidate is not frozen by this document. After the last source/test/workflow/documentation change, all applicable automated gates must succeed again on one exact SHA, including PHP 8.1/8.3/8.4, two fresh post-correction gates and deterministic package/checksum/SBOM/source-package parity.
+This is a documentation-only evidence closure after the exact reviewed source candidate and code-bearing merge passed their applicable repository gates. The final documentation merge creates a new repository HEAD and must be re-tested before this review is considered repository-closed.
 
 ## Historical provenance warning
 
