@@ -31,6 +31,7 @@ final class SPD_Outbox_Dispatcher {
 			return;
 		}
 		$table = SPD_DB::table( 'events' );
+		$had_error = false;
 
 		$wpdb->last_error = '';
 		$reset = $wpdb->query( "UPDATE {$table} SET status='retry',lease_token='',lease_expires=NULL,available_at=UTC_TIMESTAMP(),last_error_code='lease_expired' WHERE status='processing' AND lease_expires<UTC_TIMESTAMP()" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -52,7 +53,7 @@ final class SPD_Outbox_Dispatcher {
 			$wpdb->last_error = '';
 			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id=%d AND lease_token=%s LIMIT 1", $id, $token ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			if ( $wpdb->last_error ) { self::record_error( 'outbox_claim_read_failed' ); return; }
-			if ( ! $row ) { self::record_error( 'outbox_claim_lost' ); continue; }
+			if ( ! $row ) { $had_error = true; self::record_error( 'outbox_claim_lost' ); continue; }
 
 			$payload = json_decode( (string) $row['payload'], true );
 			$attempts = absint( $row['attempts'] ) + 1;
@@ -71,13 +72,13 @@ final class SPD_Outbox_Dispatcher {
 					array( 'id' => $id, 'lease_token' => $token )
 				);
 				if ( false === $saved || $wpdb->last_error ) { self::record_error( 'outbox_delivery_persist_failed' ); return; }
-				if ( 1 !== $saved ) { self::record_error( 'outbox_delivery_lease_lost' ); continue; }
+				if ( 1 !== $saved ) { $had_error = true; self::record_error( 'outbox_delivery_lease_lost' ); continue; }
 			} catch ( Throwable $exception ) {
 				if ( ! self::fail_claim( $row, $token, $attempts, sanitize_key( get_class( $exception ) ) ) ) { return; }
 			}
 		}
 
-		delete_option( 'spd_last_outbox_error' );
+		if ( ! $had_error ) { delete_option( 'spd_last_outbox_error' ); }
 		update_option( 'spd_last_outbox_run', SPD_Helpers::now(), false );
 	}
 
@@ -92,7 +93,7 @@ final class SPD_Outbox_Dispatcher {
 			array( 'id' => absint( $row['id'] ), 'lease_token' => (string) $token )
 		);
 		if ( false === $saved || $wpdb->last_error ) { self::record_error( 'outbox_failure_persist_failed' ); return false; }
-		if ( 1 !== $saved ) { self::record_error( 'outbox_failure_lease_lost' ); }
+		if ( 1 !== $saved ) { self::record_error( 'outbox_failure_lease_lost' ); return false; }
 		return true;
 	}
 }

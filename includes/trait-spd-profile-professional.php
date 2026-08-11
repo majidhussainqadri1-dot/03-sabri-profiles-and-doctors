@@ -4,10 +4,14 @@ defined( 'ABSPATH' ) || exit;
 trait SPD_Profile_Professional {
 	public function latest_professional_submission( $profile_id ) {
 		global $wpdb;
+		$wpdb->last_error = '';
 		$row = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM " . SPD_DB::table( 'professional_submissions' ) . " WHERE profile_id=%d ORDER BY id DESC LIMIT 1", absint( $profile_id ) ),
 			ARRAY_A
 		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) {
+			return new WP_Error( 'spd_professional_submission_read_failed', __( 'Professional profile submission state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
 		if ( ! $row ) { return array(); }
 		$row['id'] = absint( $row['id'] );
 		$row['profile_id'] = absint( $row['profile_id'] );

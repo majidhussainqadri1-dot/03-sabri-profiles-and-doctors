@@ -27,6 +27,9 @@ trait SPD_Profile_Lifecycle {
 		});
 		if(is_wp_error($result)){return array('removed'=>false,'retained'=>true,'retry'=>true,'messages'=>array($result->get_error_message()));}
 		$this->purge_profile_cache($profile);SPD_Media::process_deletion_queue(10);
-		return array('removed'=>true,'retained'=>true,'messages'=>array(__( 'Personal profile fields are erased. A minimal public-ID tombstone, audit events, and retryable media-deletion ledger remain for integrity and secure cleanup.','sabri-profiles-doctors')));
+		return array('removed'=>true,'retained'=>true,'messages'=>array(
+			__( 'Personal profile fields are erased. A minimal public-ID tombstone, audit events, and retryable media-deletion ledger remain for integrity and secure cleanup.','sabri-profiles-doctors'),
+			__( 'Canonical and historical profile slug aliases are retained as permanent redirect/citation-integrity records; they no longer expose erased profile fields.','sabri-profiles-doctors')
+		));
 	}
 }

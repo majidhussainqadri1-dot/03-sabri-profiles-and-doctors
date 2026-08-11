@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0-rc9 — Ninth fresh ten-round sequential corrective hardening
+
+- Completed a fresh sequential 10-round review from exact `main` baseline `4a23627b3320b7eb5957e5610da786abdec98c95`.
+- Defects were found and corrected in rounds `01, 03, 08, 09, 10`; rounds `02, 04, 05, 06, 07` were clean.
+- Made protected professional-submission state reads fail closed on SQL uncertainty instead of returning an authoritative empty state.
+- Added DB-certain, paginated WordPress personal-data export for permanent canonical/historical profile slug aliases and explicitly disclosed their redirect/citation-integrity retention during erasure.
+- Latched non-fatal outbox claim/delivery lease anomalies for the whole worker pass so an anomalous run cannot erase its own operational failure evidence.
+- Added current File-03 outbox operational error state to the explicit two-gate destructive uninstall cleanup without widening purge ownership.
+- Advanced materially changed source identity to `1.2.0-rc9`; repository DB schema remains `1.2.0` and contract remains `1.4.0` because no DDL or public contract-version change was introduced.
+- Added `NINTH-TEN-ROUND-REVIEW-2026-08-11.md`, `tests/ninth-ten-round-review.py`, permanent ninth-review CI integration and rc9 deterministic package/checksum/SBOM/source-parity gating.
+- Reconciled stale release-version/history QA assertions without weakening substantive authorization, privacy, concurrency, provider-degradation, security, determinism or deployment-boundary invariants.
+- Fixed a runtime-composition defect discovered by the exact-candidate bootstrap/regression gate: the new slug-history privacy exporter no longer self-registers during source include and is registered through the normal `SPD_Plugin::run()` privacy lifecycle.
+- Staging acceptance, exact deployed-package parity, live DB/schema/migration state, browser/WCAG/RTL evidence, backup/restore/rollback, Founder acceptance and live operational verification remain separate gates.
+
 ## 1.2.0-rc8 — Eighth fresh ten-round sequential corrective hardening
 
 - Completed a fresh sequential 10-round review from exact `main` baseline `c2c78d774207532e035e738834760b6b7395729e`.

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import json
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -30,9 +32,10 @@ future_rest = text('includes/class-spd-future-rest.php')
 update = text('includes/trait-spd-profile-update.php')
 media = text('includes/class-spd-media.php')
 ledger = text('EIGHTH-TEN-ROUND-REVIEW-2026-08-11.md')
-release_lock = text('RELEASE-LOCK.json')
+release_lock = json.loads(text('RELEASE-LOCK.json'))
 
-require('Version: 1.2.0-rc8' in main and "define( 'SPD_VERSION', '1.2.0-rc8' )" in main, 'Eighth-review release identity is not rc8')
+version = re.search(r"define\( 'SPD_VERSION', '1\.2\.0-rc(\d+)' \)", main)
+require(version and int(version.group(1)) >= 8, 'Eighth-review guarantees require rc8 or a later corrective identity')
 require('EIGHTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Eighth-review plan marker is missing')
 
 for name, src, end in (
@@ -69,7 +72,9 @@ future_state = section(future_rest, 'public function future_state', None)
 require('find_by_public_id_strict' in future_state and 'spd_read_future_profile_state' in future_state, 'Future-state mutation lacks strict profile/state preflight')
 require("'professional_lifecycle' => $effective_lifecycle" in future_state and "'lifecycle_reason' => array_key_exists" in future_state and "'federation_opt_in' => array_key_exists" in future_state, 'Future-state mutation does not materialize omitted fields from the strict preflight')
 
-require('"current_repository_candidate": "1.2.0-rc8"' in release_lock, 'Release lock still names an older current repository candidate')
+candidate = str(release_lock.get('current_repository_candidate', ''))
+locked = re.search(r'^1\.2\.0-rc(\d+)$', candidate)
+require(locked and int(locked.group(1)) >= 8, 'Release lock regressed below the eighth-review release boundary')
 require('Defect-bearing rounds: **01, 03, 04, 05, 06, 07, 08, 09, 10**' in ledger, 'Eighth-review defect-round ledger drifted')
 require('Clean rounds: **02**' in ledger, 'Eighth-review clean-round ledger drifted')
 require('Exact deployed code remains unverified' in ledger, 'Live/deployed truth boundary is missing')

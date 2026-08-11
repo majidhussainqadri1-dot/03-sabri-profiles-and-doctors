@@ -43,6 +43,7 @@ final class SPD_Plugin {
 		( new SPD_Privacy() )->hooks();
 		( new SPD_Central_Privacy() )->hooks();
 		( new SPD_Future_Privacy() )->hooks();
+		( new SPD_Slug_Privacy() )->hooks();
 		$this->observability = new SPD_Observability();
 		$this->observability->hooks();
 		remove_action( 'spd_migrate_profiles_batch', array( $this->observability, 'migrate_profiles_batch' ) );
