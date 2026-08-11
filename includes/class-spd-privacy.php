@@ -34,7 +34,7 @@ final class SPD_Privacy {
 		if ( 1 === $page ) {
 			$wpdb->last_error = '';
 			$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false );
-			if ( $wpdb->last_error ) { return new WP_Error( 'spd_privacy_export_failed', __( 'Profile data could not be read for export.', 'sabri-profiles-doctors' ) ); }
+			if ( $wpdb->last_error || ( is_array( $profile ) && ! empty( $profile['_fields_read_failed'] ) ) ) { return new WP_Error( 'spd_privacy_export_failed', __( 'Profile data could not be read for export.', 'sabri-profiles-doctors' ) ); }
 			if ( $profile ) {
 				$profile_data = array(
 					array( 'name' => 'Public profile ID', 'value' => $profile['public_id'] ),
@@ -50,8 +50,23 @@ final class SPD_Privacy {
 					array( 'name' => 'Avatar attachment ID', 'value' => (string) $profile['avatar_id'] ),
 					array( 'name' => 'Cover attachment ID', 'value' => (string) $profile['cover_id'] ),
 				);
+				$exportable_field_values = array_fill_keys(
+					array_values(
+						array_unique(
+							array_merge(
+								SPD_Profile_Repository::editable_fields(),
+								SPD_Profile_Repository::visibility_fields(),
+								array( 'profile_visibility', 'internal_message' )
+							)
+						)
+					),
+					true
+				);
 				foreach ( $profile['fields'] as $key => $field ) {
-					$profile_data[] = array( 'name' => 'Audience: ' . $key, 'value' => $field['audience'] );
+					if ( isset( $exportable_field_values[ $key ] ) && array_key_exists( 'field_value', $field ) ) {
+						$profile_data[] = array( 'name' => 'Profile field: ' . $key, 'value' => (string) $field['field_value'] );
+					}
+					$profile_data[] = array( 'name' => 'Audience: ' . $key, 'value' => (string) ( $field['audience'] ?? 'private' ) );
 				}
 				$data[] = array(
 					'group_id'    => 'sabri-profile-domain',
