@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials,
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.0-rc8
+Stable tag: 1.2.0-rc9
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -13,7 +13,7 @@ Canonical Founder, member and doctor profile domain for the Sabri Social Homeopa
 
 File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.2.0-rc8 preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements and all prior corrective hardening. The eighth fresh ten-round sequential review makes privacy erasure retries page-safe, report/appeal reads fail closed, schema-version evidence truthful after exact-shape failure, future mutation shapes strict, post-commit replay behavior deterministic, media queue errors persistent for anomalous runs, share-link rotation replay-identical and future lifecycle writes resistant to transient second-read defaults.
+1.2.0-rc9 preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements and all prior corrective hardening. The ninth fresh ten-round sequential review makes professional-submission reads fail closed on SQL uncertainty, exports retained canonical/historical slug aliases with their permanent redirect/citation-integrity purpose, latches outbox lease anomalies until an anomaly-free run, and keeps destructive uninstall cleanup aligned with current File-03 operational evidence. Release identity and permanent regression gates are advanced without changing DB schema 1.2.0 or contract 1.4.0.
 
 The approved 18 enhancements remain:
 
@@ -52,6 +52,16 @@ This remains a repository candidate. Source and automated-QA evidence are separa
 6. Do not promote to live until Founder approval and exact package/deployment parity are recorded.
 
 == Changelog ==
+
+= 1.2.0-rc9 =
+* Ninth fresh ten-round sequential review from exact main `4a23627b3320b7eb5957e5610da786abdec98c95`.
+* Defect-bearing rounds: 01, 03, 08, 09, 10. Clean rounds: 02, 04, 05, 06, 07.
+* Makes protected professional-submission state reads return DB uncertainty instead of authoritative “no submission”.
+* Adds a DB-certain, paginated WordPress personal-data exporter for permanent canonical/historical profile slug aliases and explicitly discloses their redirect/citation-integrity retention on erasure.
+* Latches non-fatal outbox claim/delivery lease anomalies so the same worker run cannot erase its own failure evidence.
+* Includes current File03 outbox operational error evidence in the explicit two-gate destructive uninstall cleanup.
+* Adds `NINTH-TEN-ROUND-REVIEW-2026-08-11.md` and `tests/ninth-ten-round-review.py` to permanent CI, advances source identity to rc9 and keeps historical release provenance separate from current candidate parity.
+* Preserves staging/live/operational separation; no live deployment claim is made.
 
 = 1.2.0-rc8 =
 * Eighth fresh ten-round sequential review from exact main `c2c78d774207532e035e738834760b6b7395729e`.
