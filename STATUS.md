@@ -14,10 +14,10 @@
 | Seventh fresh 10-round review | defect-bearing `01, 02, 03, 04, 05, 06, 08, 09, 10`; clean `07` |
 | Eighth fresh 10-round review | `EIGHTH-TEN-ROUND-REVIEW-2026-08-11.md`: defect-bearing `01, 03, 04, 05, 06, 07, 08, 09, 10`; clean `02` |
 | Eighth-review frozen baseline | Exact starting `main`: `c2c78d774207532e035e738834760b6b7395729e` |
-| Eighth-review branch | `codex/file-03-eighth-ten-round-20260811` |
-| Eighth-review exact reviewed candidate | **Pending exact-candidate QA closure** |
-| PR / merge | **Pending exact-candidate QA closure** |
-| Eighth exact-candidate automated QA | **Pending**; must include Fresh Eighty, PHP 8.1/8.3/8.4, adversarial/fresh gates, deterministic package, SHA-256, SBOM and source/package parity |
+| Eighth-review exact reviewed candidate | `2e9b46ba0e4342e7a0d5e208be000e3c4fafc7e6`; tree `57b16fb3e486bec912443a6b26b2d8e1f1610f87` |
+| PR / code merge | PR `#20` merged; code-bearing merge commit `e4f78e1cd6161266e3b6b2e37014ae0257628cc1` |
+| Exact-candidate automated QA | Fresh Eighty `31504483618`: **SUCCESS**; Future Superset 18 `31504483632`: **SUCCESS**; deterministic package/parity job `93822942584`: **SUCCESS** |
+| Exact code-merge `main` QA | Baseline Integrity `31504866846`: **SUCCESS**; Fresh Eighty `31504866884`: **SUCCESS**; Future Superset 18 `31504866864`: **SUCCESS**; deterministic package/parity job `93823973818`: **SUCCESS** |
 | Eighth-review correction themes | retry-safe privacy erasure; DB-certain report/appeal authorization/rate evidence; exact schema-version truth; strict future mutation shapes; post-commit replay equivalence; latched media-queue evidence; deterministic share-link replay; lifecycle mutation state preservation; rc8 release/QA identity |
 | Staging-Accepted | **Pending / unverified** |
 | Live-Deployed | **Unverified** |
@@ -27,6 +27,6 @@
 
 ## Truth boundary
 
-Repository source, package records, PRs and CI do not establish the state of the live Hostinger installation. The next release gate remains: staging reality freeze → exact deployed package/version/checksum → database/schema/migration verification → real companion integrations → browser/mobile/RTL/WCAG → backup/restore/rollback → Founder acceptance → controlled deployment → live re-test → parity confirmation.
+Repository source, package records, PRs and CI do not establish the state of the live Hostinger installation. Documentation-only evidence closure after the code merge does not change staging/live status. The next release gate remains: staging reality freeze → exact deployed package/version/checksum → database/schema/migration verification → real companion integrations → browser/mobile/RTL/WCAG → backup/restore/rollback → Founder acceptance → controlled deployment → live re-test → parity confirmation.
 
 **Exact deployed code is currently unverified; repository-based diagnosis is provisional for any live incident.**
