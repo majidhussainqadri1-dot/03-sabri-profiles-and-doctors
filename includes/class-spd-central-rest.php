@@ -65,7 +65,14 @@ final class SPD_Central_REST {
 	public function personal_site( WP_REST_Request $r ) { return $this->response( spd_get_personal_site_profile( $r['public_id'], get_current_user_id() ), 200, ! is_user_logged_in() ); }
 	public function search_projection( WP_REST_Request $r ) { return $this->response( spd_get_search_projection( $r['public_id'] ), 200, true ); }
 	public function edit_model() { return $this->response( SPD_Profile_Repository::instance()->central_edit_model( get_current_user_id() ) ); }
-	public function update_personal_site( WP_REST_Request $r ) { $p = (array) $r->get_json_params(); return $this->response( SPD_Profile_Repository::instance()->update_central_profile( get_current_user_id(), $p, $this->version( $r ), $this->idem( $r ) ) ); }
+	public function update_personal_site( WP_REST_Request $r ) {
+		$p = (array) $r->get_json_params();
+		if ( array_key_exists( 'audiences', $p ) ) {
+			$audience_guard = SPD_Authorization::validate_audience_payload( $p['audiences'], SPD_Central_Profile::extended_fields() );
+			if ( is_wp_error( $audience_guard ) ) { return $this->response( $audience_guard ); }
+		}
+		return $this->response( SPD_Profile_Repository::instance()->update_central_profile( get_current_user_id(), $p, $this->version( $r ), $this->idem( $r ) ) );
+	}
 	public function rotate_share( WP_REST_Request $r ) { return $this->response( SPD_Profile_Repository::instance()->rotate_share_link( get_current_user_id(), $this->version( $r ), $this->idem( $r ) ) ); }
 	public function delegates() { return $this->response( SPD_Profile_Repository::instance()->list_delegates( get_current_user_id() ) ); }
 	public function grant_delegate( WP_REST_Request $r ) { $p = (array) $r->get_json_params(); return $this->response( SPD_Profile_Repository::instance()->grant_delegate( get_current_user_id(), absint( $p['delegate_user_id'] ?? 0 ), (array) ( $p['scopes'] ?? array() ), sanitize_text_field( (string) ( $p['expires_at'] ?? '' ) ), $this->idem( $r ) ), 201 ); }
