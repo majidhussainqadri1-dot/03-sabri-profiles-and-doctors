@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.2.0-rc6 — Sixth fresh ten-round sequential corrective hardening
+
+- Completed a fresh sequential 10-round review from exact `main` baseline `822837daa3cebc4c5ae80410f31511aadf3885b0`.
+- Defects were found and corrected in rounds `01, 02, 03, 04, 05, 07, 09, 10`; rounds `06, 08` were clean.
+- Made reviewer privacy erasure clear reviewer-authored appeal `decision_note` together with reviewer identity when no legal/governance hold applies.
+- Ordered Future-owned privacy erasure behind canonical base-profile tombstoning so callback order cannot remove retired/legacy suppression before base erasure is safely established.
+- Made delegated use-time authority require exact central schema readiness and strengthened owned schema verification from index-name presence to exact ordered columns plus uniqueness semantics.
+- Added strict shared audience-map validation so malformed maps, unsupported field keys and invalid audience values fail with 400 before base-profile or personal-site mutation.
+- Blocked minor accounts from delegated profile-management authority at both grant time and use time, including stale pre-existing grants.
+- Reset bounded retry, lease and error state when a legitimate non-delivered media deletion is renewed while preserving already-delivered success records.
+- Advanced materially changed source identity to `1.2.0-rc6`; repository DB schema remains `1.2.0` and contract remains `1.4.0` because no DDL/contract-version change was introduced.
+- Added `SIXTH-TEN-ROUND-REVIEW-2026-08-11.md`, `tests/sixth-ten-round-review.py`, permanent sixth-review Fresh CI, and rc6 Future Superset deterministic package/checksum/SBOM/source-parity gating.
+- Updated historical QA identity assertions only where they had become stale, preserving their substantive authorization, privacy, concurrency, provider-degradation, security and release-boundary invariants.
+- Staging acceptance, exact deployed-package parity, live DB/schema/migration state, browser/WCAG/RTL evidence, backup/restore/rollback, Founder acceptance and live operational verification remain separate gates.
+
 ## 1.2.0-rc5 — Fifth fresh ten-round corrective hardening
 
 - Completed a fresh sequential 10-round review from exact `main` baseline `3358472bc374958c66f5e84997b7633f598caa73` (tree `49283b40823aaa31348403588311e1912af5851d`).
