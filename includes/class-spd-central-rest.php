@@ -34,7 +34,15 @@ final class SPD_Central_REST {
 
 	public function eligible() {
 		if ( ! is_user_logged_in() ) { return new WP_Error( 'spd_login_required', __( 'Authentication is required.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
-		return SPD_Membership_Adapter::is_member_eligible( get_current_user_id() ) ? true : new WP_Error( 'spd_account_ineligible', __( 'This account is not currently eligible.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+		$health = SPD_Membership_Adapter::health();
+		if ( 'available' !== ( $health['status'] ?? '' ) ) {
+			return new WP_Error( 'spd_membership_provider_unavailable', __( 'Membership verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$claims = SPD_Membership_Adapter::claims( get_current_user_id() );
+		if ( ! $claims ) {
+			return new WP_Error( 'spd_membership_claim_unavailable', __( 'Membership verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		return ! empty( $claims['eligible'] ) && empty( $claims['suspended'] ) ? true : new WP_Error( 'spd_account_ineligible', __( 'This account is not currently eligible.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
 	}
 
 	private function response( $result, $success = 200, $public = false ) {
@@ -53,7 +61,7 @@ final class SPD_Central_REST {
 
 	private function version( WP_REST_Request $r ) {
 		$raw = trim( (string) $r->get_header( 'If-Match' ) );
-		if ( '' !== $raw ) { return preg_match( '/^"?([1-9][0-9]*)"?$/', $raw, $m ) ? absint( $m[1] ) : 0; }
+		if ( '' !== $raw ) { return preg_match( '/^\"?([1-9][0-9]*)\"?$/', $raw, $m ) ? absint( $m[1] ) : 0; }
 		return absint( $r->get_param( 'version' ) );
 	}
 	private function idem( WP_REST_Request $r ) { return trim( sanitize_text_field( (string) $r->get_header( 'Idempotency-Key' ) ) ); }
