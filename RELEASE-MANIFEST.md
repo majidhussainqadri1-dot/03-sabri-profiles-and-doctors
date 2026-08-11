@@ -1,6 +1,6 @@
 # File 03 Release Manifest
 
-## Current repository candidate
+## Reviewed repository release candidate
 
 - Candidate: `1.2.0-rc10`
 - Database schema: `1.2.0`
@@ -11,25 +11,30 @@
 - Tenth-review ledger: `TENTH-TEN-ROUND-REVIEW-2026-08-12.md`
 - Defect-bearing rounds: `01–10`
 - Clean rounds: none
-- Exact reviewed candidate: **pending final same-SHA QA freeze**
-- Exact reviewed tree: **pending final same-SHA QA freeze**
-- Exact-candidate Corrective Integrity: **pending final same-SHA result**
-- Exact-candidate Fresh Eighty-Round: **pending final same-SHA result**
-- Exact-candidate Future Superset 18: **pending final same-SHA result**
-- Exact-candidate PHP 8.1/8.3/8.4: **pending final same-SHA result**
-- Exact-candidate two fresh post-correction gates: **pending final same-SHA result**
-- Exact-candidate deterministic package/checksum/SBOM/source-package parity: **pending final same-SHA result**
-- PR / code merge: **pending**
+- Exact reviewed candidate: `c78be7a81a64f771f6c6f5eab1920a3926d9e497`
+- Exact reviewed tree: `a72d4eda986aca50a56c3642c033d808377dd01f`
+- Candidate Corrective Integrity: run `31534168868` — **SUCCESS**
+- Candidate Fresh Eighty-Round: run `31534168840` — **SUCCESS**
+- Candidate Future Superset 18: run `31534168844` — **SUCCESS**
+- Candidate PHP matrix: **8.1 / 8.3 / 8.4 SUCCESS**
+- Candidate two fresh post-correction gates: **SUCCESS**
+- Candidate deterministic package/checksum/SBOM/source-package parity: job `93921325202` — **SUCCESS**
+- PR: `#23`, exact head `c78be7a81a64f771f6c6f5eab1920a3926d9e497`, applicable PR-head checks **SUCCESS**
+- Code-bearing merge: `82ae0a3b89ccf1abb3d4fa844886686965f82898`
+- Exact code-merge Baseline: run `31534430606` — **SUCCESS**
+- Exact code-merge Fresh Eighty: run `31534430651` — **SUCCESS**
+- Exact code-merge Future Superset 18: run `31534430626` — **SUCCESS**
+- Exact code-merge deterministic package/checksum/SBOM/source-package parity: job `93922177216` — **SUCCESS**
 - Production authorized: **no**
 - Live installation authorized: **no**
 - Staging accepted: **unverified**
 - Exact deployed version/package parity: **unverified**
 
-Round 10 remains open until all applicable automated gates succeed on one exact rc10 candidate SHA. Earlier intermediate green results are diagnostics only and are never promoted after a subsequent source, test, workflow, release-metadata or documentation commit.
+The reviewed source candidate and code-bearing merge are exact-SHA automated-QA green. This evidence-closure change is documentation-only; after it merges, the resulting exact final `main` is re-tested because repository HEAD truth changes even when runtime source does not.
 
 ## Tenth-review correction boundary
 
-The tenth cycle makes central/public/Future profile reads distinguish database uncertainty from genuine missing/private states; completes File03-owned personal-data export values; strengthens migration-completion truth, media reconciliation and identity post-commit certainty; latches malformed-payload/consumer-failure outbox retries and dead letters as operational evidence; and completes explicit two-gate File03 cleanup. CI also exposed an accidental bootstrap replacement regression; the frozen pre-review bootstrap contracts and startup were restored before candidate closure. Historical fixed-version tests were made forward-compatible only where they incorrectly froze a legitimate later corrective identity; substantive authorization, privacy, provider-degradation, lifecycle, concurrency and release-boundary assertions remain intact.
+The tenth cycle makes central/public/Future profile reads distinguish database uncertainty from genuine missing/private states; completes File03-owned personal-data export values; strengthens migration-completion truth, media reconciliation and identity post-commit certainty; latches malformed-payload/consumer-failure outbox retries and dead letters as operational evidence; and completes explicit two-gate File03 cleanup. Exact CI also exposed an accidental bootstrap replacement regression; the frozen pre-review provider/outbox/search/FHIR/federation/timeline/delegation/startup contracts were restored before candidate freeze. Historical fixed-version tests were made forward-compatible only where they incorrectly froze a legitimate later corrective identity; substantive authorization, privacy, provider-degradation, lifecycle, concurrency and release-boundary assertions remain intact.
 
 ## Historical provenance warning
 
