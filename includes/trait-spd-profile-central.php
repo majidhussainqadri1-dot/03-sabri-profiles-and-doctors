@@ -150,7 +150,6 @@ trait SPD_Profile_Central {
 		if ( ! $profile || 'doctor' !== $profile['profile_type'] || ! SPD_Verification_Adapter::is_verified( $owner_id ) || SPD_Membership_Adapter::is_minor( $owner_id ) ) { return new WP_Error( 'spd_delegate_owner_ineligible', __( 'Delegated profile management is available only to an eligible verified adult doctor.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		$guard = SPD_Authorization::mutation_guard( $profile, $owner_id ); if ( is_wp_error( $guard ) ) { return $guard; }
 		if ( ! SPD_Membership_Adapter::is_member_eligible( $delegate_id ) ) { return new WP_Error( 'spd_delegate_ineligible', __( 'The delegate account is not eligible.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
-		if ( SPD_Membership_Adapter::is_minor( $delegate_id ) ) { return new WP_Error( 'spd_delegate_minor_forbidden', __( 'A minor account cannot receive delegated profile-management authority.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		$scopes = array_values( array_intersect( array_map( 'sanitize_key', $scopes ), SPD_Central_Profile::delegation_scopes() ) );
 		if ( ! $scopes ) { return new WP_Error( 'spd_delegate_scope_required', __( 'Choose at least one allowed delegation scope.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		$expires_at = trim( (string) $expires_at );
@@ -207,7 +206,7 @@ trait SPD_Profile_Central {
 
 	public function delegate_can_manage( $owner_id, $delegate_id, $scope ) {
 		global $wpdb; $owner_id = absint( $owner_id ); $delegate_id = absint( $delegate_id ); $scope = sanitize_key( $scope );
-		if ( ! $owner_id || ! $delegate_id || SPD_Membership_Adapter::is_minor( $delegate_id ) || ! in_array( $scope, SPD_Central_Profile::delegation_scopes(), true ) || ! SPD_Central_Profile::schema_ready() ) { return false; }
+		if ( ! $owner_id || ! $delegate_id || ! in_array( $scope, SPD_Central_Profile::delegation_scopes(), true ) || ! SPD_Central_Profile::schema_ready() ) { return false; }
 		$table = SPD_Central_Profile::delegation_table();
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT scopes,expires_at FROM {$table} WHERE owner_user_id=%d AND delegate_user_id=%d AND status='active' LIMIT 1", $owner_id, $delegate_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		if ( ! $row || ( $row['expires_at'] && strtotime( $row['expires_at'] ) <= time() ) ) { return false; }
