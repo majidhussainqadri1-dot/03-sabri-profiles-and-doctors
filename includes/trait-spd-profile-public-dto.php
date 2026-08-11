@@ -3,9 +3,14 @@ defined( 'ABSPATH' ) || exit;
 
 trait SPD_Profile_Public_DTO {
 	public function public_dto( $identity, $viewer_id = 0 ) {
+		global $wpdb;
 		$viewer_id = absint( $viewer_id );
+		$wpdb->last_error = '';
 		$profile = is_numeric( $identity ) ? $this->find_by_user_id( absint( $identity ), false ) : $this->find_by_public_id( (string) $identity );
 		if ( is_wp_error( $profile ) ) { return $profile; }
+		if ( $wpdb->last_error || ( is_array( $profile ) && ! empty( $profile['_fields_read_failed'] ) ) ) {
+			return new WP_Error( 'spd_profile_store_unavailable', __( 'The profile store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
 		if ( $profile && 'tombstoned' === ( $profile['state'] ?? '' ) ) {
 			return new WP_Error( 'spd_profile_gone', __( 'This profile has been removed.', 'sabri-profiles-doctors' ), array( 'status' => 410 ) );
 		}
