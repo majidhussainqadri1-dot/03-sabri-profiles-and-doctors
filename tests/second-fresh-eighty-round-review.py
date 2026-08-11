@@ -38,9 +38,10 @@ assert "'doctor' === $claims['account_type']" in membership and "! empty( $claim
 assert "_fields_read_failed" in auth and "spd_profile_field_store_unavailable" in auth
 assert "_spd_read_error" in identity and "spd_profile_read_failed" in identity
 
-# 13/16/17 — retry recovery, CAS locks and one fail-closed atomic rate limiter.
-assert 'IDEMPOTENCY_ABANDONED_SECONDS = 900' in events
-assert "'status' => 'started'" in events and "self::IDEMPOTENCY_ABANDONED_SECONDS" in events
+# 13/16/17 — retry recovery, PHP 8.1 compatibility, CAS locks and one fail-closed atomic rate limiter.
+assert 'function idempotency_abandoned_seconds()' in events and 'return 900;' in events
+assert "'status' => 'started'" in events and '$this->idempotency_abandoned_seconds()' in events
+assert 'trait SPD_Profile_Events' in events and 'const IDEMPOTENCY_ABANDONED_SECONDS' not in events
 assert 'option_name=%s AND option_value=%s' in helpers
 assert "acquire_lock( 'rate_' . $bucket" in helpers and 'if ( ! set_transient' in helpers
 assert "consume_rate_limit( 'media_upload_' . $user_id" in media
