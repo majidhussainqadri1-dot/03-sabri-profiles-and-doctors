@@ -12,6 +12,7 @@ uninstall=t('uninstall.php')
 trace=t('FUTURE-SUPERSET-18.md')
 frontend=t('includes/trait-spd-frontend-future.php')
 js=t('assets/js/future-profiles.js')
+wp_readme=t('readme.txt')
 all_source='\n'.join((future,rest,privacy,contracts,main,uninstall,frontend,js))
 
 rounds=[]
@@ -63,7 +64,7 @@ gate('Review/Fix Gate 2 — adversarial privacy, safety and degradation', [
  ('guarded uninstall includes all future tables', all(x in uninstall for x in ('profile_translations','profile_attestations','profile_future_state','SPD_ALLOW_DESTRUCTIVE_UNINSTALL'))),
  ('no third-party QR/tracking endpoint', not re.search(r'chart\.googleapis|api\.qrserver|quickchart', all_source, re.I)),
  ('no paid/donor advantage implementation', not re.search(r'\b(?:paid_boost|paid_rank|paid_verification|donor_boost|donor_rank|premium_profile)\b', all_source, re.I)),
- ('truth boundary preserved', 'staging candidate' in t('readme.txt').lower() and 'Exact deployed code remains unverified' in trace),
+ ('truth boundary preserved', 'repository candidate' in wp_readme.lower() and 'exact deployed code is unverified' in wp_readme.lower() and 'Exact deployed code remains unverified' in trace),
 ])
 
 bad=False
