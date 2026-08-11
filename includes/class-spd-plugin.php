@@ -99,8 +99,10 @@ final class SPD_Plugin {
 	public function assets() {
 		$map = (array) get_option( 'spd_page_map', array() );
 		$is_profile_route = (bool) get_query_var( 'spd_public_id' );
-		$is_managed_page = is_page( array_filter( array_map( 'absint', $map ) ) );
-		if ( ! $is_profile_route && ! $is_managed_page ) { return; }
+		$mapped_ids = array_filter( array_map( 'absint', $map ) );
+		$is_managed_page = $mapped_ids ? is_page( $mapped_ids ) : false;
+		$is_fallback_page = is_page( array( 'founder', 'profile', 'account-profile', 'account-profile-personal-site', 'account-profile-preview' ) );
+		if ( ! $is_profile_route && ! $is_managed_page && ! $is_fallback_page ) { return; }
 		wp_enqueue_style( 'spd-profiles', SPD_URL . 'assets/css/profiles.css', array(), SPD_VERSION );
 		wp_enqueue_script( 'spd-profiles', SPD_URL . 'assets/js/profiles.js', array(), SPD_VERSION, true );
 		wp_enqueue_script( 'spd-future-profiles', SPD_URL . 'assets/js/future-profiles.js', array( 'spd-profiles' ), SPD_VERSION, true );
