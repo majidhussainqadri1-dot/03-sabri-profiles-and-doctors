@@ -1,46 +1,39 @@
 # File 03 Release Manifest
 
-## Reviewed repository release candidate
+## Current repository candidate
 
-- Candidate: `1.2.0-rc10`
+- Candidate: `1.2.0-rc11`
 - Database schema: `1.2.0`
 - Contract: `1.4.0`
-- Tenth-review starting `main`: `a74583a8498ece843f1d1e9736cee22b2f760a86`
-- Starting tree: `db82223523dbd4ba40183929fe5f7ddd075059ca`
-- Review branch: `audit/file-03-tenth-ten-round-20260812`
-- Tenth-review ledger: `TENTH-TEN-ROUND-REVIEW-2026-08-12.md`
-- Defect-bearing rounds: `01–10`
-- Clean rounds: none
-- Exact reviewed candidate: `c78be7a81a64f771f6c6f5eab1920a3926d9e497`
-- Exact reviewed tree: `a72d4eda986aca50a56c3642c033d808377dd01f`
-- Candidate Corrective Integrity: run `31534168868` — **SUCCESS**
-- Candidate Fresh Eighty-Round: run `31534168840` — **SUCCESS**
-- Candidate Future Superset 18: run `31534168844` — **SUCCESS**
-- Candidate PHP matrix: **8.1 / 8.3 / 8.4 SUCCESS**
-- Candidate two fresh post-correction gates: **SUCCESS**
-- Candidate deterministic package/checksum/SBOM/source-package parity: job `93921325202` — **SUCCESS**
-- PR: `#23`, exact head `c78be7a81a64f771f6c6f5eab1920a3926d9e497`, applicable PR-head checks **SUCCESS**
-- Code-bearing merge: `82ae0a3b89ccf1abb3d4fa844886686965f82898`
-- Exact code-merge Baseline: run `31534430606` — **SUCCESS**
-- Exact code-merge Fresh Eighty: run `31534430651` — **SUCCESS**
-- Exact code-merge Future Superset 18: run `31534430626` — **SUCCESS**
-- Exact code-merge deterministic package/checksum/SBOM/source-package parity: job `93922177216` — **SUCCESS**
+- Twenty-round starting `main`: `60207107479c971cae4be379e427e1adb212ea92`
+- Starting tree: `1145214fbcff6afd9bf08289e9a112ffacfc4aaf`
+- Review branch: `audit/file-03-twentieth-round-sequential-20260812`
+- Review ledger: `TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
+- Defect-bearing rounds: `01, 02, 03, 04, 05, 06, 09, 10, 12, 13, 14, 15, 17, 18, 19, 20`
+- Clean rounds: `07, 08, 11, 16`
+- Exact reviewed candidate: **pending final same-SHA QA freeze**
+- Exact reviewed tree: **pending final same-SHA QA freeze**
+- Corrective Integrity: **pending final same-SHA result**
+- Fresh Eighty-Round: **pending final same-SHA result**
+- Future Superset 18: **pending final same-SHA result**
+- PHP 8.1/8.3/8.4: **pending final same-SHA result**
+- Two fresh post-correction gates: **pending final same-SHA result**
+- Deterministic package/checksum/SBOM/source-package parity: **pending final same-SHA result**
+- PR / code merge: **pending**
 - Production authorized: **no**
 - Live installation authorized: **no**
 - Staging accepted: **unverified**
 - Exact deployed version/package parity: **unverified**
 
-The reviewed source candidate and code-bearing merge are exact-SHA automated-QA green. This evidence-closure change is documentation-only; after it merges, the resulting exact final `main` is re-tested because repository HEAD truth changes even when runtime source does not.
+The rc11 source candidate is not considered frozen until every applicable automated gate succeeds on one exact SHA after the last source/test/workflow/release-documentation change. Earlier green intermediate commits are diagnostic evidence only.
 
-## Tenth-review correction boundary
+## Twenty-round correction boundary
 
-The tenth cycle makes central/public/Future profile reads distinguish database uncertainty from genuine missing/private states; completes File03-owned personal-data export values; strengthens migration-completion truth, media reconciliation and identity post-commit certainty; latches malformed-payload/consumer-failure outbox retries and dead letters as operational evidence; and completes explicit two-gate File03 cleanup. Exact CI also exposed an accidental bootstrap replacement regression; the frozen pre-review provider/outbox/search/FHIR/federation/timeline/delegation/startup contracts were restored before candidate freeze. Historical fixed-version tests were made forward-compatible only where they incorrectly froze a legitimate later corrective identity; substantive authorization, privacy, provider-degradation, lifecycle, concurrency and release-boundary assertions remain intact.
+The fresh twenty-round cycle hardens protected REST dependency truth, DB-certain public and lifecycle-sensitive profile reads, privacy-export minimization, media-deletion operational evidence, selective-disclosure revocation semantics, Future post-preflight mutation certainty, cross-file delegation projection truth and operational health-query reporting. It also adds exact-branch workflow coverage and a permanent twenty-round regression gate. DB schema remains `1.2.0` and public contract remains `1.4.0` because the corrections do not introduce a DDL or public contract-version change.
 
 ## Historical provenance warning
 
-`RELEASE-INVENTORY.tsv` and `RELEASE-CHECKSUMS.sha256` are retained historical provenance records from an early `0.2.0` source archive. They are **not** checksums or an inventory of the current `1.2.0-rc10` repository tree and must never be used to assert current source/package parity.
-
-A current deterministic package, SHA-256, SBOM and source/package parity statement is valid only when generated by CI from the exact repository commit being promoted.
+`RELEASE-INVENTORY.tsv` and `RELEASE-CHECKSUMS.sha256` are historical provenance records from an early `0.2.0` source archive. They are **not** checksums or an inventory of the current `1.2.0-rc11` repository tree and must never be used to assert current source/package parity. Current package, SHA-256, SBOM and source-package parity evidence is valid only when generated by CI from the exact candidate commit being promoted.
 
 ## Live-truth boundary
 

@@ -12,6 +12,7 @@ on:
       - 'codex/file-03-eighth-ten-round-20260811'
       - 'audit/file-03-ninth-ten-round-20260811'
       - 'audit/file-03-tenth-ten-round-20260812'
+      - 'audit/file-03-twentieth-round-sequential-20260812'
   pull_request:
     branches: [main]
 
@@ -62,6 +63,8 @@ jobs:
         run: python3 tests/ninth-ten-round-review.py
       - name: Tenth ten-round corrective invariants
         run: python3 tests/tenth-ten-round-review.py
+      - name: Twenty-round sequential corrective invariants
+        run: python3 tests/twenty-round-sequential-review.py
 
   fresh-reviews:
     name: Two fresh post-correction review/fix gates
@@ -97,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(sed -n 's/^ \* Version: \(.*\)$/\1/p' sabri-profiles-doctors.php | head -1)"
-          test "$VERSION" = "1.2.0-rc10"
+          test "$VERSION" = "1.2.0-rc11"
           NAME="03-sabri-profiles-and-doctors-$VERSION.zip"
           cmp "$RUNNER_TEMP/a/$NAME" "$RUNNER_TEMP/b/$NAME"
           (cd "$RUNNER_TEMP/a" && sha256sum -c "$NAME.sha256")
@@ -111,7 +114,7 @@ jobs:
           diff -u uninstall.php "$TOP/uninstall.php"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: file03-future-superset-18-1.2.0-rc10-tenth-ten-round
+          name: file03-future-superset-18-1.2.0-rc11-twenty-round
           path: |
             ${{ runner.temp }}/a/*.zip
             ${{ runner.temp }}/a/*.sha256

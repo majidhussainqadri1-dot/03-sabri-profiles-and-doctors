@@ -7,7 +7,8 @@ trait SPD_Profile_Moderation {
 		$actor_id = absint( $actor_id );
 		$guard = SPD_Authorization::moderation_guard( $actor_id );
 		if ( is_wp_error( $guard ) ) { return $guard; }
-		$profile = $this->find_by_public_id( $public_id );
+		$profile = $this->find_by_public_id_strict( $public_id );
+		if ( is_wp_error( $profile ) ) { return $profile; }
 		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		if ( 'founder' === $profile['profile_type'] ) { return new WP_Error( 'spd_founder_invariant', __( 'The official Founder state cannot be altered through generic profile moderation.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		$new_state = sanitize_key( $new_state );
@@ -49,8 +50,7 @@ trait SPD_Profile_Moderation {
 		);
 		if ( is_wp_error( $result ) ) { $this->idempotency_fail( $actor_id, 'moderate_profile', $idempotency_key ); return $result; }
 		$this->audit_diff( $profile, $actor_id, array( 'state' => $profile['state'] ), array( 'state' => $new_state ), 'profile_moderation' );
-		$updated_profile = $this->find_by_public_id( $public_id );
-		$this->purge_profile_cache( $updated_profile );
+		$this->purge_profile_cache( $profile );
 		return $response;
 	}
 
@@ -112,7 +112,8 @@ trait SPD_Profile_Moderation {
 		$reporter_user_id = absint( $reporter_user_id );
 		if ( ! $reporter_user_id || ! SPD_Membership_Adapter::is_member_eligible( $reporter_user_id ) ) { return new WP_Error( 'spd_login_required', __( 'An eligible signed-in account is required to report a profile.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
 		if ( SPD_Observability::safe_mode() ) { return new WP_Error( 'spd_safe_mode', __( 'Profile reporting is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
-		$profile = $this->find_by_public_id( $public_id );
+		$profile = $this->find_by_public_id_strict( $public_id );
+		if ( is_wp_error( $profile ) ) { return $profile; }
 		if ( ! $profile || ! SPD_Authorization::profile_visibility_allows( $profile, $reporter_user_id ) ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$allowed = array( 'impersonation', 'harassment', 'false_qualification', 'unsafe_media', 'privacy_breach', 'other' );
 		$reason = sanitize_key( $reason );

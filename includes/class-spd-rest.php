@@ -31,7 +31,15 @@ final class SPD_REST {
 	public function valid_uuid_arg( $value ) { return SPD_Helpers::valid_uuid( (string) $value ); }
 	public function eligible_member() {
 		if ( ! is_user_logged_in() ) { return new WP_Error( 'spd_login_required', __( 'Authentication is required.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
-		return SPD_Membership_Adapter::is_member_eligible( get_current_user_id() ) ? true : new WP_Error( 'spd_account_ineligible', __( 'This account is not currently eligible for protected profile actions.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+		$health = SPD_Membership_Adapter::health();
+		if ( 'available' !== ( $health['status'] ?? '' ) ) {
+			return new WP_Error( 'spd_membership_provider_unavailable', __( 'Membership verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$claims = SPD_Membership_Adapter::claims( get_current_user_id() );
+		if ( ! $claims ) {
+			return new WP_Error( 'spd_membership_claim_unavailable', __( 'Membership verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		return ! empty( $claims['eligible'] ) && empty( $claims['suspended'] ) ? true : new WP_Error( 'spd_account_ineligible', __( 'This account is not currently eligible for protected profile actions.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
 	}
 	public function can_moderate() { return SPD_Authorization::moderation_guard( get_current_user_id() ); }
 	public function get_profile( WP_REST_Request $r ) { $t = SPD_Helpers::trace_id(); return $this->response( SPD_Profile_Repository::instance()->public_dto( $r['public_id'], get_current_user_id() ), $t ); }

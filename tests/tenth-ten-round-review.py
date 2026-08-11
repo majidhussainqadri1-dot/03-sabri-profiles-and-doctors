@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -22,7 +23,8 @@ outbox = text('includes/class-spd-outbox-dispatcher.php')
 uninstall = text('uninstall.php')
 ledger = text('TENTH-TEN-ROUND-REVIEW-2026-08-12.md')
 
-require('Version: 1.2.0-rc10' in main and "define( 'SPD_VERSION', '1.2.0-rc10' )" in main, 'Tenth-review release identity is not rc10')
+version_match = re.search(r"define\( 'SPD_VERSION', '1\.2\.0-rc(\d+)' \);", main)
+require(version_match is not None and int(version_match.group(1)) >= 10, 'Tenth-review guarantees require rc10 or a later corrective release')
 require('TENTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Tenth-review plan marker is missing')
 require("define( 'SPD_DB_VERSION', '1.2.0' )" in main and "define( 'SPD_CONTRACT_VERSION', '1.4.0' )" in main, 'DB/contract identity drifted during non-DDL tenth review')
 
@@ -54,4 +56,4 @@ require('Defect-bearing rounds: 01–10' in ledger, 'Tenth-review defect-bearing
 require('Clean rounds: none' in ledger, 'Tenth-review clean-round ledger drifted')
 require('Exact deployed code remains unverified' in ledger, 'Live/deployed truth boundary is missing from tenth-review ledger')
 
-print('Tenth fresh ten-round corrective invariants passed.')
+print('Tenth fresh ten-round corrective invariants passed for rc10-or-later corrective identity.')

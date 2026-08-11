@@ -199,8 +199,18 @@ final class SPD_Plugin {
 	}
 
 	public function file08_delegation_claim( $claim, $owner_user_id, $delegate_user_id, $scope ) {
+		global $wpdb;
 		if ( null !== $claim ) { return $claim; }
+		$owner_user_id = absint( $owner_user_id );
+		$delegate_user_id = absint( $delegate_user_id );
+		$scope = sanitize_key( $scope );
+		$membership_health = SPD_Membership_Adapter::health();
+		if ( 'available' !== ( $membership_health['status'] ?? '' ) || ! SPD_Membership_Adapter::claims( $owner_user_id ) || ! SPD_Membership_Adapter::claims( $delegate_user_id ) ) { return array(); }
+		$verification = SPD_Verification_Adapter::projection( $owner_user_id );
+		if ( ! $verification ) { return array(); }
+		$wpdb->last_error = '';
 		$allowed = SPD_Profile_Repository::instance()->delegate_can_manage( $owner_user_id, $delegate_user_id, $scope );
-		return array( 'contract_version' => SPD_CONTRACT_VERSION, 'owner_user_id' => absint( $owner_user_id ), 'delegate_user_id' => absint( $delegate_user_id ), 'scope' => sanitize_key( $scope ), 'allowed' => (bool) $allowed, 'generated_at' => gmdate( 'c' ), 'valid_until' => gmdate( 'c', time() + 300 ) );
+		if ( $wpdb->last_error ) { return array(); }
+		return array( 'contract_version' => SPD_CONTRACT_VERSION, 'owner_user_id' => $owner_user_id, 'delegate_user_id' => $delegate_user_id, 'scope' => $scope, 'allowed' => (bool) $allowed, 'generated_at' => gmdate( 'c' ), 'valid_until' => gmdate( 'c', time() + 300 ) );
 	}
 }

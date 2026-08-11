@@ -58,15 +58,19 @@ final class SPD_Routes {
 	public function query_vars( $vars ) { $vars[] = 'spd_public_id'; $vars[] = 'spd_view'; $vars[] = 'spd_alias'; $vars[] = 'spd_share'; return $vars; }
 
 	public function redirects() {
+		global $wpdb;
 		$share = sanitize_text_field( (string) get_query_var( 'spd_share' ) );
 		if ( $share ) {
+			$wpdb->last_error = '';
 			$profile = SPD_Central_Profile::resolve_share_token( $share );
+			if ( $wpdb->last_error || ( is_array( $profile ) && ! empty( $profile['_fields_read_failed'] ) ) ) { status_header( 503 ); return; }
 			if ( $profile ) { wp_safe_redirect( SPD_Helpers::canonical_profile_url( $profile['public_id'] ), 302 ); exit; }
 			status_header( 404 ); return;
 		}
 		$alias = sanitize_title( (string) get_query_var( 'spd_alias' ) );
 		if ( $alias ) {
-			$profile = SPD_Profile_Repository::instance()->find_by_slug( $alias );
+			$profile = SPD_Profile_Repository::instance()->find_by_slug_strict( $alias );
+			if ( is_wp_error( $profile ) ) { $data = $profile->get_error_data(); status_header( is_array( $data ) && ! empty( $data['status'] ) ? absint( $data['status'] ) : 503 ); return; }
 			if ( $profile && SPD_Authorization::profile_visibility_allows( $profile, 0 ) ) { wp_safe_redirect( SPD_Helpers::canonical_profile_url( $profile['public_id'] ), 301 ); exit; }
 			status_header( 404 ); return;
 		}
@@ -74,13 +78,19 @@ final class SPD_Routes {
 		if ( ! empty( $map['legacy_profile'] ) && is_page( absint( $map['legacy_profile'] ) ) && isset( $_GET['user'] ) ) {
 			$user = get_user_by( 'slug', sanitize_title( wp_unslash( $_GET['user'] ) ) );
 			if ( $user ) {
+				$wpdb->last_error = '';
 				$profile = SPD_Profile_Repository::instance()->find_by_user_id( $user->ID, false );
+				if ( $wpdb->last_error || ( is_array( $profile ) && ! empty( $profile['_fields_read_failed'] ) ) ) { status_header( 503 ); return; }
 				if ( $profile && ! is_wp_error( $profile ) && SPD_Authorization::profile_visibility_allows( $profile, 0 ) ) { wp_safe_redirect( SPD_Helpers::canonical_profile_url( $profile['public_id'] ), 301 ); exit; }
 			}
 			status_header( 404 ); return;
 		}
 		$public_id = sanitize_text_field( (string) get_query_var( 'spd_public_id' ) );
-		if ( $public_id ) { $profile = SPD_Profile_Repository::instance()->find_by_public_id( $public_id ); if ( $profile && 'tombstoned' === $profile['state'] ) { status_header( 410 ); } }
+		if ( $public_id ) {
+			$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( $public_id );
+			if ( is_wp_error( $profile ) ) { $data = $profile->get_error_data(); status_header( is_array( $data ) && ! empty( $data['status'] ) ? absint( $data['status'] ) : 503 ); return; }
+			if ( $profile && 'tombstoned' === $profile['state'] ) { status_header( 410 ); }
+		}
 		foreach ( array( 'account_profile', 'personal_site', 'private_preview' ) as $private_page ) {
 			if ( $this->is_mapped_or_fallback_page( $private_page, $map ) && ! is_user_logged_in() ) {
 				wp_safe_redirect( wp_login_url( $this->private_page_url( $private_page, $map ) ) );

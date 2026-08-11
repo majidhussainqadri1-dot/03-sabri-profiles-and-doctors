@@ -101,10 +101,12 @@ foreach ( array(
 	delete_option( $option );
 }
 
-// Corrective synchronization/rate-limiter keys are dynamic. They are strictly
-// File-03-owned prefixes and are removed only inside the explicit destructive
-// uninstall gate above.
+// Corrective synchronization/rate-limiter/circuit-breaker keys are dynamic.
+// They are strictly File-03-owned prefixes and are removed only inside the
+// explicit destructive uninstall gate above.
 $lock_like = $wpdb->esc_like( 'spd_lock_' ) . '%';
 $rate_like = $wpdb->esc_like( '_transient_spd_rate_' ) . '%';
 $rate_timeout_like = $wpdb->esc_like( '_transient_timeout_spd_rate_' ) . '%';
-$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s", $lock_like, $rate_like, $rate_timeout_like ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+$timeline_like = $wpdb->esc_like( '_transient_spd_timeline_circuit_' ) . '%';
+$timeline_timeout_like = $wpdb->esc_like( '_transient_timeout_spd_timeline_circuit_' ) . '%';
+$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s", $lock_like, $rate_like, $rate_timeout_like, $timeline_like, $timeline_timeout_like ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared

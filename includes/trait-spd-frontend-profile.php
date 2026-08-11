@@ -34,11 +34,13 @@ trait SPD_Frontend_Profile {
 	private function render_profile( $public_id ) {
 		$dto = SPD_Central_Profile::personal_site_dto( $public_id, get_current_user_id() );
 		if ( is_wp_error( $dto ) ) { return $this->notice( $dto->get_error_message(), 'error' ); }
-		$owner = SPD_Profile_Repository::instance()->find_by_public_id( $public_id );
-		if ( $owner ) { $dto = SPD_Future_Profile::augment_personal_site_dto( $dto, $owner, get_current_user_id() ); }
+		$owner = SPD_Profile_Repository::instance()->find_by_public_id_strict( $public_id );
+		if ( is_wp_error( $owner ) ) { return $this->notice( $owner->get_error_message(), 'error' ); }
+		if ( ! $owner ) { return $this->notice( __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), 'error' ); }
+		$dto = SPD_Future_Profile::augment_personal_site_dto( $dto, $owner, get_current_user_id() );
 		$avatar = $dto['media']['avatar'] ?? array();
 		$cover = $dto['media']['cover'] ?? array();
-		$is_owner = $owner && absint( $owner['user_id'] ) === get_current_user_id();
+		$is_owner = absint( $owner['user_id'] ) === get_current_user_id();
 		ob_start();
 		?>
 		<main class="spd spd-profile" aria-labelledby="spd-profile-name" data-profile-version="<?php echo esc_attr( $dto['version'] ); ?>">

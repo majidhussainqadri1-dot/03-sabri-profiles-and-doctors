@@ -79,9 +79,6 @@ final class SPD_Central_Privacy {
 				'item_id'     => 'profile-delegation-' . absint( $row['id'] ),
 				'data'        => array(
 					array( 'name' => 'Relationship role', 'value' => $role ),
-					array( 'name' => 'Profile ID', 'value' => (string) absint( $row['profile_id'] ) ),
-					array( 'name' => 'Owner user ID', 'value' => (string) absint( $row['owner_user_id'] ) ),
-					array( 'name' => 'Delegate user ID', 'value' => (string) absint( $row['delegate_user_id'] ) ),
 					array( 'name' => 'Scopes', 'value' => (string) $row['scopes'] ),
 					array( 'name' => 'Status', 'value' => (string) $row['status'] ),
 					array( 'name' => 'Expires', 'value' => (string) $row['expires_at'] ),

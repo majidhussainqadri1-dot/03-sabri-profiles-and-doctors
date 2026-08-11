@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials,
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.0-rc10
+Stable tag: 1.2.0-rc11
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -13,132 +13,63 @@ Canonical Founder, member and doctor profile domain for the Sabri Social Homeopa
 
 File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.2.0-rc10 preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements and all prior corrective hardening. The tenth fresh ten-round sequential review distinguishes profile-store uncertainty from real not-found/privacy states across central, public and future-owner paths; completes File03-owned privacy export values; strengthens migration completion truth, media reconciliation and post-commit identity certainty; latches all retry/dead-letter outbox delivery failures as operational evidence; and keeps destructive uninstall aligned with current File03-owned migration evidence. Release identity and permanent regression gates advance without changing DB schema 1.2.0 or contract 1.4.0.
+1.2.0-rc11 is the repository candidate produced by the fresh twenty-round sequential corrective review. It preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements and all prior corrective hardening while adding stricter provider/degraded-state truth, DB-certain route/timeline/frontend behavior, privacy-export minimization, media deletion operational evidence, Future mutation certainty, cross-file delegation projection safety, operational health-query truth and permanent twenty-round QA coverage. DB schema remains 1.2.0 and contract remains 1.4.0.
 
-The approved 18 enhancements remain:
-
-1. Portable Verifiable Professional Credential Wallet.
-2. Selective-Disclosure Professional Card with expiring, revocable public-safe scope packets.
-3. Verified Learning & Achievement Passport.
-4. Professional Trust Timeline.
-5. Evidence-Backed Expertise Map.
-6. Professional Knowledge Graph Profile.
-7. Transparent Knowledge Coverage Map with no paid/donor influence or cure ranking.
-8. Grounded “Ask About This Doctor’s Work” AI, restricted to public professional work and blocked from diagnosis/prescription/dose/emergency/cure claims.
-9. Owner-approved multilingual profile editions with machine-translation labelling.
-10. Privacy-Safe Contact Relay through File 17 with recipient address hidden.
-11. Verified external-domain and institutional-link badges.
-12. One-page professional card plus structured full dossier.
-13. Scriptless, tracking-free embeddable verified profile card.
-14. Field-level freshness and owner reconfirmation.
-15. Owner-only visual profile change history.
-16. Governed retired / legacy / memorial professional lifecycle state with active contact/appointment suppression.
-17. Public-safe FHIR Practitioner / PractitionerRole interoperability projection with no patient record.
-18. Explicit-opt-in federation-ready public actor projection while federation transport remains external.
-
-The future extension adds only three native File 03 data structures: approved translations, field freshness attestations and future-profile state. Credential, learning, AI, contact, knowledge, clinic, search/ranking and federation facts remain current/versioned external projections. Future native mutations use File 03’s canonical idempotency store. Privacy export/erasure and two-gate destructive uninstall include File 03-owned data.
-
-No paid/pro/premium or donor-advantage gate exists in File 03. No third-party QR/tracking service, hidden viewer-level analytics store, patient chart, raw identity evidence, automatic doctor verification, cure guarantee or AI diagnosis/prescription is introduced. Missing, stale or malformed canonical providers fail closed or hide/degrade only the affected feature.
+No paid/pro/premium or donor-advantage gate exists in File 03. No patient chart, raw identity evidence, automatic doctor verification, cure guarantee or AI diagnosis/prescription is introduced. Missing, stale, malformed or unavailable canonical providers fail closed or degrade only the affected feature.
 
 This remains a repository candidate. Source and automated-QA evidence are separate from Hostinger staging, exact deployed-package parity, live DB/schema/migration state, real-provider integration, browser/WCAG/RTL, backup/restore, rollback, Founder acceptance, live deployment and operations. Exact deployed code is unverified.
 
 == Installation ==
 
 1. Back up and verify restore capability.
-2. Activate a compatible File 00 Membership Core.
+2. Activate compatible File 00 and required companion contracts.
 3. Install and activate this plugin on staging.
-4. Run Profile System Check and verify base, central and future extension schemas, including exact required columns and integrity indexes.
-5. Execute documented migration, privacy, provider, disclosure, AI-safety, interoperability, accessibility, backup/restore and rollback acceptance matrices.
+4. Run Profile System Check and verify base, central and future extension schemas, routes, cron/queues and provider health.
+5. Execute migration, privacy, provider, lifecycle, media, disclosure, accessibility, backup/restore and rollback acceptance matrices.
 6. Do not promote to live until Founder approval and exact package/deployment parity are recorded.
 
 == Changelog ==
 
-= 1.2.0-rc10 =
-* Tenth fresh ten-round sequential review from exact main `a74583a8498ece843f1d1e9736cee22b2f760a86`.
-* Defect-bearing rounds: 01–10. Clean rounds: none.
-* Makes central personal-site REST, anonymous/public DTO and Future owner-only profile mutations distinguish database uncertainty from genuine missing/private profile state.
-* Extends WordPress personal-data export to include File03-owned profile field values as well as their audiences while preserving DB-certain failure semantics.
-* Adds exact-base-schema and independent post-run migration integrity reconciliation before completion truth can survive.
-* Stops media privacy reconciliation on uncertain profile/field reads without advancing its cursor or starting destructive removal.
-* Reduces identity create/refresh completion to one DB-certain hydrated post-commit read.
-* Latches malformed-payload and consumer-exception outbox retries/dead letters as operational evidence until a genuinely clean dispatch run.
-* Includes current `spd_last_migration_error` in explicit two-gate destructive uninstall cleanup.
-* Adds `TENTH-TEN-ROUND-REVIEW-2026-08-12.md` and `tests/tenth-ten-round-review.py` to permanent CI and advances source identity to rc10.
+= 1.2.0-rc11 =
+* Fresh 20-round sequential corrective review from exact main `60207107479c971cae4be379e427e1adb212ea92`.
+* Defect-bearing rounds: 01, 02, 03, 04, 05, 06, 09, 10, 12, 13, 14, 15, 17, 18, 19, 20. Clean rounds: 07, 08, 11, 16.
+* Distinguishes File 00 provider/claim outage from genuine ineligible-account state across protected REST surfaces.
+* Makes personal-site, redirect, moderation/report, timeline and frontend lifecycle-sensitive profile reads DB-certain.
+* Minimizes delegation privacy export by removing internal/counterparty user/profile IDs.
+* Preserves media deletion failures as operational evidence and completes explicit destructive cleanup of File03 timeline circuit transients.
+* Distinguishes disclosure-store failure from verified token revocation and keeps Future post-preflight writes DB-certain.
+* Prevents File 08 delegation projection from emitting an authoritative denial when File 00/File 09/delegation-store truth is unavailable.
+* Makes System Check operational counts return unknown/degraded on DB read failure rather than fabricated zero; Repair will not execute from uncertain diagnostics.
+* Adds `TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` and `tests/twenty-round-sequential-review.py` to permanent CI and package/parity gates.
 * Preserves staging/live/operational separation; no live deployment claim is made.
+
+= 1.2.0-rc10 =
+* Tenth fresh ten-round sequential review; all rounds 01–10 defect-bearing and corrected.
+* Added DB-certain central/public/Future profile reads, complete File03 field-value privacy export, migration completion truth, media reconciliation hardening, outbox failure latching, bootstrap parity restoration and permanent tenth-review QA.
 
 = 1.2.0-rc9 =
-* Historical predecessor metadata: Stable tag: 1.2.0-rc9.
-* Ninth fresh ten-round sequential review from exact main `4a23627b3320b7eb5957e5610da786abdec98c95`.
-* Defect-bearing rounds: 01, 03, 08, 09, 10. Clean rounds: 02, 04, 05, 06, 07.
-* Makes protected professional-submission state reads return DB uncertainty instead of authoritative “no submission”.
-* Adds a DB-certain, paginated WordPress personal-data exporter for permanent canonical/historical profile slug aliases and explicitly discloses their redirect/citation-integrity retention on erasure.
-* Latches non-fatal outbox claim/delivery lease anomalies so the same worker run cannot erase its own failure evidence.
-* Includes current File03 outbox operational error evidence in the explicit two-gate destructive uninstall cleanup.
-* Adds `NINTH-TEN-ROUND-REVIEW-2026-08-11.md` and `tests/ninth-ten-round-review.py` to permanent CI, advances source identity to rc9 and keeps historical release provenance separate from current candidate parity.
-* Preserves staging/live/operational separation; no live deployment claim is made.
+* Ninth fresh ten-round review; defect-bearing 01, 03, 08, 09, 10; clean 02, 04, 05, 06, 07.
 
 = 1.2.0-rc8 =
-* Eighth fresh ten-round sequential review from exact main `c2c78d774207532e035e738834760b6b7395729e`.
-* Defect-bearing rounds: 01, 03, 04, 05, 06, 07, 08, 09, 10. Clean round: 02.
-* Keeps base, central and future privacy erasers retryable across WordPress page invocations after `done=false`.
-* Makes report moderation, persistent report-rate evidence and appeal eligibility fail closed on SQL uncertainty.
-* Invalidates stale base/central/future schema-version options when exact schema repair proof fails.
-* Rejects unknown future disclosure/translation/reconfirmation fields before idempotency reservation.
-* Preserves committed profile-update responses across post-commit reread failure with File 24-facing operational evidence.
-* Latches media deletion queue anomalies until a genuinely clean worker pass.
-* Makes share-link rotation first execution and idempotent replay return the same deterministic URL-bearing response.
-* Materializes future lifecycle state from a strict preflight so transient second-read defaults cannot reactivate omitted retired/legacy state.
-* Adds `EIGHTH-TEN-ROUND-REVIEW-2026-08-11.md` and `tests/eighth-ten-round-review.py` to permanent CI.
-* Preserves staging/live/operational separation; no live deployment claim is made.
+* Eighth fresh ten-round review; defect-bearing 01, 03, 04, 05, 06, 07, 08, 09, 10; clean 02.
 
 = 1.2.0-rc7 =
-* Seventh fresh ten-round sequential review from exact main `fdde7311409d68af4bae5917f5a49154cb92c9f4`.
-* Defect-bearing rounds: 01, 02, 03, 04, 05, 06, 08, 09, 10. Clean round: 07.
-* Preserves independent requester/reviewer appeal-erasure DB read errors so uncertainty cannot be hidden by a later successful read.
-* Binds central readiness and DB-version recording to exact required schema shape rather than table presence alone.
-* Enforces minor-delegate and strict audience-map rules at the reusable repository boundary as well as REST.
-* Adds fail-closed mutation-sensitive public-ID/slug lookups and uses them on protected and lifecycle-sensitive paths.
-* Replaces the legacy File 03 outbox cron worker with a lease-bound dispatcher that verifies result persistence and records operational failure evidence.
-* Prevents uncertain second-stage profile reads from returning an unsuppressed lifecycle-sensitive personal-site/search projection.
-* Adds `SEVENTH-TEN-ROUND-REVIEW-2026-08-11.md` and `tests/seventh-ten-round-review.py` to permanent CI.
-* Preserves staging/live/operational separation; no live deployment claim is made.
+* Seventh fresh ten-round review; defect-bearing 01, 02, 03, 04, 05, 06, 08, 09, 10; clean 07.
 
 = 1.2.0-rc6 =
-* Sixth fresh ten-round sequential review from exact main `822837daa3cebc4c5ae80410f31511aadf3885b0`.
-* Defect-bearing rounds: 01, 02, 03, 04, 05, 07, 09, 10. Clean rounds: 06, 08.
-* Erases reviewer-authored appeal decision text together with reviewer identity when no hold applies.
-* Requires canonical base-profile tombstoning before Future-owned lifecycle/privacy state is erased.
-* Verifies exact index ordered columns and uniqueness instead of index names alone.
-* Rejects malformed, unknown or invalid audience maps before base/personal-site profile mutation.
-* Blocks minor delegates at both grant time and use time.
-* Gives renewed non-delivered media deletion requests a fresh bounded retry/lease state while preserving delivered success.
-* Adds `SIXTH-TEN-ROUND-REVIEW-2026-08-11.md` and `tests/sixth-ten-round-review.py` to permanent CI.
-* Preserves staging/live/operational separation; no live deployment claim is made.
+* Sixth fresh ten-round review; defect-bearing 01, 02, 03, 04, 05, 07, 09, 10; clean 06, 08.
 
 = 1.2.0-rc5 =
-* Fifth fresh ten-round review from exact main `3358472bc374958c66f5e84997b7633f598caa73`.
-* Defect-bearing rounds: 01, 02, 03, 04, 05, 09, 10. Clean rounds: 06, 07, 08.
-* Unifies File 26 and REST search projection with the canonical fail-closed lifecycle helper.
-* Requires exact central/future schema shape for privacy and exact future schema shape for authoritative lifecycle state reads.
-* Prevents shared appeal privacy exports from exposing requester-authored reason or counterparty IDs to a reviewer merely because the row is shared.
-* Recovers marker-proven orphan File-03 avatar/cover attachments during explicit two-gate destructive uninstall.
-* Adds `FIFTH-TEN-ROUND-REVIEW-2026-08-11.md` and `tests/fifth-ten-round-review.py` to permanent CI.
-* Preserves staging/live/operational separation; no live deployment claim is made.
+* Fifth fresh ten-round review; defect-bearing 01, 02, 03, 04, 05, 09, 10; clean 06, 07, 08.
 
 = 1.2.0-rc4 =
-* Fourth fresh ten-round review; all rounds 01–10 defect-bearing and corrected. Added exact schema shape/index verification, central privacy coverage, fail-closed identity/media hardening and ownership-marker page cleanup.
+* Fourth fresh ten-round review; all rounds 01–10 defect-bearing and corrected.
 
 = 1.2.0-rc3 =
-* Third fresh ten-round review; defect-bearing 01, 02, 03, 04, 06, 07, 08, 09, 10; clean 05. Added no-store future/profile REST, state-bound writes, exact idempotency reservations, fail-closed media metadata, lifecycle authority, privacy retry and migration integrity proof.
+* Third fresh ten-round review; defect-bearing 01, 02, 03, 04, 06, 07, 08, 09, 10; clean 05.
 
 = 1.2.0-rc2 =
-* Original numbered 80-round and second fresh 80-round corrective hardening; current eligibility, provider binding, signed timeline cursors, media privacy reconciliation, privacy/retention/migration hardening and PHP 8.1 compatibility.
+* Original numbered 80-round and second fresh 80-round corrective hardening.
 
 = 1.2.0-rc1 =
-* Adds the complete approved 18-feature Future Professional Identity & Profile Superset under `F03-FUT-01..18` while preserving canonical ownership boundaries.
-
-= 1.1.0-rc1 =
-* Implements the latest File 03 plan and 2026-08-07 central-plan addendum, personal-site/search/share/preview/delegation/safety integrations and Future Superset foundations.
-
-= 1.0.0-rc3 =
-* Forty-round corrective candidate with fail-closed age, strict REST preconditions, byte-bound media scanning, idempotency replay, migration/timeline/security hardening.
+* Complete approved 18-feature Future Professional Identity & Profile Superset.

@@ -17,9 +17,19 @@ final class SPD_Timeline {
 	}
 
 	public static function query( $identity, array $args = array(), $viewer_id = 0 ) {
+		global $wpdb;
 		$repo = SPD_Profile_Repository::instance();
-		$profile = is_numeric( $identity ) ? $repo->find_by_user_id( absint( $identity ), false ) : $repo->find_by_public_id( (string) $identity );
-		if ( is_wp_error( $profile ) ) { return $profile; }
+		if ( is_numeric( $identity ) ) {
+			$db_available = is_object( $wpdb );
+			if ( $db_available ) { $wpdb->last_error = ''; }
+			$profile = $repo->find_by_user_id( absint( $identity ), false );
+			if ( ( $db_available && $wpdb->last_error ) || ( is_array( $profile ) && ! empty( $profile['_fields_read_failed'] ) ) ) {
+				return new WP_Error( 'spd_timeline_profile_store_unavailable', __( 'The profile timeline store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+			}
+		} else {
+			$profile = $repo->find_by_public_id_strict( (string) $identity );
+			if ( is_wp_error( $profile ) ) { return $profile; }
+		}
 		if ( ! $profile || ! SPD_Authorization::profile_visibility_allows( $profile, $viewer_id ) ) { return new WP_Error( 'spd_timeline_unavailable', __( 'This timeline is private or unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$limit  = min( 50, max( 1, absint( $args['limit'] ?? 20 ) ) );
 		$filter = sanitize_key( (string) ( $args['provider'] ?? '' ) );
