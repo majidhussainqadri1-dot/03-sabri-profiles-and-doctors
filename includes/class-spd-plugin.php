@@ -32,10 +32,10 @@ final class SPD_Plugin {
 		( new SPD_Future_Privacy() )->hooks();
 		$this->observability = new SPD_Observability();
 		$this->observability->hooks();
-		// Replace the historical transient-only migration callback with a wrapper
-		// whose outer CAS lock is authoritative across concurrent cron requests.
 		remove_action( 'spd_migrate_profiles_batch', array( $this->observability, 'migrate_profiles_batch' ) );
 		add_action( 'spd_migrate_profiles_batch', array( $this, 'run_migration_batch' ), 10 );
+		remove_action( 'spd_retention_cleanup', array( $this->observability, 'retention_cleanup' ) );
+		add_action( 'spd_retention_cleanup', array( $this, 'run_retention_cleanup' ), 10 );
 		( new SPD_Admin() )->hooks();
 		add_action( 'template_redirect', array( $this, 'private_headers' ), 0 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
@@ -65,14 +65,35 @@ final class SPD_Plugin {
 		$token = SPD_Helpers::acquire_lock( 'migration_batch', 10 * MINUTE_IN_SECONDS );
 		if ( ! $token || ! $this->observability ) { return; }
 		try {
-			// Compatibility transient is now strictly inner-process state. The outer
-			// CAS lock prevents a competing request from reaching this legacy guard.
 			delete_transient( 'spd_migration_lock' );
 			$this->observability->migrate_profiles_batch();
 		} finally {
 			delete_transient( 'spd_migration_lock' );
 			SPD_Helpers::release_lock( 'migration_batch', $token );
 		}
+	}
+
+	public function run_retention_cleanup() {
+		global $wpdb;
+		if ( ! SPD_DB::tables_exist() ) { return; }
+		$events = SPD_DB::table( 'events' );
+		$idempotency = SPD_DB::table( 'idempotency' );
+		$reports = SPD_DB::table( 'reports' );
+		$queries = array(
+			"DELETE FROM {$idempotency} WHERE expires_at<UTC_TIMESTAMP()",
+			"UPDATE {$reports} SET reporter_user_id=0,details='',decision_note='',dedupe_hash=SHA2(CONCAT(report_uuid,':retained'),256) WHERE reporter_user_id<>0 AND status IN ('closed','rejected') AND updated_at<(UTC_TIMESTAMP()-INTERVAL 365 DAY)",
+			"DELETE FROM {$events} WHERE status='delivered' AND created_at<(UTC_TIMESTAMP()-INTERVAL 730 DAY) AND event_name NOT IN ('ProfileTombstoned.v1','ProfileReported.v1','ProfileReportReviewed.v1')",
+		);
+		foreach ( $queries as $index => $sql ) {
+			if ( false === $wpdb->query( $sql ) ) { // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				$code = 'retention_query_' . absint( $index + 1 ) . '_failed';
+				update_option( 'spd_last_retention_error', array( 'code' => $code, 'at' => SPD_Helpers::now() ), false );
+				do_action( 'sabri_file24_retention_failure', array( 'owner' => 'file03', 'code' => $code, 'at' => SPD_Helpers::now() ) );
+				return;
+			}
+		}
+		delete_option( 'spd_last_retention_error' );
+		update_option( 'spd_last_retention_run', SPD_Helpers::now(), false );
 	}
 
 	public function assets() {
