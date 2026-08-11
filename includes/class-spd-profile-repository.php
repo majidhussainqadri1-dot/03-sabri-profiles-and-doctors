@@ -29,14 +29,37 @@ final class SPD_Profile_Repository {
 	use SPD_Profile_Identity_Read;
 	use SPD_Profile_Public_DTO;
 	use SPD_Profile_Edit_Model;
-	use SPD_Profile_Update;
+	use SPD_Profile_Update { update_profile as private base_update_profile; }
 	use SPD_Profile_Professional;
 	use SPD_Profile_Media;
 	use SPD_Profile_Moderation;
 	use SPD_Profile_Lifecycle;
 	use SPD_Profile_Events;
 	use SPD_Profile_Cache;
-	use SPD_Profile_Central { grant_delegate as private central_grant_delegate; }
+	use SPD_Profile_Central {
+		grant_delegate as private central_grant_delegate;
+		update_central_profile as private central_update_profile;
+	}
+
+	/**
+	 * The repository is itself an integration boundary, so malformed visibility
+	 * maps must fail closed even when a caller bypasses the REST adapter.
+	 */
+	public function update_profile( $actor_id, array $input, $expected_version, $idempotency_key = '', array $prepared_media = array() ) {
+		if ( array_key_exists( 'audiences', $input ) ) {
+			$guard = SPD_Authorization::validate_audience_payload( $input['audiences'], self::visibility_fields() );
+			if ( is_wp_error( $guard ) ) { return $guard; }
+		}
+		return $this->base_update_profile( $actor_id, $input, $expected_version, $idempotency_key, $prepared_media );
+	}
+
+	public function update_central_profile( $actor_id, array $input, $expected_version, $idempotency_key = '' ) {
+		if ( array_key_exists( 'audiences', $input ) ) {
+			$guard = SPD_Authorization::validate_audience_payload( $input['audiences'], SPD_Central_Profile::extended_fields() );
+			if ( is_wp_error( $guard ) ) { return $guard; }
+		}
+		return $this->central_update_profile( $actor_id, $input, $expected_version, $idempotency_key );
+	}
 
 	/**
 	 * Grant-time delegation authority must be enforced below the REST layer too,
