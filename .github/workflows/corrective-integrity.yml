@@ -31,7 +31,6 @@ jobs:
           set -euo pipefail
           git merge-base --is-ancestor "$BASELINE_COMMIT" HEAD
           test "$(git show "$BASELINE_COMMIT:BASELINE-LOCK.json" | sha256sum | awk '{print $1}')" = "$BASELINE_LOCK_SHA256"
-          # Historical provenance ledgers are immutable in a current corrective branch.
           git diff --exit-code origin/main -- RELEASE-INVENTORY.tsv RELEASE-CHECKSUMS.sha256 BASELINE-LOCK.json
           python3 - <<'PY'
           import hashlib, json, pathlib, re, subprocess, sys
@@ -43,22 +42,17 @@ jobs:
           lock = json.loads((root/'RELEASE-LOCK.json').read_text(encoding='utf-8'))
           if lock.get('schema') != 3 or lock.get('record_type') != 'historical_source_archive_lock_with_current_candidate_boundary':
               fail('release-lock schema/record type is not the current historical-provenance model')
-          if lock.get('historical_baseline_commit') != 'e2165a9286e6c3106430aab431d9d44da707cf51':
-              fail('historical baseline commit drifted')
-          if lock.get('historical_baseline_lock_sha256') != '5c178339045ebdf13f6977042141b4e78e378d293a302020eb49841835617571':
-              fail('historical baseline lock digest drifted')
-          if lock.get('production_authorized') is not False or lock.get('staging_authorized') is not False:
-              fail('release lock must not authorize staging or production')
-          if lock.get('deployed_version_verified') is not False:
-              fail('repository release lock must not claim deployed-version verification')
+          if lock.get('historical_baseline_commit') != 'e2165a9286e6c3106430aab431d9d44da707cf51': fail('historical baseline commit drifted')
+          if lock.get('historical_baseline_lock_sha256') != '5c178339045ebdf13f6977042141b4e78e378d293a302020eb49841835617571': fail('historical baseline lock digest drifted')
+          if lock.get('production_authorized') is not False or lock.get('staging_authorized') is not False: fail('release lock must not authorize staging or production')
+          if lock.get('deployed_version_verified') is not False: fail('repository release lock must not claim deployed-version verification')
 
           lines=(root/'RELEASE-INVENTORY.tsv').read_text(encoding='utf-8').splitlines()
           if not lines or lines[0] != 'sha256\tsize\tpath': fail('historical release inventory header is invalid')
           rows=[]
           for line in lines[1:]:
               if line:
-                  digest,size_text,path=line.split('\t',2)
-                  rows.append((path,int(size_text),digest))
+                  digest,size_text,path=line.split('\t',2); rows.append((path,int(size_text),digest))
           paths=[r[0] for r in rows]
           if paths != sorted(paths) or len(paths) != len(set(paths)): fail('historical inventory must be sorted and unique')
           if len(rows) != int(lock['historical_source_file_count']): fail('historical source file count mismatch')
@@ -66,29 +60,26 @@ jobs:
           total_size=sum(size for _,size,_ in rows)
           canonical=''.join(f'{digest}  {size}  {path}\n' for path,size,digest in rows)
           tree_sha=hashlib.sha256(canonical.encode()).hexdigest()
-          if php_count != int(lock['historical_php_file_count']) or total_size != int(lock['historical_source_size']) or tree_sha != lock['historical_source_tree_sha256']:
-              fail('historical inventory metadata does not match release lock')
+          if php_count != int(lock['historical_php_file_count']) or total_size != int(lock['historical_source_size']) or tree_sha != lock['historical_source_tree_sha256']: fail('historical inventory metadata does not match release lock')
           expected_checks=''.join(f'{digest}  {path}\n' for path,_,digest in rows)
-          if (root/'RELEASE-CHECKSUMS.sha256').read_text(encoding='utf-8') != expected_checks:
-              fail('historical checksum ledger does not match historical inventory')
+          if (root/'RELEASE-CHECKSUMS.sha256').read_text(encoding='utf-8') != expected_checks: fail('historical checksum ledger does not match historical inventory')
 
           main=(root/'sabri-profiles-doctors.php').read_text(encoding='utf-8')
           readme=(root/'readme.txt').read_text(encoding='utf-8')
           m=re.search(r"^define\( 'SPD_VERSION', '([^']+)' \);$", main, re.M)
           if not m: fail('runtime version constant missing')
           version=m.group(1)
-          if f'Version: {version}' not in main or f'Stable tag: {version}' not in readme:
-              fail('runtime/readme version mismatch')
-          if lock.get('current_repository_candidate') != version:
-              fail('release-lock current candidate does not match runtime version')
-          if version != '1.2.0-rc10' or 'TENTH-TEN-ROUND-CORRECTIVE-REVIEW' not in main:
-              fail('tenth corrective-review identity is not the current candidate')
+          if f'Version: {version}' not in main or f'Stable tag: {version}' not in readme: fail('runtime/readme version mismatch')
+          if lock.get('current_repository_candidate') != version: fail('release-lock current candidate does not match runtime version')
+          if version != '1.2.0-rc11' or 'TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' not in main: fail('twenty-round rc11 corrective identity is not the current candidate')
+          if 'TENTH-TEN-ROUND-CORRECTIVE-REVIEW' not in main: fail('historical tenth-review guarantee marker was lost')
 
           all_files={p.as_posix() for p in root.rglob('*') if p.is_file() and '.git' not in p.parts}
           required={
-              'README.md','STATUS.md','RELEASE-LOCK.json','RELEASE-MANIFEST.md','RELEASE-INVENTORY.tsv','RELEASE-CHECKSUMS.sha256',
+              'README.md','STATUS.md','CHANGELOG.md','RELEASE-LOCK.json','RELEASE-MANIFEST.md','RELEASE-INVENTORY.tsv','RELEASE-CHECKSUMS.sha256',
               'NINTH-TEN-ROUND-REVIEW-2026-08-11.md','tests/ninth-ten-round-review.py',
-              'TENTH-TEN-ROUND-REVIEW-2026-08-12.md','tests/tenth-ten-round-review.py','tests/architecture-check.py',
+              'TENTH-TEN-ROUND-REVIEW-2026-08-12.md','tests/tenth-ten-round-review.py',
+              'TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md','tests/twenty-round-sequential-review.py','tests/architecture-check.py',
               'includes/class-spd-slug-privacy.php','includes/class-spd-outbox-dispatcher.php','includes/class-spd-schema-guard.php'
           }
           missing=sorted(required-all_files)
@@ -122,7 +113,8 @@ jobs:
           subprocess.run([sys.executable,'tests/architecture-check.py'],check=True)
           subprocess.run([sys.executable,'tests/ninth-ten-round-review.py'],check=True)
           subprocess.run([sys.executable,'tests/tenth-ten-round-review.py'],check=True)
-          print('Corrective current-candidate integrity passed without reinterpreting historical inventory as current source truth.')
+          subprocess.run([sys.executable,'tests/twenty-round-sequential-review.py'],check=True)
+          print('Corrective rc11 twenty-round current-candidate integrity passed without reinterpreting historical inventory as current source truth.')
           PY
 
   php-lint:
