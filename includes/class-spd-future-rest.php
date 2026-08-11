@@ -108,7 +108,13 @@ final class SPD_Future_REST {
 	}
 
 	public function disclosure( WP_REST_Request $r ) {
-		$packet = SPD_Future_Profile::disclosure_packet( $r['token'] ); if ( is_wp_error( $packet ) ) { return $this->response( $packet, 200, false ); }
+		global $wpdb;
+		$wpdb->last_error = '';
+		$packet = SPD_Future_Profile::disclosure_packet( $r['token'] );
+		if ( $wpdb->last_error && is_wp_error( $packet ) && 'spd_disclosure_revoked' === $packet->get_error_code() ) {
+			$packet = new WP_Error( 'spd_disclosure_store_unavailable', __( 'Disclosure verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		if ( is_wp_error( $packet ) ) { return $this->response( $packet, 200, false ); }
 		$parts = explode( '.', (string) $r['token'], 2 );
 		$raw = base64_decode( strtr( (string) ( $parts[0] ?? '' ), '-_', '+/' ) . str_repeat( '=', ( 4 - strlen( (string) ( $parts[0] ?? '' ) ) % 4 ) % 4 ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		$payload = json_decode( (string) $raw, true );
@@ -150,9 +156,6 @@ final class SPD_Future_REST {
 		if ( array_key_exists( 'federation_opt_in', $submitted ) && ! empty( $submitted['federation_opt_in'] ) && ! $is_owner ) { return $this->response( new WP_Error( 'spd_federation_owner_opt_in_required', __( 'Federation opt-in must be given explicitly by the profile owner.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ) ); }
 		$effective_lifecycle = sanitize_key( (string) ( array_key_exists( 'professional_lifecycle', $submitted ) ? $submitted['professional_lifecycle'] : ( $current_state['professional_lifecycle'] ?? 'active' ) ) );
 		if ( 'legacy' === $effective_lifecycle && ! $is_governor ) { return $this->response( new WP_Error( 'spd_legacy_governance_required', __( 'Legacy/memorial status requires current governed approval.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ) ); }
-		// Materialize every state-owned field from the strict preflight. If the
-		// lower storage helper experiences a later transient read failure, omitted
-		// fields cannot be replaced by its permissive active/version-1 defaults.
 		$payload = array(
 			'public_id' => (string) $r['public_id'],
 			'professional_lifecycle' => $effective_lifecycle,
