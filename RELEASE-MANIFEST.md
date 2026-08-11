@@ -2,44 +2,36 @@
 
 ## Current repository candidate
 
-- Candidate: `1.2.0-rc11`
+- Candidate: `1.2.0-rc12`
 - Database schema: `1.2.0`
 - Contract: `1.4.0`
-- Twenty-round starting `main`: `60207107479c971cae4be379e427e1adb212ea92`
-- Starting tree: `1145214fbcff6afd9bf08289e9a112ffacfc4aaf`
-- Review branch: `audit/file-03-twentieth-round-sequential-20260812`
-- Review ledger: `TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
-- Defect-bearing rounds: `01, 02, 03, 04, 05, 06, 09, 10, 12, 13, 14, 15, 17, 18, 19, 20`
-- Clean rounds: `07, 08, 11, 16`
-- Exact reviewed candidate: `9f7f80f7791a94a45c2dff8cbd846b0f0482621b`
-- Exact reviewed tree: `7265b5a8f318a6404b621dd027c4c1031c466f3a`
-- Exact-candidate Corrective Integrity: run `31541857922` — **SUCCESS**
-- Exact-candidate Fresh Eighty-Round: run `31541857974` — **SUCCESS**
-- Exact-candidate Future Superset 18: run `31541857955` — **SUCCESS**
-- Exact-candidate PHP 8.1/8.3/8.4: **SUCCESS**
-- Exact-candidate two fresh post-correction gates: **SUCCESS**
-- Exact-candidate deterministic package/checksum/SBOM/source-package parity: job `93945955914` — **SUCCESS**
-- PR #25: **merged** from the exact reviewed candidate
-- Code-bearing merge: `555324eb107e1d684b4028362ec3aa780adb4208`
-- Exact code-merge Baseline Integrity: run `31542150625` — **SUCCESS**
-- Exact code-merge Fresh Eighty-Round: run `31542150448` — **SUCCESS**
-- Exact code-merge Future Superset 18: run `31542150417` — **SUCCESS**
-- Exact code-merge PHP 8.1/8.3/8.4 and fresh post-correction gates: **SUCCESS**
-- Exact code-merge deterministic package/checksum/SBOM/source-package parity: job `93946919894` — **SUCCESS**
+- Second twenty-round starting `main`: `a34e4e2b808134237ae9945759745595685c8733`
+- Starting tree: `c0d41641c66cb897c1073dbb40943c5cf9093d44`
+- Review branch: `audit/file-03-second-twenty-round-20260812`
+- Review ledger: `SECOND-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
+- Defect-bearing rounds: `01, 02, 05, 06, 07, 09, 12, 15, 16, 17, 18, 19, 20`
+- Clean rounds: `03, 04, 08, 10, 11, 13, 14`
+- Round 19 corrected-head Fresh Eighty-Round: run `31545524631` — **SUCCESS**
+- Round 19 corrected-head Future Superset 18: run `31545524616` — **SUCCESS**
+- Final exact reviewed candidate: **pending after release metadata/tests/workflows freeze**
+- Final exact-candidate Corrective/Fresh/Future/PHP/package evidence: **pending same-SHA verification**
+- PR / merge: **pending**
 - Production authorized: **no**
 - Live installation authorized: **no**
 - Staging accepted: **unverified**
 - Exact deployed version/package parity: **unverified**
 
-## Twenty-round correction boundary
+## Second twenty-round correction boundary
 
-The fresh twenty-round cycle hardens protected REST dependency truth, DB-certain public and lifecycle-sensitive profile reads, privacy-export minimization, media-deletion operational evidence, selective-disclosure revocation semantics, Future post-preflight mutation certainty, cross-file delegation projection truth and operational health-query reporting. It also adds exact-branch workflow coverage and a permanent twenty-round regression gate. DB schema remains `1.2.0` and public contract remains `1.4.0` because the corrections do not introduce a DDL or public contract-version change.
+The second fresh twenty-round cycle strengthens File 00 authorization truth at moderation/report/appeal domain boundaries; removes an undeclared internal WordPress attachment primary key from public media serialization; keeps Future Ask Work DB degradation explicit; isolates media worker failure evidence; prevents legacy-option source deletion before migration persistence is proven; recovers File03-owned orphan usermeta only under explicit destructive purge; keeps public Founder rendering read-only; and exposes redacted active worker-error reasons to System Check. It also makes the new branch part of Fresh/Future exact-head CI and adds a permanent second-twenty-round regression gate.
 
-The exact reviewed candidate and the code-bearing merge have both passed their applicable automated gates. This evidence-closure commit is documentation-only; because it advances repository HEAD, the resulting final main must still be re-tested before being reported as current final repository truth.
+DB schema remains `1.2.0`. Public contract remains `1.4.0`: `attachment_id` was an undeclared internal WordPress primary key, while the machine-readable contract already specifies opaque public identity and public DTO allowlists. Its removal is privacy hardening rather than a documented public-contract field removal.
+
+The exact rc12 candidate is not frozen by this document. After the last source/test/workflow/documentation change, all applicable automated gates must succeed again on one exact SHA, including PHP 8.1/8.3/8.4, two fresh post-correction gates and deterministic package/checksum/SBOM/source-package parity.
 
 ## Historical provenance warning
 
-`RELEASE-INVENTORY.tsv` and `RELEASE-CHECKSUMS.sha256` are historical provenance records from an early `0.2.0` source archive. They are **not** checksums or an inventory of the current `1.2.0-rc11` repository tree and must never be used to assert current source/package parity. Current package, SHA-256, SBOM and source-package parity evidence is valid only when generated by CI from the exact repository commit under consideration.
+`RELEASE-INVENTORY.tsv` and `RELEASE-CHECKSUMS.sha256` are historical provenance records from an early `0.2.0` source archive. They are **not** checksums or an inventory of the current `1.2.0-rc12` repository tree and must never be used to assert current source/package parity. Current package, SHA-256, SBOM and source-package parity evidence is valid only when generated by CI from the exact repository commit under consideration.
 
 ## Live-truth boundary
 
