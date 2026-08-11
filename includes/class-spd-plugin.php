@@ -6,17 +6,19 @@ final class SPD_Plugin {
 
 	public function run() {
 		load_plugin_textdomain( 'sabri-profiles-doctors', false, dirname( plugin_basename( SPD_FILE ) ) . '/languages' );
-		if ( SPD_Membership_Adapter::available() && ( get_option( 'spd_db_version' ) !== SPD_DB_VERSION || ! SPD_DB::tables_exist() ) ) {
+		if ( ! class_exists( 'SPD_Schema_Guard' ) ) { require_once SPD_DIR . 'includes/class-spd-schema-guard.php'; }
+		if ( ! class_exists( 'SPD_Central_Privacy' ) ) { require_once SPD_DIR . 'includes/class-spd-central-privacy.php'; }
+		if ( SPD_Membership_Adapter::available() && ( get_option( 'spd_db_version' ) !== SPD_DB_VERSION || ! SPD_Schema_Guard::base_ready() ) ) {
 			$schema = SPD_DB::install();
-			if ( is_wp_error( $schema ) ) { $safe = SPD_Observability::set_safe_mode( true, 'schema_install_failed' ); if ( is_wp_error( $safe ) ) { do_action( 'spd_boot_failure', $schema, $safe ); } }
+			if ( is_wp_error( $schema ) || ! SPD_Schema_Guard::base_ready() ) { $safe = SPD_Observability::set_safe_mode( true, 'schema_install_failed' ); if ( is_wp_error( $safe ) ) { do_action( 'spd_boot_failure', is_wp_error( $schema ) ? $schema : new WP_Error( 'spd_schema_shape_invalid', __( 'The File 03 database schema is incomplete.', 'sabri-profiles-doctors' ) ), $safe ); } }
 		}
-		if ( SPD_Membership_Adapter::available() && ( get_option( 'spd_central_schema_version' ) !== SPD_Central_Profile::SCHEMA_VERSION || ! SPD_Central_Profile::schema_ready() ) ) {
+		if ( SPD_Membership_Adapter::available() && ( get_option( 'spd_central_schema_version' ) !== SPD_Central_Profile::SCHEMA_VERSION || ! SPD_Schema_Guard::central_ready() ) ) {
 			$central = SPD_Central_Profile::install_schema();
-			if ( is_wp_error( $central ) ) { SPD_Observability::set_safe_mode( true, 'central_schema_install_failed' ); }
+			if ( is_wp_error( $central ) || ! SPD_Schema_Guard::central_ready() ) { SPD_Observability::set_safe_mode( true, 'central_schema_install_failed' ); }
 		}
-		if ( SPD_Membership_Adapter::available() && ( get_option( 'spd_future_schema_version' ) !== SPD_Future_Profile::SCHEMA_VERSION || ! SPD_Future_Profile::schema_ready() ) ) {
+		if ( SPD_Membership_Adapter::available() && ( get_option( 'spd_future_schema_version' ) !== SPD_Future_Profile::SCHEMA_VERSION || ! SPD_Schema_Guard::future_ready() ) ) {
 			$future = SPD_Future_Profile::install_schema();
-			if ( is_wp_error( $future ) ) { SPD_Observability::set_safe_mode( true, 'future_schema_install_failed' ); }
+			if ( is_wp_error( $future ) || ! SPD_Schema_Guard::future_ready() ) { SPD_Observability::set_safe_mode( true, 'future_schema_install_failed' ); }
 		}
 		if ( SPD_Membership_Adapter::available() && get_option( 'spd_version' ) !== SPD_VERSION ) {
 			$upgrade = SPD_Activator::repair_owned_resources();
@@ -29,6 +31,7 @@ final class SPD_Plugin {
 		( new SPD_Future_REST() )->hooks();
 		( new SPD_Frontend() )->hooks();
 		( new SPD_Privacy() )->hooks();
+		( new SPD_Central_Privacy() )->hooks();
 		( new SPD_Future_Privacy() )->hooks();
 		$this->observability = new SPD_Observability();
 		$this->observability->hooks();
@@ -75,7 +78,7 @@ final class SPD_Plugin {
 
 	public function run_retention_cleanup() {
 		global $wpdb;
-		if ( ! SPD_DB::tables_exist() ) { return; }
+		if ( ! SPD_Schema_Guard::base_ready() ) { return; }
 		$events = SPD_DB::table( 'events' );
 		$idempotency = SPD_DB::table( 'idempotency' );
 		$reports = SPD_DB::table( 'reports' );
@@ -99,8 +102,10 @@ final class SPD_Plugin {
 	public function assets() {
 		$map = (array) get_option( 'spd_page_map', array() );
 		$is_profile_route = (bool) get_query_var( 'spd_public_id' );
-		$is_managed_page = is_page( array_filter( array_map( 'absint', $map ) ) );
-		if ( ! $is_profile_route && ! $is_managed_page ) { return; }
+		$mapped_ids = array_filter( array_map( 'absint', $map ) );
+		$is_managed_page = $mapped_ids ? is_page( $mapped_ids ) : false;
+		$is_fallback_page = is_page( array( 'founder', 'profile', 'account-profile', 'account-profile-personal-site', 'account-profile-preview' ) );
+		if ( ! $is_profile_route && ! $is_managed_page && ! $is_fallback_page ) { return; }
 		wp_enqueue_style( 'spd-profiles', SPD_URL . 'assets/css/profiles.css', array(), SPD_VERSION );
 		wp_enqueue_script( 'spd-profiles', SPD_URL . 'assets/js/profiles.js', array(), SPD_VERSION, true );
 		wp_enqueue_script( 'spd-future-profiles', SPD_URL . 'assets/js/future-profiles.js', array( 'spd-profiles' ), SPD_VERSION, true );

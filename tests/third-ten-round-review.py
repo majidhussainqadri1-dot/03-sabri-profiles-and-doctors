@@ -26,11 +26,12 @@ actual_defects = set(re.findall(r'^\|\s*(\d{2})\s*\|\s*\*\*DEFECT FOUND → FIXE
 assert actual_defects == expected_defects, (actual_defects, expected_defects)
 assert re.search(r'^\|\s*05\s*\|\s*\*\*CLEAN\*\*', ledger, flags=re.M)
 
-# R01/R10 — current release identity and truthful status are synchronized.
-assert "Version: 1.2.0-rc3" in bootstrap
-assert "define( 'SPD_VERSION', '1.2.0-rc3' )" in bootstrap
+# R01/R10 historical guarantees must remain present while current release identity may advance.
+assert "Version: 1.2.0-rc4" in bootstrap
+assert "define( 'SPD_VERSION', '1.2.0-rc4' )" in bootstrap
 assert 'THIRD-TEN-ROUND-CORRECTIVE-REVIEW' in bootstrap
-assert '1.2.0-rc3' in readme and 'Stable tag: 1.2.0-rc3' in wp_readme and '1.2.0-rc3' in status
+assert 'FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' in bootstrap
+assert '1.2.0-rc4' in readme and 'Stable tag: 1.2.0-rc4' in wp_readme and '1.2.0-rc4' in status
 assert 'Exact deployed code' in ledger and 'unverified' in ledger.lower()
 
 # R02 — revocation-sensitive future REST and all future mutations fail closed.

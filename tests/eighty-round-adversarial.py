@@ -22,7 +22,7 @@ ledger = text('EIGHTY-ROUND-REVIEW.md')
 
 # Fresh adversarial gate: intentionally checks negative properties and cross-file coupling,
 # not merely the same positive tokens used by eighty-round-review.py.
-require("'1.2.0-rc2'" in main and '80-ROUND-CORRECTIVE-REVIEW' in main, 'Candidate identity drifted')
+require("'1.2.0-rc4'" in main and '80-ROUND-CORRECTIVE-REVIEW' in main and 'FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Candidate identity drifted')
 require("set_transient( 'spd_activation_lock'" not in activator, 'Race-prone activation transient returned')
 require("add_option( $key, $value, '', false )" in helpers and 'hash_equals' in helpers, 'Atomic lock lacks owner-safe acquire/release')
 require("acquire_lock( 'migration_batch'" in plugin, 'Migration outer serialization missing')
@@ -40,7 +40,7 @@ require("case 'credentials'" in future_rest and "case 'expertise'" in future_res
 require('can_manage_founder( $actor )' in future_rest and 'can_operate_profiles( $actor )' in future_rest, 'Future lifecycle governance is not actor-bound')
 require("current_user_can( 'manage_options' )" not in future_rest, 'Future-state server route regressed to WordPress role shortcut')
 require('canGovernLegacy' in plugin and 'canGovernLegacy' in js, 'Legacy governance UI does not mirror current server capability')
-require("! empty( $dto['future']['federation']['inbox'] ) && ! empty( $dto['future']['federation']['outbox'] )" in main, 'Federation transport activates without both endpoints')
+require("$out['transport_active'] = ! empty( $out['inbox'] ) && ! empty( $out['outbox'] )" in future, 'Federation transport activates without both endpoints')
 require('spd_profile_legal_hold' in privacy and 'spd_future_profile_legal_hold' in privacy, 'Future privacy erasure lost legal/governance hold checks')
 require("'spd_lock_'" in uninstall and "'_transient_spd_rate_'" in uninstall, 'Dynamic corrective state is orphaned by destructive uninstall')
 require('Rounds with defects found and corrected' in ledger and '18' in ledger and '62' in ledger, '80-round ledger totals missing')

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0-rc4 — Fourth fresh ten-round corrective hardening
+
+- Completed a fresh 10-round sequential review from exact `main` baseline `1ff55ecd91be68bbf6d68e54c630f78f901992af`; repository-level defects were found and corrected in **all rounds `01–10`**.
+- Reclassified early `0.2.0` release inventory/checksum records as historical provenance so they cannot be mistaken for current rc4 package parity evidence.
+- Hardened private fallback route recognition, guest redirects, no-store/noindex context and profile UI asset loading when the managed page map is absent or corrupt.
+- Made managed-page repair idempotent when the ownership marker is already correct.
+- Added bounded, schema-aware WordPress privacy export/erasure for File 03 delegation and report-appeal records, including explicit legal-hold hooks.
+- Added exact base/central/future schema shape verification for required columns and integrity indexes; boot, activation repair and retention fail closed on partial/deferred schemas.
+- Made profile identity, custom slug lock, Founder uniqueness and slug registry/history reads fail closed on SQL uncertainty.
+- Made media privacy reconciliation and deletion processing fail closed on schema/read/lease/result-persistence uncertainty and record operational failure evidence.
+- Completed two-gate destructive-uninstall cleanup by recovering File-03-owned pages from ownership markers and purging newer migration/retention/media failure-state options.
+- Added `FOURTH-TEN-ROUND-REVIEW-2026-08-11.md`, `tests/fourth-ten-round-review.py`, and the permanent fourth-review exact-candidate CI gate; advanced materially changed source identity from rc3 to rc4.
+- Staging acceptance, exact deployed-package parity, live DB/schema/migration state, browser/WCAG/RTL evidence, backup/restore/rollback and operational acceptance remain separate gates.
+
 ## 1.2.0-rc3 — Third fresh ten-round corrective hardening
 
 - Completed a fresh 10-round sequential review from exact `main` baseline `ffcd790b831e2ae028c48f8aa664e4c496c115e0`; defects were found in rounds `01, 02, 03, 04, 06, 07, 08, 09, 10`, while round `05` was clean.

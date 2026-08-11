@@ -40,9 +40,13 @@ final class SPD_Activator {
 	}
 
 	public static function repair_owned_resources() {
+		if ( ! class_exists( 'SPD_Schema_Guard' ) ) { require_once SPD_DIR . 'includes/class-spd-schema-guard.php'; }
 		$schema = SPD_DB::install(); if ( is_wp_error( $schema ) ) { return $schema; }
+		if ( ! SPD_Schema_Guard::base_ready() ) { return new WP_Error( 'spd_schema_shape_invalid', __( 'The File 03 base database schema is incomplete after repair.', 'sabri-profiles-doctors' ) ); }
 		$central = SPD_Central_Profile::install_schema(); if ( is_wp_error( $central ) ) { return $central; }
+		if ( ! SPD_Schema_Guard::central_ready() ) { return new WP_Error( 'spd_central_schema_shape_invalid', __( 'The File 03 central-plan database schema is incomplete after repair.', 'sabri-profiles-doctors' ) ); }
 		$future = SPD_Future_Profile::install_schema(); if ( is_wp_error( $future ) ) { return $future; }
+		if ( ! SPD_Schema_Guard::future_ready() ) { return new WP_Error( 'spd_future_schema_shape_invalid', __( 'The File 03 future-profile database schema is incomplete after repair.', 'sabri-profiles-doctors' ) ); }
 		$pages = self::pages(); if ( is_wp_error( $pages ) ) { return $pages; }
 		$schedules = array(
 			'spd_dispatch_outbox'         => array( time() + 300, 'hourly' ),
@@ -88,8 +92,13 @@ final class SPD_Activator {
 		}
 		$slug_page = get_page_by_path( $slug, OBJECT, 'page' );
 		if ( $slug_page instanceof WP_Post ) {
-			$is_owned = $key === get_post_meta( $slug_page->ID, '_spd_managed_page_key', true ); $is_exact = trim( $slug_page->post_content ) === $shortcode;
-			if ( $is_owned || $is_exact ) { if ( false === update_post_meta( $slug_page->ID, '_spd_managed_page_key', $key ) ) { return new WP_Error( 'spd_managed_page_marker_failed', __( 'A File 03 managed-page marker could not be recorded.', 'sabri-profiles-doctors' ) ); } return absint( $slug_page->ID ); }
+			$current_marker = (string) get_post_meta( $slug_page->ID, '_spd_managed_page_key', true );
+			$is_owned = $key === $current_marker;
+			$is_exact = trim( $slug_page->post_content ) === $shortcode;
+			if ( $is_owned || $is_exact ) {
+				if ( ! $is_owned && false === update_post_meta( $slug_page->ID, '_spd_managed_page_key', $key ) ) { return new WP_Error( 'spd_managed_page_marker_failed', __( 'A File 03 managed-page marker could not be recorded.', 'sabri-profiles-doctors' ) ); }
+				return absint( $slug_page->ID );
+			}
 			$slug .= '-file03';
 		}
 		$id = wp_insert_post( array( 'post_title' => $title, 'post_name' => wp_unique_post_slug( $slug, 0, 'publish', 'page', 0 ), 'post_content' => $shortcode, 'post_status' => 'publish', 'post_type' => 'page' ), true );

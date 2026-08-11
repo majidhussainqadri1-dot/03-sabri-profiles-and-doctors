@@ -2,6 +2,32 @@
 defined( 'ABSPATH' ) || exit;
 
 final class SPD_Routes {
+	private static function fallback_slug( $key ) {
+		$map = array(
+			'founder'         => 'founder',
+			'profile'         => 'profile',
+			'account_profile' => 'account-profile',
+			'personal_site'   => 'account-profile-personal-site',
+			'private_preview' => 'account-profile-preview',
+		);
+		return isset( $map[ $key ] ) ? $map[ $key ] : '';
+	}
+
+	private function is_mapped_or_fallback_page( $key, array $map = array() ) {
+		if ( ! empty( $map[ $key ] ) && is_page( absint( $map[ $key ] ) ) ) { return true; }
+		$slug = self::fallback_slug( $key );
+		return $slug ? is_page( $slug ) : false;
+	}
+
+	private function private_page_url( $key, array $map ) {
+		if ( ! empty( $map[ $key ] ) ) {
+			$url = get_permalink( absint( $map[ $key ] ) );
+			if ( $url ) { return $url; }
+		}
+		$slug = self::fallback_slug( $key );
+		return $slug ? home_url( user_trailingslashit( $slug ) ) : home_url( '/' );
+	}
+
 	public function hooks() {
 		add_action( 'init', array( $this, 'rewrites' ) );
 		add_filter( 'query_vars', array( $this, 'query_vars' ) );
@@ -56,14 +82,17 @@ final class SPD_Routes {
 		$public_id = sanitize_text_field( (string) get_query_var( 'spd_public_id' ) );
 		if ( $public_id ) { $profile = SPD_Profile_Repository::instance()->find_by_public_id( $public_id ); if ( $profile && 'tombstoned' === $profile['state'] ) { status_header( 410 ); } }
 		foreach ( array( 'account_profile', 'personal_site', 'private_preview' ) as $private_page ) {
-			if ( ! empty( $map[ $private_page ] ) && is_page( absint( $map[ $private_page ] ) ) && ! is_user_logged_in() ) { wp_safe_redirect( wp_login_url( get_permalink( absint( $map[ $private_page ] ) ) ) ); exit; }
+			if ( $this->is_mapped_or_fallback_page( $private_page, $map ) && ! is_user_logged_in() ) {
+				wp_safe_redirect( wp_login_url( $this->private_page_url( $private_page, $map ) ) );
+				exit;
+			}
 		}
 		if ( isset( $_GET['print_profile'] ) && $public_id ) { header( 'X-Robots-Tag: noindex, nofollow, noarchive', true ); }
 	}
 
 	public function current_context() {
 		$map = (array) get_option( 'spd_page_map', array() );
-		foreach ( array( 'account_profile', 'personal_site', 'private_preview' ) as $key ) { if ( ! empty( $map[ $key ] ) && is_page( absint( $map[ $key ] ) ) ) { return 'private'; } }
+		foreach ( array( 'account_profile', 'personal_site', 'private_preview' ) as $key ) { if ( $this->is_mapped_or_fallback_page( $key, $map ) ) { return 'private'; } }
 		$view = sanitize_key( (string) get_query_var( 'spd_view' ) ); if ( 'report' === $view ) { return 'private'; }
 		$public_id = sanitize_text_field( (string) get_query_var( 'spd_public_id' ) );
 		if ( $public_id ) {
@@ -78,7 +107,7 @@ final class SPD_Routes {
 		$map = (array) get_option( 'spd_page_map', array() );
 		if ( get_query_var( 'spd_public_id' ) || get_query_var( 'spd_alias' ) || get_query_var( 'spd_share' ) ) { return true; }
 		foreach ( array( 'founder', 'profile', 'account_profile', 'personal_site', 'private_preview' ) as $key ) {
-			if ( ! empty( $map[ $key ] ) && is_page( absint( $map[ $key ] ) ) ) { return true; }
+			if ( $this->is_mapped_or_fallback_page( $key, $map ) ) { return true; }
 		}
 		return false;
 	}

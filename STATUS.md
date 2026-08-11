@@ -1,15 +1,17 @@
-# File 03 Status — 1.2.0-rc3
+# File 03 Status — 1.2.0-rc4
 
 | Status | Evidence / decision |
 |---|---|
 | Specified | File 03 plan + 2026-08-07 central-plan addendum + `FUTURE-SUPERSET-18.md` + central governing plan |
-| Repository identity | Plugin `1.2.0-rc3` · DB schema `1.2.0` · contract `1.4.0` |
-| Coded | Repository-owned File 03 scope plus `F03-FUT-01..18` and the corrective changes recorded in the review ledgers |
+| Repository identity | Plugin `1.2.0-rc4` · DB schema `1.2.0` · contract `1.4.0` |
+| Coded | Repository-owned File 03 scope plus `F03-FUT-01..18` and corrective changes recorded in all review ledgers |
 | First 80-round corrective review | 80 rounds completed; 18 defect-bearing rounds and 62 clean rounds; all recorded findings corrected before continuation |
-| Second fresh 80-round review | `SECOND-FRESH-EIGHTY-ROUND-REVIEW-2026-08-11.md`: 80 sequential rounds; defect-bearing rounds `03, 05, 07, 08, 13, 16, 17, 18, 20, 23, 25, 28, 29, 30, 32, 34, 40, 41, 46, 47, 49, 51, 64, 65, 67, 71, 75, 79`; 28 defect-bearing / 52 clean |
-| Third fresh 10-round review | `THIRD-TEN-ROUND-REVIEW-2026-08-11.md`: defect-bearing rounds `01, 02, 03, 04, 06, 07, 08, 09, 10`; clean round `05`; all proven findings corrected before closure |
-| Third-review source evidence | Frozen starting `main`: `ffcd790b831e2ae028c48f8aa664e4c496c115e0`; exact corrected candidate: `692e1381a72073cb09ada13d70270c7fd183d115`; PR #15 merged the identical tested source tree as `664a6023b1b92226a4385a9ea53cdb96de977b93`; candidate and merge tree: `f4480c9d1001a7401dc03341c4e5f03b2b93ff01` |
-| Automated-QA evidence | Exact candidate Fresh Eighty-Round run `31474498223` succeeded. After PR #15 merge, exact code-bearing `main` `664a6023b1b92226a4385a9ea53cdb96de977b93` passed Baseline Integrity run `31474663305` and Fresh Eighty-Round run `31474663300`. This STATUS synchronization is documentation-only and does not alter runtime source files. |
+| Second fresh 80-round review | `SECOND-FRESH-EIGHTY-ROUND-REVIEW-2026-08-11.md`: 80 sequential rounds; 28 defect-bearing / 52 clean |
+| Third fresh 10-round review | `THIRD-TEN-ROUND-REVIEW-2026-08-11.md`: defect-bearing rounds `01, 02, 03, 04, 06, 07, 08, 09, 10`; clean round `05` |
+| Fourth fresh 10-round review | `FOURTH-TEN-ROUND-REVIEW-2026-08-11.md`: defect-bearing rounds `01, 02, 03, 04, 05, 06, 07, 08, 09, 10`; clean rounds: none; every proven repository finding corrected before closure |
+| Fourth-review frozen baseline | Exact starting `main`: `1ff55ecd91be68bbf6d68e54c630f78f901992af`; starting tree: `f350eb65e8206865f4b44093263b2c931b5305a9` |
+| Fourth-review correction themes | Historical release-truth disambiguation; fallback private-route protection/assets; idempotent page repair; central delegation/appeal privacy coverage; exact schema shape/index guard; fail-closed identity/slug reads; media reconciliation/deletion queue DB certainty; ownership-marker destructive uninstall cleanup; rc4 release/QA identity |
+| Automated-QA evidence | Fourth-review exact-candidate CI is a mandatory closure gate. Exact final candidate SHA and final successful run are recorded in PR/merge evidence; repository source must not be called staging/live verified from CI alone. |
 | Staging-Accepted | **Pending / unverified** |
 | Live-Deployed | **Unverified** |
 | Live DB / migration | **Unverified** |

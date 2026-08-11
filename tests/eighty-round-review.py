@@ -9,7 +9,7 @@ def exists(path): return (ROOT / path).exists()
 php = '\n'.join(p.read_text(encoding='utf-8') for p in ROOT.rglob('*.php') if 'tests' not in p.parts)
 
 checks = [
-(1,'Exact corrective candidate version',lambda:has('sabri-profiles-doctors.php',"'1.2.0-rc2'")),
+(1,'Exact corrective candidate version',lambda:has('sabri-profiles-doctors.php',"'1.2.0-rc4'")),
 (2,'Database version remains additive 1.2.0',lambda:has('sabri-profiles-doctors.php',"SPD_DB_VERSION', '1.2.0")),
 (3,'Contract version remains 1.4.0',lambda:has('sabri-profiles-doctors.php',"SPD_CONTRACT_VERSION', '1.4.0")),
 (4,'Plan identity records 80-round correction',lambda:has('sabri-profiles-doctors.php','80-ROUND-CORRECTIVE-REVIEW')),
@@ -77,7 +77,7 @@ checks = [
 (66,'Owner-only change history remains projection',lambda:has('includes/class-spd-future-profile.php','change_history')),
 (67,'Legacy UI and server require governed authority',lambda:has('includes/class-spd-plugin.php','canGovernLegacy') and has('assets/js/future-profiles.js','canGovernLegacy') and has('includes/class-spd-future-rest.php','spd_legacy_governance_required')),
 (68,'FHIR remains professional-only/no patient record',lambda:has('includes/class-spd-future-profile.php','PractitionerRole') and has('includes/class-spd-contracts.php','fhir_no_patient_record')),
-(69,'Federation transport requires both endpoints',lambda:has('sabri-profiles-doctors.php',"! empty( $dto['future']['federation']['inbox'] ) && ! empty( $dto['future']['federation']['outbox'] )")),
+(69,'Federation transport requires both endpoints',lambda:has('includes/class-spd-future-profile.php',"$out['transport_active'] = ! empty( $out['inbox'] ) && ! empty( $out['outbox'] )")),
 (70,'Future native data participates in privacy export',lambda:has('includes/class-spd-future-privacy.php','export_profile_data')),
 (71,'Future erasure honors base and future holds',lambda:has('includes/class-spd-future-privacy.php','spd_profile_legal_hold') and has('includes/class-spd-future-privacy.php','spd_future_profile_legal_hold')),
 (72,'Guarded uninstall purges dynamic lock/rate keys',lambda:has('uninstall.php',"'spd_lock_'") and has('uninstall.php',"'_transient_spd_rate_'")),
