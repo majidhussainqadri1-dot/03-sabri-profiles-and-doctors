@@ -22,7 +22,7 @@ ledger = text('EIGHTY-ROUND-REVIEW.md')
 
 # Fresh adversarial gate: intentionally checks negative properties and cross-file coupling,
 # not merely the same positive tokens used by eighty-round-review.py.
-require("'1.2.0-rc5'" in main and '80-ROUND-CORRECTIVE-REVIEW' in main and 'FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'FIFTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Candidate identity drifted')
+require("'1.2.0-rc6'" in main and '80-ROUND-CORRECTIVE-REVIEW' in main and 'FOURTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'FIFTH-TEN-ROUND-CORRECTIVE-REVIEW' in main and 'SIXTH-TEN-ROUND-CORRECTIVE-REVIEW' in main, 'Candidate identity drifted')
 require("set_transient( 'spd_activation_lock'" not in activator, 'Race-prone activation transient returned')
 require("add_option( $key, $value, '', false )" in helpers and 'hash_equals' in helpers, 'Atomic lock lacks owner-safe acquire/release')
 require("acquire_lock( 'migration_batch'" in plugin, 'Migration outer serialization missing')

@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials,
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.0-rc5
+Stable tag: 1.2.0-rc6
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -13,7 +13,7 @@ Canonical Founder, member and doctor profile domain for the Sabri Social Homeopa
 
 File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.2.0-rc5 preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements and all prior corrective hardening. The fifth fresh ten-round review unifies File 26 and REST search lifecycle semantics, strengthens exact-schema privacy and future-state guards, minimizes shared appeal privacy exports, and extends explicit two-gate destructive uninstall to marker-proven orphan File-03 avatar/cover media.
+1.2.0-rc6 preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements and all prior corrective hardening. The sixth fresh ten-round sequential review strengthens privacy erasure ordering/minimization, exact index integrity, strict audience validation, delegated-minor safety and renewed media-deletion retry reliability.
 
 The approved 18 enhancements remain:
 
@@ -52,6 +52,18 @@ This remains a repository candidate. Source and automated-QA evidence are separa
 6. Do not promote to live until Founder approval and exact package/deployment parity are recorded.
 
 == Changelog ==
+
+= 1.2.0-rc6 =
+* Sixth fresh ten-round sequential review from exact main `822837daa3cebc4c5ae80410f31511aadf3885b0`.
+* Defect-bearing rounds: 01, 02, 03, 04, 05, 07, 09, 10. Clean rounds: 06, 08.
+* Erases reviewer-authored appeal decision text together with reviewer identity when no hold applies.
+* Requires canonical base-profile tombstoning before Future-owned lifecycle/privacy state is erased.
+* Verifies exact index ordered columns and uniqueness instead of index names alone.
+* Rejects malformed, unknown or invalid audience maps before base/personal-site profile mutation.
+* Blocks minor delegates at both grant time and use time.
+* Gives renewed non-delivered media deletion requests a fresh bounded retry/lease state while preserving delivered success.
+* Adds `SIXTH-TEN-ROUND-REVIEW-2026-08-11.md` and `tests/sixth-ten-round-review.py` to permanent CI.
+* Preserves staging/live/operational separation; no live deployment claim is made.
 
 = 1.2.0-rc5 =
 * Fifth fresh ten-round review from exact main `3358472bc374958c66f5e84997b7633f598caa73`.

@@ -9,7 +9,7 @@ def exists(path): return (ROOT / path).exists()
 php = '\n'.join(p.read_text(encoding='utf-8') for p in ROOT.rglob('*.php') if 'tests' not in p.parts)
 
 checks = [
-(1,'Exact corrective candidate version',lambda:has('sabri-profiles-doctors.php',"'1.2.0-rc5'")),
+(1,'Exact corrective candidate version',lambda:has('sabri-profiles-doctors.php',"'1.2.0-rc6'")),
 (2,'Database version remains additive 1.2.0',lambda:has('sabri-profiles-doctors.php',"SPD_DB_VERSION', '1.2.0")),
 (3,'Contract version remains 1.4.0',lambda:has('sabri-profiles-doctors.php',"SPD_CONTRACT_VERSION', '1.4.0")),
 (4,'Plan identity records 80-round correction',lambda:has('sabri-profiles-doctors.php','80-ROUND-CORRECTIVE-REVIEW')),
