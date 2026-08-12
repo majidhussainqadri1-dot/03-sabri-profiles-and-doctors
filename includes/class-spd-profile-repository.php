@@ -175,8 +175,15 @@ final class SPD_Profile_Repository {
 		if ( 'available' !== ( $verification_health['status'] ?? '' ) ) {
 			return new WP_Error( 'spd_verification_provider_unavailable', __( 'Doctor verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 		}
+		$owner_verification = SPD_Verification_Adapter::projection( $owner_id );
+		if ( ! $owner_verification ) {
+			return new WP_Error( 'spd_verification_claim_unavailable', __( 'Current doctor-verification evidence could not be verified.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
 		if ( ! empty( $delegate_claims['is_minor'] ) ) {
 			return new WP_Error( 'spd_delegate_minor_forbidden', __( 'A minor account cannot receive delegated profile-management authority.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+		}
+		if ( 'verified' !== sanitize_key( (string) ( $owner_verification['status'] ?? '' ) ) ) {
+			return new WP_Error( 'spd_delegate_owner_ineligible', __( 'Delegated profile management is available only to a currently verified doctor.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
 		}
 		return $this->central_grant_delegate( $owner_id, $delegate_id, $scopes, $expires_at, $idempotency_key );
 	}
