@@ -87,11 +87,14 @@ final class SPD_Authorization {
 	public static function moderation_guard( $actor_id ) {
 		if ( SPD_Observability::safe_mode() ) { return new WP_Error( 'spd_safe_mode', __( 'Profile moderation is temporarily unavailable while the system is in safe mode.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		$actor_id = absint( $actor_id );
+		if ( ! $actor_id ) {
+			return new WP_Error( 'spd_login_required', __( 'A signed-in account is required for profile moderation.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) );
+		}
 		$health = SPD_Membership_Adapter::health();
 		if ( 'available' !== ( $health['status'] ?? '' ) ) {
 			return new WP_Error( 'spd_membership_provider_unavailable', __( 'Membership authorization is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 		}
-		if ( ! $actor_id || ! SPD_Membership_Adapter::claims( $actor_id ) ) {
+		if ( ! SPD_Membership_Adapter::claims( $actor_id ) ) {
 			return new WP_Error( 'spd_membership_claim_unavailable', __( 'Current membership authorization could not be verified.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 		}
 		return SPD_Membership_Adapter::can_moderate_profiles( $actor_id ) ? true : new WP_Error( 'spd_forbidden', __( 'Profile moderation permission is required.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
