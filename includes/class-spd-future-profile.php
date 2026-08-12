@@ -102,9 +102,7 @@ final class SPD_Future_Profile {
 	private static function text( $value, $limit = 1000 ) { return SPD_Helpers::sanitize_multiline( (string) $value, $limit ); }
 
 	public static function state_for_profile( $profile_id ) {
-		global $wpdb;
-		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::state_table() . ' WHERE profile_id=%d LIMIT 1', absint( $profile_id ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		return $row ?: array( 'profile_id' => absint( $profile_id ), 'federation_opt_in' => 0, 'professional_lifecycle' => 'active', 'lifecycle_reason' => '', 'version' => 1, 'updated_at' => '' );
+		return spd_read_future_profile_state( absint( $profile_id ) );
 	}
 
 	/** FUT-01: portable, provider-issued professional credentials. */
@@ -147,7 +145,8 @@ final class SPD_Future_Profile {
 		$raw = base64_decode( strtr( $parts[0], '-_', '+/' ) . str_repeat( '=', ( 4 - strlen( $parts[0] ) % 4 ) % 4 ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		$p = json_decode( (string) $raw, true );
 		if ( ! is_array( $p ) || empty( $p['pid'] ) || empty( $p['scopes'] ) || time() > absint( $p['exp'] ?? 0 ) ) { return new WP_Error( 'spd_disclosure_expired', __( 'This disclosure link has expired.', 'sabri-profiles-doctors' ), array( 'status' => 410 ) ); }
-		$profile = SPD_Profile_Repository::instance()->find_by_public_id( sanitize_text_field( $p['pid'] ) );
+		$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( sanitize_text_field( $p['pid'] ) );
+		if ( is_wp_error( $profile ) ) { return $profile; }
 		if ( ! $profile || absint( $p['epoch'] ?? 0 ) !== SPD_Central_Profile::share_epoch( $profile ) || ! SPD_Authorization::profile_visibility_allows( $profile, 0 ) ) { return new WP_Error( 'spd_disclosure_revoked', __( 'This disclosure link is no longer available.', 'sabri-profiles-doctors' ), array( 'status' => 410 ) ); }
 		$dto = spd_get_personal_site_profile( $profile['public_id'], 0 );
 		if ( is_wp_error( $dto ) ) { return $dto; }
@@ -322,13 +321,15 @@ final class SPD_Future_Profile {
 	/** FUT-16: governed retired/legacy professional state. */
 	public static function lifecycle( array $profile ) {
 		$state = self::state_for_profile( $profile['id'] );
-		$status = sanitize_key( (string) $state['professional_lifecycle'] ); if ( ! in_array( $status, array( 'active','retired','legacy' ), true ) ) { $status = 'active'; }
+		if ( is_wp_error( $state ) ) { return array( 'status' => 'unknown', 'active_professional' => false, 'reason' => '', 'changed_at' => '', 'state_degraded' => true ); }
+		$status = sanitize_key( (string) $state['professional_lifecycle'] );
+		if ( ! in_array( $status, array( 'active','retired','legacy' ), true ) ) { return array( 'status' => 'unknown', 'active_professional' => false, 'reason' => '', 'changed_at' => '', 'state_degraded' => true ); }
 		return array( 'status' => $status, 'active_professional' => 'active' === $status, 'reason' => self::text( $state['lifecycle_reason'] ?? '', 500 ), 'changed_at' => sanitize_text_field( (string) ( $state['lifecycle_changed_at'] ?? '' ) ) );
 	}
 
 	/** FUT-17: FHIR-compatible public professional projection; no patient record. */
 	public static function fhir_projection( array $dto ) {
-		$lifecycle = $dto['future']['lifecycle']['status'] ?? 'active';
+		$lifecycle = $dto['future']['lifecycle']['status'] ?? 'unknown';
 		$practitioner = array( 'resourceType' => 'Practitioner', 'id' => 'sabri-' . strtolower( str_replace( '-', '', $dto['public_id'] ) ), 'active' => 'active' === $lifecycle, 'identifier' => array( array( 'system' => 'https://sabrihomeopathy.com/profile-id', 'value' => $dto['public_id'] ) ), 'name' => array( array( 'text' => $dto['display_name'] ) ) );
 		if ( ! empty( $dto['fields']['languages'] ) ) { $practitioner['communication'] = array( array( 'language' => array( 'text' => $dto['fields']['languages'] ) ) ); }
 		if ( ! empty( $dto['credential_card'] ) ) { $practitioner['qualification'] = array( array( 'code' => array( 'text' => $dto['credential_card']['qualification'] ?? $dto['credential_card']['degree'] ?? 'Verified professional credential' ), 'issuer' => array( 'display' => $dto['credential_card']['institution'] ?? $dto['credential_card']['licensing_authority'] ?? '' ) ) ); }
@@ -340,6 +341,7 @@ final class SPD_Future_Profile {
 	/** FUT-18: federation-ready actor projection; transport remains external. */
 	public static function federation_projection( array $profile, array $dto ) {
 		$state = self::state_for_profile( $profile['id'] );
+		if ( is_wp_error( $state ) ) { return array( 'opt_in' => false, 'actor_id' => $dto['canonical_url'] . '#actor', 'type' => 'Person', 'name' => $dto['display_name'], 'url' => $dto['canonical_url'], 'transport_owner' => 'external', 'transport_active' => false, 'state_degraded' => true ); }
 		$opt_in = ! empty( $state['federation_opt_in'] );
 		$out = array( 'opt_in' => $opt_in, 'actor_id' => $dto['canonical_url'] . '#actor', 'type' => 'Person', 'name' => $dto['display_name'], 'url' => $dto['canonical_url'], 'transport_owner' => 'external', 'transport_active' => false );
 		if ( ! $opt_in ) { return $out; }
@@ -375,6 +377,7 @@ final class SPD_Future_Profile {
 		$dto['future']['embed_card'] = self::embed_card( $dto );
 		$dto['future']['fhir'] = self::fhir_projection( $dto );
 		$dto['future']['federation'] = self::federation_projection( $profile, $dto );
+		if ( ! empty( $lifecycle['state_degraded'] ) ) { $dto['future']['state_degraded'] = true; }
 		if ( ! $lifecycle['active_professional'] ) { $dto['contacts'] = array(); if ( isset( $dto['clinic']['appointment_url'] ) ) { unset( $dto['clinic']['appointment_url'] ); } $dto['future']['contact_relay'] = array(); }
 		return $dto;
 	}
@@ -427,7 +430,9 @@ final class SPD_Future_Profile {
 		$is_governor = SPD_Membership_Adapter::can_manage_founder( $actor_id ) || SPD_Membership_Adapter::can_operate_profiles( $actor_id );
 		if ( ! $is_owner && ! $is_governor ) { return new WP_Error( 'spd_forbidden', __( 'You cannot change this professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		if ( $is_owner ) { $guard = SPD_Authorization::mutation_guard( $profile, $actor_id ); if ( is_wp_error( $guard ) ) { return $guard; } }
-		$current = self::state_for_profile( $profile['id'] ); $federation = array_key_exists( 'federation_opt_in', $input ) ? ( ! empty( $input['federation_opt_in'] ) ? 1 : 0 ) : absint( $current['federation_opt_in'] );
+		$current = self::state_for_profile( $profile['id'] );
+		if ( is_wp_error( $current ) ) { return $current; }
+		$federation = array_key_exists( 'federation_opt_in', $input ) ? ( ! empty( $input['federation_opt_in'] ) ? 1 : 0 ) : absint( $current['federation_opt_in'] );
 		$lifecycle = sanitize_key( (string) ( $input['professional_lifecycle'] ?? $current['professional_lifecycle'] ) ); if ( ! in_array( $lifecycle, array( 'active','retired','legacy' ), true ) ) { return new WP_Error( 'spd_lifecycle_invalid', __( 'Choose an allowed professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		if ( 'legacy' === $lifecycle && ! $is_governor ) { return new WP_Error( 'spd_legacy_governance_required', __( 'Legacy/memorial status requires governed approval.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		$reason = self::text( $input['lifecycle_reason'] ?? $current['lifecycle_reason'], 500 ); if ( in_array( $lifecycle, array( 'retired','legacy' ), true ) && ! $reason ) { return new WP_Error( 'spd_lifecycle_reason_required', __( 'A reason is required for retired or legacy status.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
