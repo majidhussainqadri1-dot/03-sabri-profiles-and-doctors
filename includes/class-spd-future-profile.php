@@ -109,6 +109,13 @@ final class SPD_Future_Profile {
 		return spd_read_future_profile_state( absint( $profile_id ) );
 	}
 
+	private static function writable_schema_guard() {
+		if ( ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_Schema_Guard::future_ready() ) {
+			return new WP_Error( 'spd_future_schema_unavailable', __( 'The future-profile schema is temporarily unavailable or incomplete.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		return true;
+	}
+
 	/** FUT-01: portable, provider-issued professional credentials. */
 	public static function credential_wallet( $user_id, $viewer_id = 0 ) {
 		$claim = self::current_claim( 'sabri_file09_verifiable_credentials_v1', $user_id, $viewer_id, 600 );
@@ -418,12 +425,16 @@ final class SPD_Future_Profile {
 	}
 
 	public static function save_translation( $actor_id, $public_id, $locale, $headline, $bio, $source = 'human' ) {
-		global $wpdb; $profile = self::owner_profile( $actor_id, $public_id ); if ( is_wp_error( $profile ) ) { return $profile; }
+		global $wpdb;
+		$schema = self::writable_schema_guard(); if ( is_wp_error( $schema ) ) { return $schema; }
+		$profile = self::owner_profile( $actor_id, $public_id ); if ( is_wp_error( $profile ) ) { return $profile; }
 		$locale = SPD_Helpers::normalize_locale( $locale ); if ( ! $locale ) { return new WP_Error( 'spd_translation_locale_invalid', __( 'Choose a valid locale.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		$source = 'machine' === sanitize_key( $source ) ? 'machine' : 'human'; $headline = self::text( $headline, 250 ); $bio = self::text( $bio, 4000 );
 		if ( ! $headline && ! $bio ) { return new WP_Error( 'spd_translation_empty', __( 'A translated headline or biography is required.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		$table = self::translations_table(); $now = SPD_Helpers::now();
+		$wpdb->last_error = '';
 		$existing = $wpdb->get_row( $wpdb->prepare( "SELECT id,version FROM {$table} WHERE profile_id=%d AND locale=%s LIMIT 1", $profile['id'], $locale ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_translation_store_unavailable', __( 'The profile translation store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		$data = array( 'headline' => $headline, 'bio' => $bio, 'source' => $source, 'status' => 'approved', 'approved_by' => absint( $actor_id ), 'updated_at' => $now );
 		if ( $existing ) { $data['version'] = absint( $existing['version'] ) + 1; $ok = 1 === $wpdb->update( $table, $data, array( 'id' => absint( $existing['id'] ), 'version' => absint( $existing['version'] ) ) ); }
 		else { $data += array( 'profile_id' => absint( $profile['id'] ), 'locale' => $locale, 'version' => 1, 'created_at' => $now ); $ok = (bool) $wpdb->insert( $table, $data ); }
@@ -432,11 +443,15 @@ final class SPD_Future_Profile {
 	}
 
 	public static function reconfirm_field( $actor_id, $public_id, $field_key, $days = 365 ) {
-		global $wpdb; $profile = self::owner_profile( $actor_id, $public_id ); if ( is_wp_error( $profile ) ) { return $profile; }
+		global $wpdb;
+		$schema = self::writable_schema_guard(); if ( is_wp_error( $schema ) ) { return $schema; }
+		$profile = self::owner_profile( $actor_id, $public_id ); if ( is_wp_error( $profile ) ) { return $profile; }
 		$allowed = array_merge( array( 'bio','country','city','languages','studied_books' ), SPD_Central_Profile::extended_fields() ); $field_key = sanitize_key( $field_key );
 		if ( ! in_array( $field_key, $allowed, true ) ) { return new WP_Error( 'spd_reconfirm_field_invalid', __( 'That profile field cannot be reconfirmed here.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		$days = min( 730, max( 30, absint( $days ) ) ); $now = SPD_Helpers::now(); $expires = gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS * $days ); $table = self::attestations_table();
+		$wpdb->last_error = '';
 		$existing = $wpdb->get_row( $wpdb->prepare( "SELECT id,version FROM {$table} WHERE profile_id=%d AND field_key=%s LIMIT 1", $profile['id'], $field_key ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_attestation_store_unavailable', __( 'The profile freshness store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		$data = array( 'confirmed_by' => absint( $actor_id ), 'confirmed_at' => $now, 'expires_at' => $expires );
 		if ( $existing ) { $data['version'] = absint( $existing['version'] ) + 1; $ok = 1 === $wpdb->update( $table, $data, array( 'id' => absint( $existing['id'] ), 'version' => absint( $existing['version'] ) ) ); }
 		else { $data += array( 'profile_id' => absint( $profile['id'] ), 'field_key' => $field_key, 'version' => 1 ); $ok = (bool) $wpdb->insert( $table, $data ); }
@@ -445,7 +460,12 @@ final class SPD_Future_Profile {
 	}
 
 	public static function set_future_state( $actor_id, $public_id, array $input ) {
-		global $wpdb; $profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) $public_id ); if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
+		global $wpdb;
+		$schema = self::writable_schema_guard(); if ( is_wp_error( $schema ) ) { return $schema; }
+		$wpdb->last_error = '';
+		$profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) $public_id );
+		if ( $wpdb->last_error || ( is_array( $profile ) && ! empty( $profile['_fields_read_failed'] ) ) ) { return new WP_Error( 'spd_profile_store_unavailable', __( 'The profile store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$actor_id = absint( $actor_id );
 		if ( ! $actor_id ) { return new WP_Error( 'spd_login_required', __( 'Log in to change this professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
 		$membership_health = SPD_Membership_Adapter::health();
@@ -465,7 +485,9 @@ final class SPD_Future_Profile {
 		$reason = self::text( $input['lifecycle_reason'] ?? $current['lifecycle_reason'], 500 ); if ( in_array( $lifecycle, array( 'retired','legacy' ), true ) && ! $reason ) { return new WP_Error( 'spd_lifecycle_reason_required', __( 'A reason is required for retired or legacy status.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		$now = SPD_Helpers::now(); $changed_at = $lifecycle !== $current['professional_lifecycle'] ? $now : ( $current['lifecycle_changed_at'] ?: $now ); $table = self::state_table();
 		$data = array( 'federation_opt_in' => $federation, 'professional_lifecycle' => $lifecycle, 'lifecycle_reason' => $reason, 'lifecycle_changed_at' => $changed_at, 'version' => absint( $current['version'] ) + 1, 'updated_at' => $now );
+		$wpdb->last_error = '';
 		$exists = $wpdb->get_var( $wpdb->prepare( "SELECT profile_id FROM {$table} WHERE profile_id=%d", $profile['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_state_store_unavailable', __( 'The future-profile state store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		if ( $exists ) { $ok = 1 === $wpdb->update( $table, $data, array( 'profile_id' => absint( $profile['id'] ), 'version' => absint( $current['version'] ) ) ); }
 		else { $ok = (bool) $wpdb->insert( $table, array_merge( array( 'profile_id' => absint( $profile['id'] ) ), $data ) ); }
 		if ( ! $ok || ! self::insert_event( 'ProfileFutureStateChanged.v1', $profile, array( 'changed_fields' => array( 'federation_opt_in','professional_lifecycle' ), 'version' => absint( $profile['version'] ), 'lifecycle' => $lifecycle ) ) ) { return new WP_Error( 'spd_future_state_save_failed', __( 'The future-profile state changed concurrently or could not be saved.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
