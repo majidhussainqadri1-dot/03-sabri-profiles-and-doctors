@@ -449,6 +449,7 @@ final class SPD_Future_Profile {
 		if ( $is_owner ) { $guard = SPD_Authorization::mutation_guard( $profile, $actor_id ); if ( is_wp_error( $guard ) ) { return $guard; } }
 		$current = self::state_for_profile( $profile['id'] );
 		if ( is_wp_error( $current ) ) { return $current; }
+		if ( array_key_exists( 'federation_opt_in', $input ) && ! empty( $input['federation_opt_in'] ) && ! $is_owner ) { return new WP_Error( 'spd_federation_owner_opt_in_required', __( 'Federation opt-in must be given explicitly by the profile owner.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		$federation = array_key_exists( 'federation_opt_in', $input ) ? ( ! empty( $input['federation_opt_in'] ) ? 1 : 0 ) : absint( $current['federation_opt_in'] );
 		$lifecycle = sanitize_key( (string) ( $input['professional_lifecycle'] ?? $current['professional_lifecycle'] ) ); if ( ! in_array( $lifecycle, array( 'active','retired','legacy' ), true ) ) { return new WP_Error( 'spd_lifecycle_invalid', __( 'Choose an allowed professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		if ( 'legacy' === $lifecycle && ! $is_governor ) { return new WP_Error( 'spd_legacy_governance_required', __( 'Legacy/memorial status requires governed approval.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
