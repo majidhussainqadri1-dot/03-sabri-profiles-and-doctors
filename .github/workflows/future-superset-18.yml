@@ -121,9 +121,13 @@ jobs:
           TOP="$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors"
           for f in includes/class-spd-future-profile.php includes/class-spd-future-rest.php includes/class-spd-future-privacy.php includes/class-spd-slug-privacy.php includes/class-spd-outbox-dispatcher.php includes/class-spd-central-rest.php includes/class-spd-plugin.php includes/class-spd-media.php includes/trait-spd-profile-identity-create.php includes/trait-spd-profile-public-dto.php includes/trait-spd-profile-professional.php includes/trait-spd-profile-edit-model.php includes/trait-spd-frontend-future.php assets/js/future-profiles.js; do test -f "$TOP/$f"; done
           diff -u sabri-profiles-doctors.php "$TOP/sabri-profiles-doctors.php"
-          diff -ru includes "$TOP/includes"
-          diff -ru assets "$TOP/assets"
           diff -u uninstall.php "$TOP/uninstall.php"
+          diff -u readme.txt "$TOP/readme.txt"
+          find includes -maxdepth 1 -type f -name '*.php' -printf '%f\n' | LC_ALL=C sort > "$RUNNER_TEMP/source-includes.txt"
+          find "$TOP/includes" -maxdepth 1 -type f -name '*.php' -printf '%f\n' | LC_ALL=C sort > "$RUNNER_TEMP/package-includes.txt"
+          cmp "$RUNNER_TEMP/source-includes.txt" "$RUNNER_TEMP/package-includes.txt"
+          while IFS= read -r f; do diff -u "includes/$f" "$TOP/includes/$f"; done < "$RUNNER_TEMP/source-includes.txt"
+          diff -ru assets "$TOP/assets"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: file03-future-superset-18-1.2.0-rc14-fourth-twenty-round
