@@ -11,11 +11,19 @@
 - Review ledger: `FOURTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
 - Defect-bearing rounds: `01, 04, 06, 14, 16, 18, 19, 20`
 - Clean rounds: `02, 03, 05, 07, 08, 09, 10, 11, 12, 13, 15, 17`
-- R19 exact corrected-head Fresh Eighty: `31588887544` — **SUCCESS**
-- R19 exact corrected-head Future Superset: `31588887559` — **SUCCESS**
-- Final exact reviewed candidate: **pending final same-SHA freeze**
-- Final candidate Corrective/Fresh/Future/PHP/package evidence: **pending**
-- PR / merge: **pending**
+- Exact reviewed candidate: `b83671ea1359e118fa5a8ec3ef24bb057718d38e`
+- Candidate tree: `4c7e9581a372e34db1ecc4ad324695bdf3e66381`
+- Candidate Corrective `31590070336` — **SUCCESS**
+- Candidate Fresh Eighty `31590070346` — **SUCCESS**
+- Candidate Future Superset `31590070472` — **SUCCESS**
+- Candidate PHP 8.1 / 8.3 / 8.4, permanent Fourth-Twenty, two fresh post-correction reviews, deterministic double build, SHA-256, SBOM and source-package parity — **SUCCESS**
+- PR #31 — **merged exact reviewed head**
+- Code-bearing merge: `a19b931db4c54e29c030a6c5a3d980077ed7348b`
+- Code-bearing merge tree: `4c7e9581a372e34db1ecc4ad324695bdf3e66381` — exact reviewed-tree parity
+- Code-bearing main Baseline `31590590095` — **SUCCESS**
+- Code-bearing main Fresh `31590590293` — **SUCCESS**
+- Code-bearing main Future `31590589935` — **SUCCESS**
+- Code-bearing main PHP 8.1 / 8.3 / 8.4, permanent Fourth-Twenty, two fresh post-correction reviews and deterministic package/checksum/SBOM/source-package parity — **SUCCESS**
 - Production authorized: **no**
 - Live installation authorized: **no**
 - Staging accepted: **unverified**
@@ -23,11 +31,11 @@
 
 ## Fourth twenty-round correction boundary
 
-The fourth fresh twenty-round cycle preserves unauthenticated generic mutations as 401 separately from authorization 403; makes delegation grant distinguish profile-store/File00/File09 uncertainty from genuine ineligibility; verifies operational activation and Repair evidence persistence; requires current File09 verification evidence; rejects unknown root JSON fields on core mutation routes; and prevents File08 delegation projection from fabricating authoritative denial while Central schema truth is unavailable. Exact review-branch coverage and a permanent Fourth-Twenty regression gate are also part of this candidate.
+The fourth fresh twenty-round cycle preserves unauthenticated generic mutations as 401 separately from authorization 403; makes delegation grant distinguish profile-store/File00/File09 uncertainty from genuine ineligibility; verifies operational activation and Repair evidence persistence; requires current File09 verification evidence; rejects unknown root JSON fields on core mutation routes; and prevents File08 delegation projection from fabricating authoritative denial while Central schema truth is unavailable. Exact review-branch coverage and a permanent Fourth-Twenty regression gate are part of rc14.
 
 DB schema remains `1.2.0`; no table, column or index changed. Public contract remains `1.4.0`; no documented public response field changed.
 
-The exact rc14 candidate is not frozen by this document. Every later source/test/workflow/documentation change creates a new SHA that must pass all release gates again.
+This documentation closure itself creates a later repository SHA, so current repository closure is established only after that exact final `main` passes its own automated gates.
 
 ## Historical provenance warning
 
