@@ -8,34 +8,31 @@ File 03 owns stable public profile identity, profile fields/audiences, Founder o
 
 ## Current repository candidate
 
-- Plugin: `1.2.0-rc13`
+- Plugin: `1.2.0-rc14`
 - Database schema: `1.2.0`
 - Contract: `1.4.0`
 - PHP target matrix: `8.1`, `8.3`, `8.4`
 - WordPress baseline: `7.0+`
-- Third twenty-round starting `main`: `1b887186a7097948b41aabd22122d84cd8b080e0`
-- Starting tree: `0113b2993a6def0a7a39f72749436bfd493fc836`
-- Review branch: `audit/file-03-third-twenty-round-20260812`
-- Ledger: `THIRD-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
-- Defect-bearing rounds: `01, 05, 07, 09, 12, 13, 14, 15, 17, 18, 19, 20`
-- Clean rounds: `02, 03, 04, 06, 08, 10, 11, 16`
-- Exact reviewed candidate: `febc19f1f4384de18d5f51073ad6a437ae6fb852`
-- Candidate tree: `07b5bdd96d4238430023f5adf963b5c0200ef232`
-- Code-bearing merge: `538ef9e1b5b380bd01417ccc0626625d7c151231`
+- Fourth twenty-round starting `main`: `998571621bae0c33afa347e515be543cb3f4b4e9`
+- Starting tree: `dd8269834b86413e1394884eaab3da3d41ba57dd`
+- Review branch: `audit/file-03-fourth-twenty-round-20260812`
+- Ledger: `FOURTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
+- Defect-bearing rounds: `01, 04, 06, 14, 16, 18, 19, 20`
+- Clean rounds: `02, 03, 05, 07, 08, 09, 10, 11, 12, 13, 15, 17`
 
-## Third twenty-round correction boundary
+## Fourth twenty-round correction boundary
 
-This cycle separates unauthenticated moderation from File00 provider failure; makes Future lifecycle/native state and Central edit reads DB-certain; verifies activation and normal-upgrade identity persistence; cleans the original legacy Founder source only under explicit destructive uninstall; enforces File09 minimum claim version; preserves non-null File26 upstream errors; keeps logged-in public profile GET side-effect free; and adds exact-branch/permanent third-twenty QA.
+This cycle separates unauthenticated generic profile mutation from authenticated authorization denial; makes delegation grant distinguish profile-store, File00 and File09 uncertainty from genuine ineligibility; verifies activation operational-state and Repair evidence persistence; requires a current File09 verification projection before issuing delegation authority; rejects unknown root JSON fields on core mutation routes; and prevents File08 from emitting authoritative delegation denial while the Central delegation schema is unavailable. It also adds exact-branch and permanent Fourth-Twenty QA.
 
-DB schema remains `1.2.0`; no table/column/index change was introduced. Contract remains `1.4.0`; no documented public contract field was removed or redefined.
+DB schema remains `1.2.0`; no table, column or index change was introduced. Contract remains `1.4.0`; no documented public response field was removed or renamed, and strict unknown-request-field rejection enforces the existing request boundary.
 
 ## Exact candidate closure status
 
-Exact candidate `febc19f1f4384de18d5f51073ad6a437ae6fb852` passed Corrective `31572754678`, Fresh `31572754676` and Future `31572754659` on the same SHA, including PHP 8.1/8.3/8.4, permanent Third-Twenty, fresh post-correction gates and deterministic package/checksum/SBOM/source-package parity. PR #29 merged that exact head as code-bearing `main` `538ef9e1b5b380bd01417ccc0626625d7c151231`; its tree remains exactly `07b5bdd96d4238430023f5adf963b5c0200ef232`, and push-triggered Baseline `31573348838`, Fresh `31573348862` and Future `31573348876` all passed. This documentation-only closure creates another repository HEAD that must itself be re-tested before repository closure.
+R19 corrected head `f0c2a77119dd77b4e3381aa44be1d717a4e70cf6` passed Fresh `31588887544` and Future `31588887559`. The final rc14 exact candidate is still pending because release identity, permanent Fourth-Twenty test/workflow integration and repository evidence documents themselves create later SHAs. No candidate, PR, staging or live completion is pre-claimed here; the final post-metadata SHA must pass all release gates again.
 
 ## Prior review history
 
-The repository retains the original/fresh 80-round reviews, third–tenth ten-round ledgers, and the first/second twenty-round ledgers as historical regression evidence. Historical green runs never substitute for current exact-HEAD verification.
+The repository retains the original/fresh 80-round reviews, third–tenth ten-round ledgers, and the first/second/third twenty-round ledgers as historical regression evidence. Historical green runs never substitute for current exact-HEAD verification.
 
 ## Truthful status
 
