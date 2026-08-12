@@ -71,7 +71,8 @@ jobs:
           version=m.group(1)
           if f'Version: {version}' not in main or f'Stable tag: {version}' not in readme: fail('runtime/readme version mismatch')
           if lock.get('current_repository_candidate') != version: fail('release-lock current candidate does not match runtime version')
-          if version != '1.2.0-rc13' or 'THIRD-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' not in main: fail('third twenty-round rc13 corrective identity is not the current candidate')
+          if version != '1.2.0-rc14' or 'FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' not in main: fail('fourth twenty-round rc14 corrective identity is not the current candidate')
+          if 'THIRD-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' not in main: fail('historical third twenty-round guarantee marker was lost')
           if 'SECOND-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' not in main: fail('historical second twenty-round guarantee marker was lost')
           if 'TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' not in main: fail('historical first twenty-round guarantee marker was lost')
           if 'TENTH-TEN-ROUND-CORRECTIVE-REVIEW' not in main: fail('historical tenth-review guarantee marker was lost')
@@ -83,7 +84,8 @@ jobs:
               'TENTH-TEN-ROUND-REVIEW-2026-08-12.md','tests/tenth-ten-round-review.py',
               'TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md','tests/twenty-round-sequential-review.py',
               'SECOND-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md','tests/second-twenty-round-sequential-review.py',
-              'THIRD-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md','tests/third-twenty-round-sequential-review.py','tests/architecture-check.py',
+              'THIRD-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md','tests/third-twenty-round-sequential-review.py',
+              'FOURTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md','tests/fourth-twenty-round-sequential-review.py','tests/architecture-check.py',
               'includes/class-spd-slug-privacy.php','includes/class-spd-outbox-dispatcher.php','includes/class-spd-schema-guard.php'
           }
           missing=sorted(required-all_files)
@@ -120,7 +122,8 @@ jobs:
           subprocess.run([sys.executable,'tests/twenty-round-sequential-review.py'],check=True)
           subprocess.run([sys.executable,'tests/second-twenty-round-sequential-review.py'],check=True)
           subprocess.run([sys.executable,'tests/third-twenty-round-sequential-review.py'],check=True)
-          print('Corrective rc13 third-twenty current-candidate integrity passed without reinterpreting historical inventory as current source truth.')
+          subprocess.run([sys.executable,'tests/fourth-twenty-round-sequential-review.py'],check=True)
+          print('Corrective rc14 fourth-twenty current-candidate integrity passed without reinterpreting historical inventory as current source truth.')
           PY
 
   php-lint:
