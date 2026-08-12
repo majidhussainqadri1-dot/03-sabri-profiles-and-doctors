@@ -17,9 +17,11 @@ final class SPD_Activator {
 			if ( is_wp_error( $repair ) ) { throw new RuntimeException( $repair->get_error_message() ); }
 			$legacy = self::migrate_legacy_options();
 			if ( is_wp_error( $legacy ) ) { throw new RuntimeException( $legacy->get_error_message() ); }
-			update_option( 'spd_version', SPD_VERSION, false );
-			update_option( 'spd_contract_version', SPD_CONTRACT_VERSION, false );
-			update_option( 'spd_plan_version', SPD_PLAN_VERSION, false );
+			foreach ( array( 'spd_version' => SPD_VERSION, 'spd_contract_version' => SPD_CONTRACT_VERSION, 'spd_plan_version' => SPD_PLAN_VERSION ) as $option => $value ) {
+				if ( ! self::persist_exact_option( $option, $value ) ) {
+					throw new RuntimeException( __( 'File 03 activation metadata could not be persisted safely.', 'sabri-profiles-doctors' ) );
+				}
+			}
 			if ( false === get_option( 'spd_safe_mode', false ) ) { add_option( 'spd_safe_mode', false, '', false ); }
 			if ( false === get_option( 'spd_migration_cursor', false ) ) { add_option( 'spd_migration_cursor', 0, '', false ); }
 			if ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) && ! wp_schedule_event( time() + 60, 'hourly', 'spd_migrate_profiles_batch' ) ) { throw new RuntimeException( __( 'The File 03 migration schedule could not be created.', 'sabri-profiles-doctors' ) ); }
@@ -30,6 +32,14 @@ final class SPD_Activator {
 		} finally {
 			SPD_Helpers::release_lock( 'activation', $activation_lock );
 		}
+	}
+
+	private static function persist_exact_option( $option, $value ) {
+		$option = sanitize_key( (string) $option );
+		if ( '' === $option ) { return false; }
+		$updated = update_option( $option, $value, false );
+		if ( false === $updated && get_option( $option, null ) !== $value ) { return false; }
+		return get_option( $option, null ) === $value;
 	}
 
 	public static function deactivate() {
