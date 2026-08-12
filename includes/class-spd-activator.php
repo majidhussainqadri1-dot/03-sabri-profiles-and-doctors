@@ -22,8 +22,12 @@ final class SPD_Activator {
 					throw new RuntimeException( __( 'File 03 activation metadata could not be persisted safely.', 'sabri-profiles-doctors' ) );
 				}
 			}
-			if ( false === get_option( 'spd_safe_mode', false ) ) { add_option( 'spd_safe_mode', false, '', false ); }
-			if ( false === get_option( 'spd_migration_cursor', false ) ) { add_option( 'spd_migration_cursor', 0, '', false ); }
+			if ( null === get_option( 'spd_safe_mode', null ) && ! self::persist_exact_option( 'spd_safe_mode', false ) ) {
+				throw new RuntimeException( __( 'File 03 safe-mode state could not be initialized safely.', 'sabri-profiles-doctors' ) );
+			}
+			if ( null === get_option( 'spd_migration_cursor', null ) && ! self::persist_exact_option( 'spd_migration_cursor', 0 ) ) {
+				throw new RuntimeException( __( 'File 03 migration cursor could not be initialized safely.', 'sabri-profiles-doctors' ) );
+			}
 			if ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) && ! wp_schedule_event( time() + 60, 'hourly', 'spd_migrate_profiles_batch' ) ) { throw new RuntimeException( __( 'The File 03 migration schedule could not be created.', 'sabri-profiles-doctors' ) ); }
 			flush_rewrite_rules();
 		} catch ( Throwable $exception ) {
@@ -76,7 +80,10 @@ final class SPD_Activator {
 		foreach ( $schedules as $hook => $definition ) {
 			if ( ! wp_next_scheduled( $hook ) && ! wp_schedule_event( $definition[0], $definition[1], $hook ) ) { return new WP_Error( 'spd_schedule_failed', sprintf( __( 'The File 03 schedule %s could not be created.', 'sabri-profiles-doctors' ), $hook ) ); }
 		}
-		update_option( 'spd_last_repair_at', SPD_Helpers::now(), false );
+		$repair_at = SPD_Helpers::now();
+		if ( ! self::persist_exact_option( 'spd_last_repair_at', $repair_at ) ) {
+			return new WP_Error( 'spd_repair_evidence_failed', __( 'File 03 resources were repaired but the repair evidence could not be persisted safely.', 'sabri-profiles-doctors' ) );
+		}
 		return true;
 	}
 
