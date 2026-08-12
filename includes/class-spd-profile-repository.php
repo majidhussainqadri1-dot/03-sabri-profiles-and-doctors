@@ -38,6 +38,7 @@ final class SPD_Profile_Repository {
 	use SPD_Profile_Cache;
 	use SPD_Profile_Central {
 		grant_delegate as private central_grant_delegate;
+		central_edit_model as private central_edit_model_impl;
 		update_central_profile as private central_update_profile;
 	}
 
@@ -61,6 +62,31 @@ final class SPD_Profile_Repository {
 		return $result;
 	}
 
+	private function central_target_preflight( $target_user_id ) {
+		global $wpdb;
+		$target_user_id = absint( $target_user_id );
+		$wpdb->last_error = '';
+		$profile = $this->find_by_user_id( $target_user_id, false );
+		if ( $wpdb->last_error || ( is_array( $profile ) && ! empty( $profile['_fields_read_failed'] ) ) ) {
+			return new WP_Error( 'spd_profile_store_unavailable', __( 'The profile store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		return $profile;
+	}
+
+	public function central_edit_model( $actor_id, $target_user_id = 0 ) {
+		$actor_id = absint( $actor_id );
+		$target_user_id = $target_user_id ? absint( $target_user_id ) : $actor_id;
+		$profile = $this->central_target_preflight( $target_user_id );
+		if ( is_wp_error( $profile ) ) { return $profile; }
+		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
+		$result = $this->central_edit_model_impl( $actor_id, $target_user_id );
+		if ( is_wp_error( $result ) && 'spd_profile_unavailable' === $result->get_error_code() ) {
+			$confirm = $this->central_target_preflight( $target_user_id );
+			if ( is_wp_error( $confirm ) ) { return $confirm; }
+		}
+		return $result;
+	}
+
 	public function update_profile( $actor_id, array $input, $expected_version, $idempotency_key = '', array $prepared_media = array() ) {
 		if ( array_key_exists( 'audiences', $input ) ) {
 			$guard = SPD_Authorization::validate_audience_payload( $input['audiences'], self::visibility_fields() );
@@ -70,6 +96,10 @@ final class SPD_Profile_Repository {
 	}
 
 	public function update_central_profile( $actor_id, array $input, $expected_version, $idempotency_key = '' ) {
+		$target_user_id = absint( $input['target_user_id'] ?? $actor_id );
+		$profile = $this->central_target_preflight( $target_user_id );
+		if ( is_wp_error( $profile ) ) { return $profile; }
+		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		if ( array_key_exists( 'audiences', $input ) ) {
 			$guard = SPD_Authorization::validate_audience_payload( $input['audiences'], SPD_Central_Profile::extended_fields() );
 			if ( is_wp_error( $guard ) ) { return $guard; }
@@ -81,7 +111,12 @@ final class SPD_Profile_Repository {
 				if ( is_wp_error( $registry ) ) { return $registry; }
 			}
 		}
-		return $this->central_update_profile( $actor_id, $input, $expected_version, $idempotency_key );
+		$result = $this->central_update_profile( $actor_id, $input, $expected_version, $idempotency_key );
+		if ( is_wp_error( $result ) && 'spd_profile_unavailable' === $result->get_error_code() ) {
+			$confirm = $this->central_target_preflight( $target_user_id );
+			if ( is_wp_error( $confirm ) ) { return $confirm; }
+		}
+		return $result;
 	}
 
 	public function rotate_share_link( $actor_id, $expected_version, $idempotency_key = '' ) {
