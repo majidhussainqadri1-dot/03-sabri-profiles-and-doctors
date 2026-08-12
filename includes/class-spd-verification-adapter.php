@@ -15,8 +15,12 @@ final class SPD_Verification_Adapter {
 	public static function projection( $user_id ) {
 		$user_id = absint( $user_id );
 		if ( ! $user_id || ! self::available() ) { return array(); }
-		$data = apply_filters( 'sabri_doctor_verification_public_projection_v1', null, $user_id, SPD_CONTRACT_VERSION );
-		if ( ! is_array( $data ) || true !== gdo_validate_public_projection( $data, $user_id, SPD_CONTRACT_VERSION ) ) { return array(); }
+		try {
+			$data = apply_filters( 'sabri_doctor_verification_public_projection_v1', null, $user_id, SPD_CONTRACT_VERSION );
+			if ( ! is_array( $data ) || true !== gdo_validate_public_projection( $data, $user_id, SPD_CONTRACT_VERSION ) ) { return array(); }
+		} catch ( Throwable $e ) {
+			return array();
+		}
 		$normalized = self::normalize( $data, $user_id );
 		return self::is_current_projection( $normalized, $user_id ) ? $normalized : array();
 	}
