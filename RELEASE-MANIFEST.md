@@ -2,46 +2,36 @@
 
 ## Current repository candidate
 
-- Candidate: `1.2.0-rc12`
+- Candidate: `1.2.0-rc13`
 - Database schema: `1.2.0`
 - Contract: `1.4.0`
-- Second twenty-round starting `main`: `a34e4e2b808134237ae9945759745595685c8733`
-- Starting tree: `c0d41641c66cb897c1073dbb40943c5cf9093d44`
-- Review branch: `audit/file-03-second-twenty-round-20260812`
-- Review ledger: `SECOND-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
-- Defect-bearing rounds: `01, 02, 05, 06, 07, 09, 12, 15, 16, 17, 18, 19, 20`
-- Clean rounds: `03, 04, 08, 10, 11, 13, 14`
-- Final exact reviewed candidate: `96276335b02fd42bea265648ae4a21c255db6d00`
-- Candidate tree: `c5fee38ec9587fa67bdd3f7e0d265257ee908b71`
-- Exact-candidate Corrective Integrity: `31546528055` — **SUCCESS**
-- Exact-candidate Fresh Eighty-Round: `31546527984` — **SUCCESS**
-- Exact-candidate Future Superset 18: `31546527994` — **SUCCESS**
-- Candidate PHP 8.1 / 8.3 / 8.4: **SUCCESS**
-- Candidate permanent Second-Twenty gate: **SUCCESS**
-- Candidate two fresh post-correction adversarial gates: **SUCCESS**
-- Candidate deterministic double build / SHA-256 / SBOM / source-package parity: **SUCCESS**
-- PR #27: **merged** from exact head `96276335b02fd42bea265648ae4a21c255db6d00`
-- Code-bearing merge commit: `97cc579f706587490c2f4424efd593bbba9add29`
-- Code-bearing merge tree: `c5fee38ec9587fa67bdd3f7e0d265257ee908b71`
-- Code-bearing `main` Baseline Integrity: `31546721884` — **SUCCESS**
-- Code-bearing `main` Fresh Eighty-Round: `31546721891` — **SUCCESS**
-- Code-bearing `main` Future Superset 18: `31546721910` — **SUCCESS**
+- Third twenty-round starting `main`: `1b887186a7097948b41aabd22122d84cd8b080e0`
+- Starting tree: `0113b2993a6def0a7a39f72749436bfd493fc836`
+- Review branch: `audit/file-03-third-twenty-round-20260812`
+- Review ledger: `THIRD-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
+- Defect-bearing rounds: `01, 05, 07, 09, 12, 13, 14, 15, 17, 18, 19, 20`
+- Clean rounds: `02, 03, 04, 06, 08, 10, 11, 16`
+- R19 corrected-head Fresh Eighty: `31571192317` — **SUCCESS**
+- R19 corrected-head Future Superset: `31571192318` — **SUCCESS**
+- Final exact reviewed candidate: **pending post-metadata same-SHA freeze**
+- Final candidate Corrective/Fresh/Future/PHP/package evidence: **pending**
+- PR / merge: **pending**
 - Production authorized: **no**
 - Live installation authorized: **no**
 - Staging accepted: **unverified**
 - Exact deployed version/package parity: **unverified**
 
-## Second twenty-round correction boundary
+## Third twenty-round correction boundary
 
-The second fresh twenty-round cycle strengthens File 00 authorization truth at moderation/report/appeal domain boundaries; removes an undeclared internal WordPress attachment primary key from public media serialization; keeps Future Ask Work DB degradation explicit; isolates media worker failure evidence; prevents legacy-option source deletion before migration persistence is proven; recovers File03-owned orphan usermeta only under explicit destructive purge; keeps public Founder rendering read-only; and exposes redacted active worker-error reasons to System Check. It also makes the new branch part of Fresh/Future exact-head CI and adds a permanent second-twenty-round regression gate.
+The third fresh twenty-round cycle preserves unauthenticated moderation as 401 separately from File00 provider/claim 503; makes Future lifecycle/native state and Central edit profile reads DB-certain; verifies activation and runtime-upgrade identity persistence; removes the original legacy Founder source only under explicit destructive uninstall; enforces File09 minimum claim version; preserves non-null File26 upstream answers/errors; and keeps logged-in public profile GET side-effect free. It also adds the new branch and permanent Third-Twenty gate to exact-head CI.
 
-DB schema remains `1.2.0`. Public contract remains `1.4.0`: `attachment_id` was an undeclared internal WordPress primary key, while the machine-readable contract already specifies opaque public identity and public DTO allowlists. Its removal is privacy hardening rather than a documented public-contract field removal.
+DB schema remains `1.2.0`; no table, column or index changed. Public contract remains `1.4.0`; no documented public contract field changed.
 
-This is a documentation-only evidence closure after the exact reviewed source candidate and code-bearing merge passed their applicable repository gates. The final documentation merge creates a new repository HEAD and must be re-tested before this review is considered repository-closed.
+The exact rc13 candidate is not frozen by this document. Every later source/test/workflow/documentation change creates a new SHA that must pass all release gates again.
 
 ## Historical provenance warning
 
-`RELEASE-INVENTORY.tsv` and `RELEASE-CHECKSUMS.sha256` are historical provenance records from an early `0.2.0` source archive. They are **not** checksums or an inventory of the current `1.2.0-rc12` repository tree and must never be used to assert current source/package parity. Current package, SHA-256, SBOM and source-package parity evidence is valid only when generated by CI from the exact repository commit under consideration.
+`RELEASE-INVENTORY.tsv` and `RELEASE-CHECKSUMS.sha256` are historical provenance records from an early `0.2.0` source archive. They are not current rc13 package checksums. Current package, SHA-256, SBOM and source-package parity evidence is valid only when generated by CI from the exact repository commit under consideration.
 
 ## Live-truth boundary
 
