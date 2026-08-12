@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Profiles and Doctors
  * Plugin URI: https://www.sabrihomeopathy.com/
  * Description: Canonical, privacy-controlled Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
- * Version: 1.2.0-rc14
+ * Version: 1.2.0-rc15
  * Requires at least: 7.0
  * Requires PHP: 8.1
  * Author: Dr. Allamah Majid Hussain Sabri
@@ -13,10 +13,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SPD_VERSION', '1.2.0-rc14' );
+define( 'SPD_VERSION', '1.2.0-rc15' );
 define( 'SPD_DB_VERSION', '1.2.0' );
 define( 'SPD_CONTRACT_VERSION', '1.4.0' );
-define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW+FIFTH-TEN-ROUND-CORRECTIVE-REVIEW+SIXTH-TEN-ROUND-CORRECTIVE-REVIEW+SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW+EIGHTH-TEN-ROUND-CORRECTIVE-REVIEW+NINTH-TEN-ROUND-CORRECTIVE-REVIEW+TENTH-TEN-ROUND-CORRECTIVE-REVIEW+TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SECOND-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+THIRD-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' );
+define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW+FIFTH-TEN-ROUND-CORRECTIVE-REVIEW+SIXTH-TEN-ROUND-CORRECTIVE-REVIEW+SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW+EIGHTH-TEN-ROUND-CORRECTIVE-REVIEW+NINTH-TEN-ROUND-CORRECTIVE-REVIEW+TENTH-TEN-ROUND-CORRECTIVE-REVIEW+TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SECOND-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+THIRD-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' );
 define( 'SPD_FILE', __FILE__ );
 define( 'SPD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SPD_URL', plugin_dir_url( __FILE__ ) );
@@ -136,10 +136,10 @@ function spd_migration_integrity_guard() {
 	$remaining_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->users} WHERE ID>%d", $cursor ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	$read_error = (string) $wpdb->last_error;
 	$wpdb->last_error = '';
-	$retry_raw = $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='retry'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$retry_raw = $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='retry'" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	$read_error = $read_error ?: (string) $wpdb->last_error;
 	$wpdb->last_error = '';
-	$dead_raw = $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='dead'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$dead_raw = $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='dead'" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	$read_error = $read_error ?: (string) $wpdb->last_error;
 	if ( $read_error ) {
 		delete_option( 'spd_migration_completed_at' );
