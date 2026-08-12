@@ -43,9 +43,17 @@ final class SPD_Future_Privacy {
 		$profile = $this->profile_for_privacy( $user->ID );
 		if ( is_wp_error( $profile ) ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( $profile->get_error_message() ), 'done' => false ); }
 		if ( ! $profile ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
+		$membership_health = SPD_Membership_Adapter::health();
+		if ( 'available' !== ( $membership_health['status'] ?? '' ) || ! SPD_Membership_Adapter::claims( $user->ID ) ) {
+			return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'Current identity governance could not be verified; future-profile erasure will be retried.', 'sabri-profiles-doctors' ) ), 'done' => false );
+		}
 		if ( SPD_Membership_Adapter::is_founder( $user->ID ) ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'The official Founder future-profile record requires an authorized governance decision before removal.', 'sabri-profiles-doctors' ) ), 'done' => true ); }
-		$base_hold = apply_filters( 'spd_profile_legal_hold', false, absint( $user->ID ), $profile );
-		$future_hold = apply_filters( 'spd_future_profile_legal_hold', false, absint( $user->ID ), $profile );
+		try {
+			$base_hold = apply_filters( 'spd_profile_legal_hold', false, absint( $user->ID ), $profile );
+			$future_hold = apply_filters( 'spd_future_profile_legal_hold', false, absint( $user->ID ), $profile );
+		} catch ( Throwable $e ) {
+			return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'Legal-hold status could not be verified; future-profile erasure will be retried.', 'sabri-profiles-doctors' ) ), 'done' => false );
+		}
 		if ( $base_hold || $future_hold ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'Future professional profile data is retained under an active legal or governance hold.', 'sabri-profiles-doctors' ) ), 'done' => true ); }
 		if ( 'tombstoned' !== sanitize_key( (string) ( $profile['state'] ?? '' ) ) ) {
 			return array(
