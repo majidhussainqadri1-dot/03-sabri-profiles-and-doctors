@@ -194,7 +194,7 @@ final class SPD_Plugin {
 	}
 
 	public function file26_search_projection( $current, $identity ) {
-		if ( null !== $current && ! is_wp_error( $current ) ) { return $current; }
+		if ( null !== $current ) { return $current; }
 		return spd_get_search_projection( $identity );
 	}
 
