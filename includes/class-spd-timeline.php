@@ -12,7 +12,11 @@ final class SPD_Timeline {
 			'file11' => array( 'callback' => array( __CLASS__, 'file11_provider' ), 'availability_filter' => 'sabri_file11_profile_timeline_provider_health_v1' ),
 			'file05' => array( 'callback' => array( __CLASS__, 'file05_provider' ), 'availability_filter' => 'sabri_file05_profile_timeline_provider_health_v1' ),
 		);
-		$filtered = apply_filters( 'spd_profile_timeline_providers_v1', $providers );
+		try {
+			$filtered = apply_filters( 'spd_profile_timeline_providers_v1', $providers );
+		} catch ( Throwable $e ) {
+			return $providers;
+		}
 		return is_array( $filtered ) ? $filtered : $providers;
 	}
 
@@ -42,7 +46,12 @@ final class SPD_Timeline {
 			if ( ! $key || ( $filter && $filter !== $key ) ) { continue; }
 			$callback = is_array( $definition ) && isset( $definition['callback'] ) ? $definition['callback'] : $definition;
 			$health_filter = is_array( $definition ) ? (string) ( $definition['availability_filter'] ?? '' ) : '';
-			$provider_health = $health_filter ? apply_filters( $health_filter, null, $profile['user_id'], SPD_CONTRACT_VERSION ) : null;
+			try {
+				$provider_health = $health_filter ? apply_filters( $health_filter, null, $profile['user_id'], SPD_CONTRACT_VERSION ) : null;
+			} catch ( Throwable $e ) {
+				$health[ $key ] = 'unavailable';
+				continue;
+			}
 			if ( ! SPD_Helpers::current_contract_claim( $provider_health, self::PROVIDER_CONTRACT_MIN, 300 ) || 'available' !== sanitize_key( (string) ( $provider_health['status'] ?? '' ) ) || ! is_callable( $callback ) ) { $health[ $key ] = 'unavailable'; continue; }
 			if ( get_transient( 'spd_timeline_circuit_' . $key ) ) { $health[ $key ] = 'circuit_open'; continue; }
 			$started = microtime( true );
