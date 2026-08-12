@@ -21,7 +21,11 @@ final class SPD_Outbox_Dispatcher {
 	private static function record_error( $code ) {
 		$record = array( 'code' => sanitize_key( $code ), 'at' => SPD_Helpers::now() );
 		update_option( 'spd_last_outbox_error', $record, false );
-		do_action( 'sabri_file24_outbox_failure', array_merge( array( 'owner' => 'file03' ), $record ) );
+		try {
+			do_action( 'sabri_file24_outbox_failure', array_merge( array( 'owner' => 'file03' ), $record ) );
+		} catch ( Throwable $e ) {
+			// File 24 is an assurance consumer, never a dependency of native File 03 delivery/recovery.
+		}
 	}
 
 	public static function dispatch() {
