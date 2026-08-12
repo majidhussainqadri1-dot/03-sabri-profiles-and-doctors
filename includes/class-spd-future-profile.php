@@ -435,7 +435,7 @@ final class SPD_Future_Profile {
 		global $wpdb; $profile = self::owner_profile( $actor_id, $public_id ); if ( is_wp_error( $profile ) ) { return $profile; }
 		$allowed = array_merge( array( 'bio','country','city','languages','studied_books' ), SPD_Central_Profile::extended_fields() ); $field_key = sanitize_key( $field_key );
 		if ( ! in_array( $field_key, $allowed, true ) ) { return new WP_Error( 'spd_reconfirm_field_invalid', __( 'That profile field cannot be reconfirmed here.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
-		$days = min( 730, max( 30, absint( $days ) ) ); $now = SPD_Helpers::now(); $expires = gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS * $days ); $table = self::attestations_table();
+		$days = min( 730, max( 30, absint( $days ) ); $now = SPD_Helpers::now(); $expires = gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS * $days ); $table = self::attestations_table();
 		$existing = $wpdb->get_row( $wpdb->prepare( "SELECT id,version FROM {$table} WHERE profile_id=%d AND field_key=%s LIMIT 1", $profile['id'], $field_key ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$data = array( 'confirmed_by' => absint( $actor_id ), 'confirmed_at' => $now, 'expires_at' => $expires );
 		if ( $existing ) { $data['version'] = absint( $existing['version'] ) + 1; $ok = 1 === $wpdb->update( $table, $data, array( 'id' => absint( $existing['id'] ), 'version' => absint( $existing['version'] ) ) ); }
@@ -447,6 +447,11 @@ final class SPD_Future_Profile {
 	public static function set_future_state( $actor_id, $public_id, array $input ) {
 		global $wpdb; $profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) $public_id ); if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$actor_id = absint( $actor_id );
+		if ( ! $actor_id ) { return new WP_Error( 'spd_login_required', __( 'Log in to change this professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
+		$membership_health = SPD_Membership_Adapter::health();
+		if ( 'available' !== ( $membership_health['status'] ?? '' ) ) { return new WP_Error( 'spd_membership_dependency_unavailable', __( 'Membership authorization is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		$actor_claims = SPD_Membership_Adapter::claims( $actor_id );
+		if ( ! $actor_claims ) { return new WP_Error( 'spd_membership_claim_unavailable', __( 'Current membership authorization could not be verified.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		$is_owner = absint( $profile['user_id'] ) === $actor_id;
 		$is_governor = SPD_Membership_Adapter::can_manage_founder( $actor_id ) || SPD_Membership_Adapter::can_operate_profiles( $actor_id );
 		if ( ! $is_owner && ! $is_governor ) { return new WP_Error( 'spd_forbidden', __( 'You cannot change this professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
