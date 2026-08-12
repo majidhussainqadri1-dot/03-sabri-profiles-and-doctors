@@ -11,11 +11,12 @@
 | Third twenty-round clean | `02, 03, 04, 06, 08, 10, 11, 16` |
 | Frozen starting main | `1b887186a7097948b41aabd22122d84cd8b080e0` · tree `0113b2993a6def0a7a39f72749436bfd493fc836` |
 | Review branch | `audit/file-03-third-twenty-round-20260812` |
-| R19 corrected-head QA | `db7225277b833bcdff64df407c6f92728772c80c`: Fresh `31571192317` SUCCESS · Future `31571192318` SUCCESS |
 | Contract decision | DB remains `1.2.0`; contract remains `1.4.0` because no schema or documented public-contract field changed |
-| Final exact rc13 candidate | **Pending post-metadata same-SHA freeze** |
-| Final exact-candidate automated QA | **Pending same-SHA verification** |
-| PR / merge | **Pending** |
+| Exact reviewed rc13 candidate | `febc19f1f4384de18d5f51073ad6a437ae6fb852` · tree `07b5bdd96d4238430023f5adf963b5c0200ef232` |
+| Exact-candidate QA | Corrective `31572754678` SUCCESS · Fresh `31572754676` SUCCESS · Future `31572754659` SUCCESS; PHP 8.1/8.3/8.4, permanent Third-Twenty, fresh post-correction gates and deterministic package/checksum/SBOM/source-package parity passed |
+| PR #29 | **Merged** from exact reviewed head `febc19f1f4384de18d5f51073ad6a437ae6fb852` |
+| Code-bearing merge | `538ef9e1b5b380bd01417ccc0626625d7c151231` · tree `07b5bdd96d4238430023f5adf963b5c0200ef232` |
+| Code-bearing main QA | Baseline `31573348838` SUCCESS · Fresh `31573348862` SUCCESS · Future `31573348876` SUCCESS; PHP 8.1/8.3/8.4 and Third-Twenty passed |
 | Correction themes | moderation 401/503/403; DB-certain Future state/native reads; activation/runtime metadata persistence; Central target DB certainty; destructive legacy cleanup; File09 claim-version floor; File26 upstream error preservation; side-effect-free public GET; exact-branch/permanent third-twenty QA; rc13 identity |
 | Staging-Accepted | **Pending / unverified** |
 | Live-Deployed | **Unverified** |
@@ -25,8 +26,8 @@
 
 ## Repository closure boundary
 
-The rc13 candidate is not frozen by this document. After the last source/test/workflow/release-metadata/documentation change, all applicable automated gates must succeed again on one exact SHA, including Corrective Integrity, Fresh Eighty, Future Superset, PHP 8.1/8.3/8.4, permanent Third-Twenty, two fresh post-correction gates and deterministic package/checksum/SBOM/source-package parity.
+The exact reviewed rc13 source candidate and its code-bearing merge have passed their applicable repository gates. This documentation-only closure does not alter runtime/source behavior. Because the documentation merge creates a new repository HEAD, that final HEAD must itself be re-tested before this review is repository-closed.
 
 Repository and CI evidence do not establish Hostinger staging or live state. External acceptance remains: staging reality freeze → exact installed package/version/checksum → DB/schema/migration verification → current companion contracts → representative browser/mobile/RTL/WCAG journeys → backup/restore/rollback → Founder acceptance → controlled deployment → live re-test → parity confirmation.
 
-**Exact deployed code is currently unverified; repository-based diagnosis is provisional for any live incident.**
+**Exact deployed code remains unverified; repository-based diagnosis is provisional for any live incident.**
