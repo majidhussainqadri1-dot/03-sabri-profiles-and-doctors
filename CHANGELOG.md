@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.2.0-rc14 — Fourth fresh twenty-round sequential corrective hardening
+
+- Started from exact `main` `998571621bae0c33afa347e515be543cb3f4b4e9` (tree `dd8269834b86413e1394884eaab3da3d41ba57dd`).
+- Defect-bearing rounds: `01, 04, 06, 14, 16, 18, 19, 20`.
+- Clean rounds: `02, 03, 05, 07, 08, 09, 10, 11, 12, 13, 15, 17`.
+- Preserves unauthenticated generic profile mutation as 401 separately from authenticated authorization denial.
+- Makes delegation grant fail closed on profile-store, File00 provider/current-claim and File09 provider/current-projection uncertainty before applying genuine eligibility denials.
+- Verifies initialization of `spd_safe_mode` / `spd_migration_cursor` and exact persistence of Repair evidence before reporting activation/repair success.
+- Rejects unknown root JSON fields on core professional/report/moderation mutation routes with 400 before mutation.
+- Requires exact Central delegation schema readiness before File08 emits an authoritative delegation `allowed` projection.
+- Adds `FOURTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` and `tests/fourth-twenty-round-sequential-review.py` to permanent CI/package gates.
+- Advances source identity to `1.2.0-rc14`; DB schema remains `1.2.0`; contract remains `1.4.0`.
+- Final exact candidate/PR/merge evidence remains pending until one post-metadata SHA passes every applicable automated gate.
+- Staging, deployed-package parity, live DB/migration state, Founder acceptance and operational status remain unverified.
+
 ## 1.2.0-rc13 — Third fresh twenty-round sequential corrective hardening
 
 - Started from exact `main` `1b887186a7097948b41aabd22122d84cd8b080e0` (tree `0113b2993a6def0a7a39f72749436bfd493fc836`).

@@ -154,9 +154,36 @@ final class SPD_Profile_Repository {
 	}
 
 	public function grant_delegate( $owner_id, $delegate_id, array $scopes, $expires_at = '', $idempotency_key = '' ) {
+		$owner_id = absint( $owner_id );
 		$delegate_id = absint( $delegate_id );
-		if ( $delegate_id && SPD_Membership_Adapter::is_minor( $delegate_id ) ) {
+		if ( ! $owner_id || ! $delegate_id || $owner_id === $delegate_id ) {
+			return $this->central_grant_delegate( $owner_id, $delegate_id, $scopes, $expires_at, $idempotency_key );
+		}
+		$profile = $this->central_target_preflight( $owner_id );
+		if ( is_wp_error( $profile ) ) { return $profile; }
+		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
+		$membership_health = SPD_Membership_Adapter::health();
+		if ( 'available' !== ( $membership_health['status'] ?? '' ) ) {
+			return new WP_Error( 'spd_membership_provider_unavailable', __( 'Membership authorization is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$owner_claims = SPD_Membership_Adapter::claims( $owner_id );
+		$delegate_claims = SPD_Membership_Adapter::claims( $delegate_id );
+		if ( ! $owner_claims || ! $delegate_claims ) {
+			return new WP_Error( 'spd_membership_claim_unavailable', __( 'Current delegation eligibility could not be verified.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$verification_health = SPD_Verification_Adapter::health();
+		if ( 'available' !== ( $verification_health['status'] ?? '' ) ) {
+			return new WP_Error( 'spd_verification_provider_unavailable', __( 'Doctor verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$owner_verification = SPD_Verification_Adapter::projection( $owner_id );
+		if ( ! $owner_verification ) {
+			return new WP_Error( 'spd_verification_claim_unavailable', __( 'Current doctor-verification evidence could not be verified.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		if ( ! empty( $delegate_claims['is_minor'] ) ) {
 			return new WP_Error( 'spd_delegate_minor_forbidden', __( 'A minor account cannot receive delegated profile-management authority.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+		}
+		if ( 'verified' !== sanitize_key( (string) ( $owner_verification['status'] ?? '' ) ) ) {
+			return new WP_Error( 'spd_delegate_owner_ineligible', __( 'Delegated profile management is available only to a currently verified doctor.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
 		}
 		return $this->central_grant_delegate( $owner_id, $delegate_id, $scopes, $expires_at, $idempotency_key );
 	}

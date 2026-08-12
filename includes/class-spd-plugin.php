@@ -211,6 +211,7 @@ final class SPD_Plugin {
 		$owner_user_id = absint( $owner_user_id );
 		$delegate_user_id = absint( $delegate_user_id );
 		$scope = sanitize_key( $scope );
+		if ( ! $owner_user_id || ! $delegate_user_id || ! in_array( $scope, SPD_Central_Profile::delegation_scopes(), true ) || ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_Schema_Guard::central_ready() ) { return array(); }
 		$membership_health = SPD_Membership_Adapter::health();
 		if ( 'available' !== ( $membership_health['status'] ?? '' ) || ! SPD_Membership_Adapter::claims( $owner_user_id ) || ! SPD_Membership_Adapter::claims( $delegate_user_id ) ) { return array(); }
 		$verification = SPD_Verification_Adapter::projection( $owner_user_id );

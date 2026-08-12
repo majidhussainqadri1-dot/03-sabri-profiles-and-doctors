@@ -44,7 +44,15 @@ final class SPD_REST {
 	public function can_moderate() { return SPD_Authorization::moderation_guard( get_current_user_id() ); }
 	public function get_profile( WP_REST_Request $r ) { $t = SPD_Helpers::trace_id(); return $this->response( SPD_Profile_Repository::instance()->public_dto( $r['public_id'], get_current_user_id() ), $t ); }
 	public function edit_model( WP_REST_Request $r ) { $t = SPD_Helpers::trace_id(); return $this->response( SPD_Profile_Repository::instance()->edit_model( get_current_user_id(), absint( $r->get_param( 'target_user_id' ) ) ), $t ); }
-	public function submit_professional( WP_REST_Request $r ) { $t = SPD_Helpers::trace_id(); $p = (array) $r->get_json_params(); $fields = isset( $p['fields'] ) && is_array( $p['fields'] ) ? $p['fields'] : array(); $idem = $this->idempotency_key( $r ); return $this->response( SPD_Profile_Repository::instance()->submit_professional_fields( get_current_user_id(), $fields, $this->expected_version( $r ), $idem, empty( $p['save_draft'] ) ), $t ); }
+	public function submit_professional( WP_REST_Request $r ) {
+		$t = SPD_Helpers::trace_id();
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'fields', 'save_draft' ), 'spd_unknown_professional_request_field' );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape, $t ); }
+		$fields = isset( $p['fields'] ) && is_array( $p['fields'] ) ? $p['fields'] : array();
+		$idem = $this->idempotency_key( $r );
+		return $this->response( SPD_Profile_Repository::instance()->submit_professional_fields( get_current_user_id(), $fields, $this->expected_version( $r ), $idem, empty( $p['save_draft'] ) ), $t );
+	}
 	public function update_profile( WP_REST_Request $r ) {
 		$t = SPD_Helpers::trace_id();
 		$repo = SPD_Profile_Repository::instance();
@@ -60,9 +68,33 @@ final class SPD_REST {
 		return $this->response( $repo->update_profile( get_current_user_id(), $params, $this->expected_version( $r ), $this->idempotency_key( $r ) ), $t );
 	}
 	public function get_timeline( WP_REST_Request $r ) { $t = SPD_Helpers::trace_id(); return $this->response( SPD_Timeline::query( $r['public_id'], array( 'limit' => $r->get_param( 'limit' ), 'cursor' => $r->get_param( 'cursor' ), 'provider' => $r->get_param( 'provider' ) ), get_current_user_id() ), $t ); }
-	public function create_report( WP_REST_Request $r ) { $t = SPD_Helpers::trace_id(); $p = (array) $r->get_json_params(); return $this->response( SPD_Profile_Repository::instance()->create_report( $r['public_id'], get_current_user_id(), $p['reason'] ?? '', $p['details'] ?? '', $this->idempotency_key( $r ) ), $t, 201 ); }
-	public function moderate_profile( WP_REST_Request $r ) { $t = SPD_Helpers::trace_id(); $p = (array) $r->get_json_params(); return $this->response( SPD_Profile_Repository::instance()->moderate_profile( $r['public_id'], get_current_user_id(), $p['state'] ?? '', $this->expected_version( $r ), $p['reason'] ?? '', $this->idempotency_key( $r ) ), $t ); }
-	public function moderate_report( WP_REST_Request $r ) { $t = SPD_Helpers::trace_id(); $p = (array) $r->get_json_params(); return $this->response( SPD_Profile_Repository::instance()->moderate_report( $r['report_uuid'], get_current_user_id(), $p['status'] ?? '', $this->expected_version( $r ), $p['note'] ?? '', $this->idempotency_key( $r ) ), $t ); }
+	public function create_report( WP_REST_Request $r ) {
+		$t = SPD_Helpers::trace_id();
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'reason', 'details' ), 'spd_unknown_report_field' );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape, $t ); }
+		return $this->response( SPD_Profile_Repository::instance()->create_report( $r['public_id'], get_current_user_id(), $p['reason'] ?? '', $p['details'] ?? '', $this->idempotency_key( $r ) ), $t, 201 );
+	}
+	public function moderate_profile( WP_REST_Request $r ) {
+		$t = SPD_Helpers::trace_id();
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'state', 'reason', 'version' ), 'spd_unknown_profile_moderation_field' );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape, $t ); }
+		return $this->response( SPD_Profile_Repository::instance()->moderate_profile( $r['public_id'], get_current_user_id(), $p['state'] ?? '', $this->expected_version( $r ), $p['reason'] ?? '', $this->idempotency_key( $r ) ), $t );
+	}
+	public function moderate_report( WP_REST_Request $r ) {
+		$t = SPD_Helpers::trace_id();
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'status', 'note', 'version' ), 'spd_unknown_report_moderation_field' );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape, $t ); }
+		return $this->response( SPD_Profile_Repository::instance()->moderate_report( $r['report_uuid'], get_current_user_id(), $p['status'] ?? '', $this->expected_version( $r ), $p['note'] ?? '', $this->idempotency_key( $r ) ), $t );
+	}
+
+	private function reject_unknown( array $payload, array $allowed, $code ) {
+		return array_diff( array_keys( $payload ), $allowed )
+			? new WP_Error( sanitize_key( $code ), __( 'One or more submitted fields are not supported for this operation.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) )
+			: true;
+	}
 
 	private function idempotency_key( WP_REST_Request $r ) {
 		return trim( sanitize_text_field( (string) $r->get_header( 'Idempotency-Key' ) ) );

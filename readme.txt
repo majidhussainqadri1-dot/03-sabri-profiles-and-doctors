@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials,
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.0-rc13
+Stable tag: 1.2.0-rc14
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -13,7 +13,7 @@ Canonical Founder, member and doctor profile domain for the Sabri Social Homeopa
 
 File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.2.0-rc13 is the repository candidate produced by the third fresh twenty-round sequential corrective review. It preserves the complete Future Professional Identity & Profile Superset and all prior corrective hardening while strengthening moderation 401/503/403 truth, DB-certain future lifecycle/native data and Central edit reads, exact activation/runtime-upgrade metadata persistence, minimum File09 claim-version enforcement, upstream File26 error preservation, explicit destructive legacy cleanup and side-effect-free public profile GET behavior. DB schema remains 1.2.0 and contract remains 1.4.0.
+1.2.0-rc14 is the repository candidate produced by the fourth fresh twenty-round sequential corrective review. It preserves all prior Future Professional Identity & Profile Superset hardening while strengthening generic mutation 401/403 truth, delegation store/provider/current-claim certainty, activation/Repair persistence evidence, current File09 verification evidence, strict core REST root-payload allowlists and File08 delegation schema-degraded behavior. DB schema remains 1.2.0 and contract remains 1.4.0.
 
 No paid/pro/premium or donor-advantage gate exists in File 03. No patient chart, raw identity evidence, automatic doctor verification, cure guarantee or AI diagnosis/prescription is introduced. Missing, stale, malformed or unavailable canonical providers fail closed or degrade only the affected feature.
 
@@ -29,6 +29,17 @@ This remains a repository candidate. Source and automated-QA evidence are separa
 6. Do not promote to live until Founder approval and exact package/deployment parity are recorded.
 
 == Changelog ==
+
+= 1.2.0-rc14 =
+* Fourth fresh 20-round sequential corrective review from exact main `998571621bae0c33afa347e515be543cb3f4b4e9`.
+* Defect-bearing rounds: 01, 04, 06, 14, 16, 18, 19, 20. Clean rounds: 02, 03, 05, 07, 08, 09, 10, 11, 12, 13, 15, 17.
+* Separates unauthenticated generic profile mutation 401 from authenticated forbidden 403.
+* Makes delegation grant distinguish profile-store/File00/File09 uncertainty from genuine ineligibility and requires current verification evidence.
+* Verifies activation operational options and Repair evidence by exact persistence/read-back.
+* Rejects unknown root JSON fields on core professional/report/moderation mutation routes.
+* Prevents File08 from emitting authoritative delegation denial when Central delegation schema is unavailable.
+* Adds `FOURTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` and `tests/fourth-twenty-round-sequential-review.py` to permanent CI/package gates.
+* Preserves DB 1.2.0, contract 1.4.0 and staging/live/operational separation.
 
 = 1.2.0-rc13 =
 * Third fresh 20-round sequential corrective review from exact main `1b887186a7097948b41aabd22122d84cd8b080e0`.
