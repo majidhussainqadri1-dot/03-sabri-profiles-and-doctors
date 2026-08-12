@@ -12,7 +12,8 @@
 - Requires exact Central delegation schema readiness before File08 emits an authoritative delegation `allowed` projection.
 - Adds `FOURTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` and `tests/fourth-twenty-round-sequential-review.py` to permanent CI/package gates.
 - Advances source identity to `1.2.0-rc14`; DB schema remains `1.2.0`; contract remains `1.4.0`.
-- Final exact candidate/PR/merge evidence remains pending until one post-metadata SHA passes every applicable automated gate.
+- Exact reviewed candidate `b83671ea1359e118fa5a8ec3ef24bb057718d38e` passed Corrective `31590070336`, Fresh `31590070346`, Future `31590070472`, PHP 8.1/8.3/8.4, permanent Fourth-Twenty, two fresh post-correction gates and deterministic package/checksum/SBOM/source-package parity.
+- PR #31 merged that exact head as code-bearing `main` `a19b931db4c54e29c030a6c5a3d980077ed7348b`, preserving reviewed tree `4c7e9581a372e34db1ecc4ad324695bdf3e66381`; Baseline `31590590095`, Fresh `31590590293` and Future `31590589935` then passed on the code-bearing merge, including PHP matrix, fresh-review and deterministic package/parity jobs.
 - Staging, deployed-package parity, live DB/migration state, Founder acceptance and operational status remain unverified.
 
 ## 1.2.0-rc13 — Third fresh twenty-round sequential corrective hardening
