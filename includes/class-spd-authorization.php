@@ -78,6 +78,8 @@ final class SPD_Authorization {
 
 	public static function mutation_guard( array $profile, $actor_id ) {
 		if ( SPD_Observability::safe_mode() ) { return new WP_Error( 'spd_safe_mode', __( 'Profile changes are temporarily unavailable while the system is in safe mode.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		$actor_id = absint( $actor_id );
+		if ( ! $actor_id ) { return new WP_Error( 'spd_login_required', __( 'A signed-in account is required to change a profile.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
 		if ( ! empty( $profile['_fields_read_failed'] ) ) { return new WP_Error( 'spd_profile_field_store_unavailable', __( 'Profile visibility data is temporarily unavailable; no changes were made.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		if ( ! self::profile_mutation_state_allows( $profile ) ) { return new WP_Error( 'spd_profile_state_locked', __( 'This profile state does not allow owner or delegated edits. A governed state transition is required first.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
 		if ( ! self::can_edit_profile( $profile, $actor_id ) ) { return new WP_Error( 'spd_forbidden', __( 'You are not authorized to change this profile.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
