@@ -97,7 +97,7 @@ foreach ( array(
 	'spd_last_outbox_run', 'spd_last_outbox_error', 'spd_last_retention_run', 'spd_last_retention_error', 'spd_last_repair_at', 'spd_last_reconciliation',
 	'spd_reconciliation_required', 'spd_profile_cache_generation',
 	'spd_media_privacy_cursor', 'spd_media_privacy_cycle_completed_at', 'spd_last_media_queue_error',
-	'spd_purge_on_uninstall', 'spd_founder_profile_legacy_read_only',
+	'spd_purge_on_uninstall', 'spd_founder_profile', 'spd_founder_profile_legacy_read_only',
 ) as $option ) {
 	delete_option( $option );
 }
