@@ -43,7 +43,11 @@ final class SPD_Media {
 		$rechecked=wp_check_filetype_and_ext($file['tmp_name'],$file['name'],$mimes);
 		if ( empty($rechecked['type']) || $rechecked['type']!==$checked['type'] ) { return new WP_Error('spd_upload_reencode_mismatch',__( 'The re-encoded image did not retain a valid type.','sabri-profiles-doctors')); }
 		if ( ! has_filter('spd_profile_media_scan_v1') ) { return new WP_Error('spd_scan_unavailable',__( 'A compatible profile-image safety scanner is required before upload.','sabri-profiles-doctors'),array('status'=>503)); }
-		$scan=apply_filters('spd_profile_media_scan_v1',null,$file['tmp_name'],$rechecked['type'],$user_id,$purpose,SPD_CONTRACT_VERSION);
+		try {
+			$scan=apply_filters('spd_profile_media_scan_v1',null,$file['tmp_name'],$rechecked['type'],$user_id,$purpose,SPD_CONTRACT_VERSION);
+		} catch ( Throwable $e ) {
+			return new WP_Error('spd_scan_unavailable',__( 'The image safety scanner failed safely. Try again later.','sabri-profiles-doctors'),array('status'=>503));
+		}
 		if ( ! self::valid_clean_scan($scan,$file['tmp_name']) ) { return new WP_Error('spd_scan_unavailable',__( 'The image safety scan was unavailable, stale, or invalid.','sabri-profiles-doctors'),array('status'=>503)); }
 
 		require_once ABSPATH.'wp-admin/includes/file.php'; require_once ABSPATH.'wp-admin/includes/media.php'; require_once ABSPATH.'wp-admin/includes/image.php';
