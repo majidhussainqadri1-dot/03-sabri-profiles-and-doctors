@@ -11,6 +11,7 @@ def section(src, start, end=None):
     if end: require(j>=0, f'Missing section end: {end}')
     return src[i:j]
 
+plugin=text('sabri-profiles-doctors.php')
 future=text('includes/class-spd-future-profile.php')
 verification=text('includes/class-spd-verification-adapter.php')
 timeline=text('includes/class-spd-timeline.php')
@@ -21,6 +22,10 @@ outbox=text('includes/class-spd-outbox-dispatcher.php')
 fresh=text('.github/workflows/fresh-eighty-round-review.yml')
 future_ci=text('.github/workflows/future-superset-18.yml')
 ledger=text('FIFTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md')
+
+require("Version: 1.2.0-rc15" in plugin and "define( 'SPD_VERSION', '1.2.0-rc15' )" in plugin, 'R20 rc15 source identity missing')
+require('FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in plugin, 'R20 Fifth-Twenty plan marker missing')
+require("define( 'SPD_DB_VERSION', '1.2.0' )" in plugin and "define( 'SPD_CONTRACT_VERSION', '1.4.0' )" in plugin, 'R20 DB/contract identity drifted')
 
 state=section(future,'public static function set_future_state',None)
 require('spd_federation_owner_opt_in_required' in state and '! $is_owner' in state, 'R02 owner-only federation opt-in invariant missing')
@@ -53,7 +58,8 @@ require(branch in fresh and branch in future_ci, 'R19 exact fifth-twenty branch 
 require('tests/fifth-twenty-round-sequential-review.py' in fresh, 'R19 permanent Fifth-Twenty Fresh gate missing')
 require('tests/fifth-twenty-round-sequential-review.py' in future_ci, 'R19 permanent Fifth-Twenty Future gate missing')
 
-require('02, 03, 05, 06, 10, 11, 12, 13, 14, 16, 19' in ledger, 'Fifth twenty-round defect ledger drifted')
+require('02, 03, 05, 06, 10, 11, 12, 13, 14, 16, 19, 20' in ledger, 'Fifth twenty-round defect ledger drifted')
 require('01, 04, 07, 08, 09, 15, 17, 18' in ledger, 'Fifth twenty-round clean ledger drifted')
+require('1.2.0-rc15' in ledger and 'DB schema remains `1.2.0`' in ledger and 'contract remains `1.4.0`' in ledger, 'R20 release decision evidence missing')
 require('Exact deployed code remains unverified' in ledger, 'Live/deployed truth boundary missing')
-print('Fifth fresh twenty-round sequential corrective invariants passed through R19.')
+print('Fifth fresh twenty-round sequential corrective invariants passed through R20.')
