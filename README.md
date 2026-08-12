@@ -26,9 +26,11 @@ This cycle separates unauthenticated generic profile mutation from authenticated
 
 DB schema remains `1.2.0`; no table, column or index change was introduced. Contract remains `1.4.0`; no documented public response field was removed or renamed, and strict unknown-request-field rejection enforces the existing request boundary.
 
-## Exact candidate closure status
+## Exact repository evidence
 
-R19 corrected head `f0c2a77119dd77b4e3381aa44be1d717a4e70cf6` passed Fresh `31588887544` and Future `31588887559`. The final rc14 exact candidate is still pending because release identity, permanent Fourth-Twenty test/workflow integration and repository evidence documents themselves create later SHAs. No candidate, PR, staging or live completion is pre-claimed here; the final post-metadata SHA must pass all release gates again.
+Exact reviewed rc14 candidate `b83671ea1359e118fa5a8ec3ef24bb057718d38e` (tree `4c7e9581a372e34db1ecc4ad324695bdf3e66381`) passed Corrective `31590070336`, Fresh `31590070346`, Future `31590070472`, PHP 8.1/8.3/8.4, permanent Fourth-Twenty, two fresh post-correction gates and deterministic package/checksum/SBOM/source-package parity. PR #31 merged that exact head as code-bearing `main` `a19b931db4c54e29c030a6c5a3d980077ed7348b`, preserving the same source tree. On that code-bearing main, Baseline `31590590095`, Fresh `31590590293`, Future `31590589935`, PHP matrix, Fourth-Twenty, fresh-review and package/parity gates all passed.
+
+The documentation-only closure that records those facts creates a later final repository SHA, which must itself be re-tested before repository closure is reported.
 
 ## Prior review history
 
