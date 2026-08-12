@@ -19,6 +19,9 @@ File 03 owns stable public profile identity, profile fields/audiences, Founder o
 - Ledger: `THIRD-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
 - Defect-bearing rounds: `01, 05, 07, 09, 12, 13, 14, 15, 17, 18, 19, 20`
 - Clean rounds: `02, 03, 04, 06, 08, 10, 11, 16`
+- Exact reviewed candidate: `febc19f1f4384de18d5f51073ad6a437ae6fb852`
+- Candidate tree: `07b5bdd96d4238430023f5adf963b5c0200ef232`
+- Code-bearing merge: `538ef9e1b5b380bd01417ccc0626625d7c151231`
 
 ## Third twenty-round correction boundary
 
@@ -28,7 +31,7 @@ DB schema remains `1.2.0`; no table/column/index change was introduced. Contract
 
 ## Exact candidate closure status
 
-The rc13 source tree is pending final same-SHA candidate freeze after all release metadata/tests/workflows are finalized. No PR, staging or live status is pre-claimed here. Any further source/test/workflow/documentation change creates a new repository candidate that must be re-tested.
+Exact candidate `febc19f1f4384de18d5f51073ad6a437ae6fb852` passed Corrective `31572754678`, Fresh `31572754676` and Future `31572754659` on the same SHA, including PHP 8.1/8.3/8.4, permanent Third-Twenty, fresh post-correction gates and deterministic package/checksum/SBOM/source-package parity. PR #29 merged that exact head as code-bearing `main` `538ef9e1b5b380bd01417ccc0626625d7c151231`; its tree remains exactly `07b5bdd96d4238430023f5adf963b5c0200ef232`, and push-triggered Baseline `31573348838`, Fresh `31573348862` and Future `31573348876` all passed. This documentation-only closure creates another repository HEAD that must itself be re-tested before repository closure.
 
 ## Prior review history
 
@@ -38,4 +41,4 @@ The repository retains the original/fresh 80-round reviews, third–tenth ten-ro
 
 Repository source, CI and deterministic package evidence do **not** authorize production. Staging reality, exact deployed-package parity, live DB/schema/migration state, real companion-provider integration, representative browser/mobile/Urdu-Arabic RTL/WCAG journeys, backup/restore/rollback and Founder acceptance remain separate mandatory gates.
 
-**Exact deployed code is currently unverified; repository evidence must not be described as live verification.**
+**Exact deployed code remains unverified; repository-based diagnosis is provisional for any live incident.**

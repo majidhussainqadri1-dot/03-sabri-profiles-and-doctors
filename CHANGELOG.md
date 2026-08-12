@@ -13,7 +13,8 @@
 - Keeps logged-in public profile GET side-effect free instead of ensuring/creating a missing profile.
 - Adds exact review-branch coverage plus `THIRD-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` and `tests/third-twenty-round-sequential-review.py`.
 - Advances source identity to `1.2.0-rc13`; DB schema remains `1.2.0`; contract remains `1.4.0`.
-- Final exact candidate, PR/merge and exact-main evidence remain pending until one post-metadata SHA passes every applicable automated gate.
+- Exact reviewed candidate `febc19f1f4384de18d5f51073ad6a437ae6fb852` passed Corrective `31572754678`, Fresh `31572754676`, Future `31572754659`, PHP 8.1/8.3/8.4, permanent Third-Twenty, fresh post-correction gates and deterministic package/checksum/SBOM/source-package parity.
+- PR #29 merged that exact head as code-bearing `main` `538ef9e1b5b380bd01417ccc0626625d7c151231`, preserving tree `07b5bdd96d4238430023f5adf963b5c0200ef232`; Baseline `31573348838`, Fresh `31573348862` and Future `31573348876` then passed on the merge commit.
 - Staging, deployed-package parity, live DB/migration state, Founder acceptance and operational status remain unverified.
 
 ## 1.2.0-rc12 — Second fresh twenty-round sequential corrective hardening

@@ -11,11 +11,21 @@
 - Review ledger: `THIRD-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md`
 - Defect-bearing rounds: `01, 05, 07, 09, 12, 13, 14, 15, 17, 18, 19, 20`
 - Clean rounds: `02, 03, 04, 06, 08, 10, 11, 16`
-- R19 corrected-head Fresh Eighty: `31571192317` — **SUCCESS**
-- R19 corrected-head Future Superset: `31571192318` — **SUCCESS**
-- Final exact reviewed candidate: **pending post-metadata same-SHA freeze**
-- Final candidate Corrective/Fresh/Future/PHP/package evidence: **pending**
-- PR / merge: **pending**
+- Final exact reviewed candidate: `febc19f1f4384de18d5f51073ad6a437ae6fb852`
+- Candidate tree: `07b5bdd96d4238430023f5adf963b5c0200ef232`
+- Exact-candidate Corrective Integrity: `31572754678` — **SUCCESS**
+- Exact-candidate Fresh Eighty-Round: `31572754676` — **SUCCESS**
+- Exact-candidate Future Superset 18: `31572754659` — **SUCCESS**
+- Candidate PHP 8.1 / 8.3 / 8.4: **SUCCESS**
+- Candidate permanent Third-Twenty gate: **SUCCESS**
+- Candidate fresh post-correction gates: **SUCCESS**
+- Candidate deterministic double build / SHA-256 / SBOM / source-package parity: **SUCCESS**
+- PR #29: **merged** from exact head `febc19f1f4384de18d5f51073ad6a437ae6fb852`
+- Code-bearing merge commit: `538ef9e1b5b380bd01417ccc0626625d7c151231`
+- Code-bearing merge tree: `07b5bdd96d4238430023f5adf963b5c0200ef232`
+- Code-bearing `main` Baseline Integrity: `31573348838` — **SUCCESS**
+- Code-bearing `main` Fresh Eighty-Round: `31573348862` — **SUCCESS**
+- Code-bearing `main` Future Superset 18: `31573348876` — **SUCCESS**
 - Production authorized: **no**
 - Live installation authorized: **no**
 - Staging accepted: **unverified**
@@ -27,7 +37,7 @@ The third fresh twenty-round cycle preserves unauthenticated moderation as 401 s
 
 DB schema remains `1.2.0`; no table, column or index changed. Public contract remains `1.4.0`; no documented public contract field changed.
 
-The exact rc13 candidate is not frozen by this document. Every later source/test/workflow/documentation change creates a new SHA that must pass all release gates again.
+This is a documentation-only evidence closure after the exact reviewed source candidate and code-bearing merge passed their applicable repository gates. The documentation merge itself creates a new repository HEAD and must be re-tested before repository closure.
 
 ## Historical provenance warning
 
