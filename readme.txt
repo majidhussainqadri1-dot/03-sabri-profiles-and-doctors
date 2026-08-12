@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials,
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.0-rc12
+Stable tag: 1.2.0-rc13
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -13,7 +13,7 @@ Canonical Founder, member and doctor profile domain for the Sabri Social Homeopa
 
 File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.2.0-rc12 is the repository candidate produced by the second fresh twenty-round sequential corrective review. It preserves the complete Future Professional Identity & Profile Superset — 18 Enhancements and all prior corrective hardening while adding domain-level File 00 provider/claim truth, public DTO internal-PK minimization, Ask Work DB-degraded truth, isolated media-worker error evidence, safe legacy-option persistence, orphan File03 usermeta destructive cleanup, read-only public Founder rendering, redacted active worker-error health evidence and permanent second-twenty-round QA coverage. DB schema remains 1.2.0 and contract remains 1.4.0.
+1.2.0-rc13 is the repository candidate produced by the third fresh twenty-round sequential corrective review. It preserves the complete Future Professional Identity & Profile Superset and all prior corrective hardening while strengthening moderation 401/503/403 truth, DB-certain future lifecycle/native data and Central edit reads, exact activation/runtime-upgrade metadata persistence, minimum File09 claim-version enforcement, upstream File26 error preservation, explicit destructive legacy cleanup and side-effect-free public profile GET behavior. DB schema remains 1.2.0 and contract remains 1.4.0.
 
 No paid/pro/premium or donor-advantage gate exists in File 03. No patient chart, raw identity evidence, automatic doctor verification, cure guarantee or AI diagnosis/prescription is introduced. Missing, stale, malformed or unavailable canonical providers fail closed or degrade only the affected feature.
 
@@ -29,6 +29,18 @@ This remains a repository candidate. Source and automated-QA evidence are separa
 6. Do not promote to live until Founder approval and exact package/deployment parity are recorded.
 
 == Changelog ==
+
+= 1.2.0-rc13 =
+* Third fresh 20-round sequential corrective review from exact main `1b887186a7097948b41aabd22122d84cd8b080e0`.
+* Defect-bearing rounds: 01, 05, 07, 09, 12, 13, 14, 15, 17, 18, 19, 20. Clean rounds: 02, 03, 04, 06, 08, 10, 11, 16.
+* Separates unauthenticated moderation 401 from File00 provider/claim 503 and valid unauthorized 403.
+* Makes future lifecycle/federation/native translations/freshness/history and Central edit profile reads DB-certain or explicitly degraded.
+* Verifies activation and normal boot version/contract/plan persistence by exact read-back.
+* Enforces File09 minimum claim version and preserves non-null upstream File26 results including errors.
+* Adds original legacy Founder source cleanup only under explicit two-gate destructive uninstall.
+* Keeps logged-in public profile GET side-effect free instead of ensuring/creating a missing profile.
+* Adds `THIRD-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` and `tests/third-twenty-round-sequential-review.py` to permanent CI/package gates.
+* Preserves DB 1.2.0, contract 1.4.0 and staging/live/operational separation.
 
 = 1.2.0-rc12 =
 * Second fresh 20-round sequential corrective review from exact main `a34e4e2b808134237ae9945759745595685c8733`.

@@ -102,9 +102,7 @@ final class SPD_Future_Profile {
 	private static function text( $value, $limit = 1000 ) { return SPD_Helpers::sanitize_multiline( (string) $value, $limit ); }
 
 	public static function state_for_profile( $profile_id ) {
-		global $wpdb;
-		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::state_table() . ' WHERE profile_id=%d LIMIT 1', absint( $profile_id ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		return $row ?: array( 'profile_id' => absint( $profile_id ), 'federation_opt_in' => 0, 'professional_lifecycle' => 'active', 'lifecycle_reason' => '', 'version' => 1, 'updated_at' => '' );
+		return spd_read_future_profile_state( absint( $profile_id ) );
 	}
 
 	/** FUT-01: portable, provider-issued professional credentials. */
@@ -147,7 +145,8 @@ final class SPD_Future_Profile {
 		$raw = base64_decode( strtr( $parts[0], '-_', '+/' ) . str_repeat( '=', ( 4 - strlen( $parts[0] ) % 4 ) % 4 ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		$p = json_decode( (string) $raw, true );
 		if ( ! is_array( $p ) || empty( $p['pid'] ) || empty( $p['scopes'] ) || time() > absint( $p['exp'] ?? 0 ) ) { return new WP_Error( 'spd_disclosure_expired', __( 'This disclosure link has expired.', 'sabri-profiles-doctors' ), array( 'status' => 410 ) ); }
-		$profile = SPD_Profile_Repository::instance()->find_by_public_id( sanitize_text_field( $p['pid'] ) );
+		$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( sanitize_text_field( $p['pid'] ) );
+		if ( is_wp_error( $profile ) ) { return $profile; }
 		if ( ! $profile || absint( $p['epoch'] ?? 0 ) !== SPD_Central_Profile::share_epoch( $profile ) || ! SPD_Authorization::profile_visibility_allows( $profile, 0 ) ) { return new WP_Error( 'spd_disclosure_revoked', __( 'This disclosure link is no longer available.', 'sabri-profiles-doctors' ), array( 'status' => 410 ) ); }
 		$dto = spd_get_personal_site_profile( $profile['public_id'], 0 );
 		if ( is_wp_error( $dto ) ) { return $dto; }
@@ -249,9 +248,11 @@ final class SPD_Future_Profile {
 	/** FUT-09: owner-approved multilingual profile editions. */
 	public static function translations( $profile_id ) {
 		global $wpdb;
+		$wpdb->last_error = '';
 		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT locale,headline,bio,source,status,version,updated_at FROM ' . self::translations_table() . " WHERE profile_id=%d AND status='approved' ORDER BY locale ASC LIMIT 20", absint( $profile_id ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		if ( $wpdb->last_error || ! is_array( $rows ) ) { return new WP_Error( 'spd_future_translation_store_unavailable', __( 'Profile translations are temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		$out = array();
-		foreach ( (array) $rows as $row ) { $out[] = array( 'locale' => sanitize_text_field( $row['locale'] ), 'headline' => self::text( $row['headline'], 250 ), 'bio' => self::text( $row['bio'], 4000 ), 'source' => in_array( $row['source'], array( 'human','machine' ), true ) ? $row['source'] : 'human', 'version' => absint( $row['version'] ), 'updated_at' => sanitize_text_field( $row['updated_at'] ) ); }
+		foreach ( $rows as $row ) { $out[] = array( 'locale' => sanitize_text_field( $row['locale'] ), 'headline' => self::text( $row['headline'], 250 ), 'bio' => self::text( $row['bio'], 4000 ), 'source' => in_array( $row['source'], array( 'human','machine' ), true ) ? $row['source'] : 'human', 'version' => absint( $row['version'] ), 'updated_at' => sanitize_text_field( $row['updated_at'] ) ); }
 		return $out;
 	}
 
@@ -298,7 +299,9 @@ final class SPD_Future_Profile {
 		$allowed = array_merge( array( 'bio','country','city','languages','studied_books' ), SPD_Central_Profile::extended_fields() );
 		foreach ( $allowed as $key ) {
 			$row = $profile['fields'][ $key ] ?? array(); if ( ! $row ) { continue; }
+			$wpdb->last_error = '';
 			$att = $wpdb->get_row( $wpdb->prepare( 'SELECT confirmed_at,expires_at,version FROM ' . self::attestations_table() . ' WHERE profile_id=%d AND field_key=%s LIMIT 1', absint( $profile['id'] ), $key ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_freshness_store_unavailable', __( 'Profile freshness evidence is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 			$out[ $key ] = array( 'last_updated' => sanitize_text_field( (string) ( $row['updated_at'] ?? $profile['updated_at'] ?? '' ) ), 'last_confirmed' => sanitize_text_field( (string) ( $att['confirmed_at'] ?? '' ) ), 'confirm_by' => sanitize_text_field( (string) ( $att['expires_at'] ?? '' ) ), 'stale' => $att ? strtotime( $att['expires_at'] . ' UTC' ) < time() : true );
 		}
 		return $out;
@@ -313,22 +316,26 @@ final class SPD_Future_Profile {
 		$placeholders = implode( ',', array_fill( 0, count( $names ), '%s' ) );
 		$params = array_merge( array( $public_id ), $names );
 		$sql = $wpdb->prepare( "SELECT event_name,payload,created_at FROM {$table} WHERE aggregate_type='profile' AND aggregate_id=%s AND event_name IN ({$placeholders}) ORDER BY id DESC LIMIT 50", $params ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->last_error = '';
 		$rows = $wpdb->get_results( $sql, ARRAY_A );
+		if ( $wpdb->last_error || ! is_array( $rows ) ) { return new WP_Error( 'spd_future_history_store_unavailable', __( 'Profile change history is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		$out = array();
-		foreach ( (array) $rows as $row ) { $p = json_decode( (string) $row['payload'], true ); $out[] = array( 'event' => sanitize_text_field( $row['event_name'] ), 'changed_fields' => array_slice( array_map( 'sanitize_key', (array) ( $p['changed_fields'] ?? array() ) ), 0, 30 ), 'version' => absint( $p['version'] ?? 0 ), 'occurred_at' => sanitize_text_field( $row['created_at'] ) ); }
+		foreach ( $rows as $row ) { $p = json_decode( (string) $row['payload'], true ); $out[] = array( 'event' => sanitize_text_field( $row['event_name'] ), 'changed_fields' => array_slice( array_map( 'sanitize_key', (array) ( $p['changed_fields'] ?? array() ) ), 0, 30 ), 'version' => absint( $p['version'] ?? 0 ), 'occurred_at' => sanitize_text_field( $row['created_at'] ) ); }
 		return $out;
 	}
 
 	/** FUT-16: governed retired/legacy professional state. */
 	public static function lifecycle( array $profile ) {
 		$state = self::state_for_profile( $profile['id'] );
-		$status = sanitize_key( (string) $state['professional_lifecycle'] ); if ( ! in_array( $status, array( 'active','retired','legacy' ), true ) ) { $status = 'active'; }
+		if ( is_wp_error( $state ) ) { return array( 'status' => 'unknown', 'active_professional' => false, 'reason' => '', 'changed_at' => '', 'state_degraded' => true ); }
+		$status = sanitize_key( (string) $state['professional_lifecycle'] );
+		if ( ! in_array( $status, array( 'active','retired','legacy' ), true ) ) { return array( 'status' => 'unknown', 'active_professional' => false, 'reason' => '', 'changed_at' => '', 'state_degraded' => true ); }
 		return array( 'status' => $status, 'active_professional' => 'active' === $status, 'reason' => self::text( $state['lifecycle_reason'] ?? '', 500 ), 'changed_at' => sanitize_text_field( (string) ( $state['lifecycle_changed_at'] ?? '' ) ) );
 	}
 
 	/** FUT-17: FHIR-compatible public professional projection; no patient record. */
 	public static function fhir_projection( array $dto ) {
-		$lifecycle = $dto['future']['lifecycle']['status'] ?? 'active';
+		$lifecycle = $dto['future']['lifecycle']['status'] ?? 'unknown';
 		$practitioner = array( 'resourceType' => 'Practitioner', 'id' => 'sabri-' . strtolower( str_replace( '-', '', $dto['public_id'] ) ), 'active' => 'active' === $lifecycle, 'identifier' => array( array( 'system' => 'https://sabrihomeopathy.com/profile-id', 'value' => $dto['public_id'] ) ), 'name' => array( array( 'text' => $dto['display_name'] ) ) );
 		if ( ! empty( $dto['fields']['languages'] ) ) { $practitioner['communication'] = array( array( 'language' => array( 'text' => $dto['fields']['languages'] ) ) ); }
 		if ( ! empty( $dto['credential_card'] ) ) { $practitioner['qualification'] = array( array( 'code' => array( 'text' => $dto['credential_card']['qualification'] ?? $dto['credential_card']['degree'] ?? 'Verified professional credential' ), 'issuer' => array( 'display' => $dto['credential_card']['institution'] ?? $dto['credential_card']['licensing_authority'] ?? '' ) ) ); }
@@ -340,6 +347,7 @@ final class SPD_Future_Profile {
 	/** FUT-18: federation-ready actor projection; transport remains external. */
 	public static function federation_projection( array $profile, array $dto ) {
 		$state = self::state_for_profile( $profile['id'] );
+		if ( is_wp_error( $state ) ) { return array( 'opt_in' => false, 'actor_id' => $dto['canonical_url'] . '#actor', 'type' => 'Person', 'name' => $dto['display_name'], 'url' => $dto['canonical_url'], 'transport_owner' => 'external', 'transport_active' => false, 'state_degraded' => true ); }
 		$opt_in = ! empty( $state['federation_opt_in'] );
 		$out = array( 'opt_in' => $opt_in, 'actor_id' => $dto['canonical_url'] . '#actor', 'type' => 'Person', 'name' => $dto['display_name'], 'url' => $dto['canonical_url'], 'transport_owner' => 'external', 'transport_active' => false );
 		if ( ! $opt_in ) { return $out; }
@@ -354,6 +362,13 @@ final class SPD_Future_Profile {
 	public static function augment_personal_site_dto( array $dto, array $profile, $viewer_id = 0 ) {
 		$user_id = absint( $profile['user_id'] );
 		$lifecycle = self::lifecycle( $profile );
+		$translations = self::translations( $profile['id'] );
+		$freshness = self::freshness( $profile );
+		$history = self::change_history( $profile['public_id'], $viewer_id, $user_id );
+		$native_degraded = array();
+		foreach ( array( 'translations' => $translations, 'freshness' => $freshness, 'change_history' => $history ) as $component => $value ) {
+			if ( is_wp_error( $value ) ) { $native_degraded[] = $component; }
+		}
 		$future = array(
 			'credential_wallet' => self::credential_wallet( $user_id, $viewer_id ),
 			'selective_disclosure' => array( 'supported' => true, 'max_ttl_seconds' => self::DISCLOSURE_MAX_TTL, 'public_only' => true ),
@@ -363,18 +378,23 @@ final class SPD_Future_Profile {
 			'knowledge_graph' => self::knowledge_graph( $user_id, $viewer_id ),
 			'knowledge_coverage' => self::knowledge_coverage( $user_id, $viewer_id ),
 			'ai_work_assistant' => array( 'available_for_members' => true, 'scope' => 'public_professional_work', 'medical_advice' => false ),
-			'multilingual_editions' => self::translations( $profile['id'] ),
+			'multilingual_editions' => is_wp_error( $translations ) ? array() : $translations,
 			'contact_relay' => self::contact_relay( $user_id, $viewer_id ),
 			'verified_links' => self::verified_links( $user_id, $viewer_id ),
-			'freshness' => self::freshness( $profile ),
-			'change_history' => self::change_history( $profile['public_id'], $viewer_id, $user_id ),
+			'freshness' => is_wp_error( $freshness ) ? array() : $freshness,
+			'change_history' => is_wp_error( $history ) ? array() : $history,
 			'lifecycle' => $lifecycle,
 		);
+		if ( $native_degraded ) {
+			$future['native_store_degraded'] = true;
+			$future['degraded_components'] = $native_degraded;
+		}
 		$dto['future'] = $future;
 		$dto['future']['dossier'] = self::dossier( $dto );
 		$dto['future']['embed_card'] = self::embed_card( $dto );
 		$dto['future']['fhir'] = self::fhir_projection( $dto );
 		$dto['future']['federation'] = self::federation_projection( $profile, $dto );
+		if ( ! empty( $lifecycle['state_degraded'] ) ) { $dto['future']['state_degraded'] = true; }
 		if ( ! $lifecycle['active_professional'] ) { $dto['contacts'] = array(); if ( isset( $dto['clinic']['appointment_url'] ) ) { unset( $dto['clinic']['appointment_url'] ); } $dto['future']['contact_relay'] = array(); }
 		return $dto;
 	}
@@ -427,7 +447,9 @@ final class SPD_Future_Profile {
 		$is_governor = SPD_Membership_Adapter::can_manage_founder( $actor_id ) || SPD_Membership_Adapter::can_operate_profiles( $actor_id );
 		if ( ! $is_owner && ! $is_governor ) { return new WP_Error( 'spd_forbidden', __( 'You cannot change this professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		if ( $is_owner ) { $guard = SPD_Authorization::mutation_guard( $profile, $actor_id ); if ( is_wp_error( $guard ) ) { return $guard; } }
-		$current = self::state_for_profile( $profile['id'] ); $federation = array_key_exists( 'federation_opt_in', $input ) ? ( ! empty( $input['federation_opt_in'] ) ? 1 : 0 ) : absint( $current['federation_opt_in'] );
+		$current = self::state_for_profile( $profile['id'] );
+		if ( is_wp_error( $current ) ) { return $current; }
+		$federation = array_key_exists( 'federation_opt_in', $input ) ? ( ! empty( $input['federation_opt_in'] ) ? 1 : 0 ) : absint( $current['federation_opt_in'] );
 		$lifecycle = sanitize_key( (string) ( $input['professional_lifecycle'] ?? $current['professional_lifecycle'] ) ); if ( ! in_array( $lifecycle, array( 'active','retired','legacy' ), true ) ) { return new WP_Error( 'spd_lifecycle_invalid', __( 'Choose an allowed professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		if ( 'legacy' === $lifecycle && ! $is_governor ) { return new WP_Error( 'spd_legacy_governance_required', __( 'Legacy/memorial status requires governed approval.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		$reason = self::text( $input['lifecycle_reason'] ?? $current['lifecycle_reason'], 500 ); if ( in_array( $lifecycle, array( 'retired','legacy' ), true ) && ! $reason ) { return new WP_Error( 'spd_lifecycle_reason_required', __( 'A reason is required for retired or legacy status.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }

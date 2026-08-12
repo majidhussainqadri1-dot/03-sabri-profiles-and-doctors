@@ -39,7 +39,14 @@ final class SPD_Plugin {
 		if ( SPD_Membership_Adapter::available() && get_option( 'spd_version' ) !== SPD_VERSION ) {
 			$upgrade = SPD_Activator::repair_owned_resources();
 			if ( is_wp_error( $upgrade ) ) { SPD_Observability::set_safe_mode( true, 'latest_plan_upgrade_failed' ); }
-			else { update_option( 'spd_version', SPD_VERSION, false ); update_option( 'spd_contract_version', SPD_CONTRACT_VERSION, false ); update_option( 'spd_plan_version', SPD_PLAN_VERSION, false ); }
+			else {
+				$identity_persisted = true;
+				foreach ( array( 'spd_version' => SPD_VERSION, 'spd_contract_version' => SPD_CONTRACT_VERSION, 'spd_plan_version' => SPD_PLAN_VERSION ) as $option => $value ) {
+					$written = update_option( $option, $value, false );
+					if ( ( false === $written && get_option( $option, null ) !== $value ) || get_option( $option, null ) !== $value ) { $identity_persisted = false; break; }
+				}
+				if ( ! $identity_persisted ) { SPD_Observability::set_safe_mode( true, 'latest_plan_upgrade_metadata_failed' ); }
+			}
 		}
 		( new SPD_Routes() )->hooks();
 		( new SPD_REST() )->hooks();
@@ -194,7 +201,7 @@ final class SPD_Plugin {
 	}
 
 	public function file26_search_projection( $current, $identity ) {
-		if ( null !== $current && ! is_wp_error( $current ) ) { return $current; }
+		if ( null !== $current ) { return $current; }
 		return spd_get_search_projection( $identity );
 	}
 

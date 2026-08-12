@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.0-rc13 — Third fresh twenty-round sequential corrective hardening
+
+- Started from exact `main` `1b887186a7097948b41aabd22122d84cd8b080e0` (tree `0113b2993a6def0a7a39f72749436bfd493fc836`).
+- Defect-bearing rounds: `01, 05, 07, 09, 12, 13, 14, 15, 17, 18, 19, 20`.
+- Clean rounds: `02, 03, 04, 06, 08, 10, 11, 16`.
+- Preserves no-actor moderation as 401 separately from File00 provider/claim 503 and valid unauthorized 403.
+- Makes Future lifecycle/federation/native translation/freshness/history and Central target reads DB-certain or explicitly degraded.
+- Requires exact persistence/read-back of activation and normal runtime-upgrade version/contract/plan metadata.
+- Adds original `spd_founder_profile` cleanup only inside explicit two-gate destructive uninstall.
+- Enforces File09 minimum claim version and preserves every non-null upstream File26 answer, including errors.
+- Keeps logged-in public profile GET side-effect free instead of ensuring/creating a missing profile.
+- Adds exact review-branch coverage plus `THIRD-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` and `tests/third-twenty-round-sequential-review.py`.
+- Advances source identity to `1.2.0-rc13`; DB schema remains `1.2.0`; contract remains `1.4.0`.
+- Final exact candidate, PR/merge and exact-main evidence remain pending until one post-metadata SHA passes every applicable automated gate.
+- Staging, deployed-package parity, live DB/migration state, Founder acceptance and operational status remain unverified.
+
 ## 1.2.0-rc12 — Second fresh twenty-round sequential corrective hardening
 
 - Started from exact `main` `a34e4e2b808134237ae9945759745595685c8733` (tree `c0d41641c66cb897c1073dbb40943c5cf9093d44`).
@@ -28,17 +44,15 @@
 - Made personal-site, redirect, moderation/report, timeline and lifecycle-sensitive frontend reads DB-certain.
 - Minimized delegation privacy export by removing internal/counterparty user/profile identifiers.
 - Preserved media attachment-deletion failures as operational evidence and completed explicit destructive cleanup of File03-owned timeline circuit transients.
-- Distinguished disclosure-store failure from verified revocation and made Future post-preflight mutation helpers DB-certain.
+- Distinguished disclosure-store failure from verified revocation and made Future post-preflight mutations DB-certain.
 - Prevented File 08 delegation projection from emitting authoritative denial when File 00, File 09 or delegation-store truth is unavailable.
-- Prevented operational count-query failures from masquerading as healthy zero values; Repair now refuses execution from uncertain database diagnostics.
-- Added exact review-branch Fresh/Future workflow coverage; CI then exposed and drove correction of an isolated timeline runtime composition failure.
-- Added `TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` and `tests/twenty-round-sequential-review.py`; advanced source identity to `1.2.0-rc11` while DB schema stays `1.2.0` and contract stays `1.4.0`.
-- Final exact candidate, PR/merge and exact-main evidence remain pending until one post-documentation SHA passes every applicable automated gate.
+- Prevented operational count-query failures from masquerading as healthy zero values; Repair refuses execution from uncertain database diagnostics.
+- Added exact review-branch Fresh/Future workflow coverage and permanent first twenty-round QA.
 - Staging, deployed-package parity, live DB/migration state, Founder acceptance and operational status remain unverified.
 
 ## Historical corrective releases
 
-- `1.2.0-rc10`: tenth fresh ten-round review; all rounds `01–10` defect-bearing and corrected; bootstrap parity restoration and permanent tenth-review QA.
+- `1.2.0-rc10`: tenth fresh ten-round review; all rounds `01–10` defect-bearing and corrected.
 - `1.2.0-rc9`: ninth fresh ten-round review; defects `01,03,08,09,10`; clean `02,04,05,06,07`.
 - `1.2.0-rc8`: eighth fresh ten-round review; defects `01,03,04,05,06,07,08,09,10`; clean `02`.
 - `1.2.0-rc7`: seventh fresh ten-round review; defects `01,02,03,04,05,06,08,09,10`; clean `07`.

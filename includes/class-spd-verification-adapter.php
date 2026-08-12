@@ -53,10 +53,11 @@ final class SPD_Verification_Adapter {
 	private static function is_current_projection( array $projection, $user_id ) {
 		if ( absint( $projection['user_id'] ?? 0 ) !== absint( $user_id ) ) { return false; }
 		if ( empty( $projection['contract_version'] ) || version_compare( $projection['contract_version'], self::MIN_CONTRACT_VERSION, '<' ) ) { return false; }
+		if ( empty( $projection['claim_version'] ) || version_compare( (string) $projection['claim_version'], self::MIN_VERSION, '<' ) ) { return false; }
 		$reviewed_at = strtotime( (string) $projection['reviewed_at'] );
 		$generated_at = strtotime( (string) ( $projection['generated_at'] ?? '' ) );
 		$valid_until = strtotime( (string) ( $projection['valid_until'] ?? '' ) );
-		if ( empty( $projection['claim_version'] ) || empty( $projection['reviewer_id'] ) || false === $reviewed_at || false === $generated_at || false === $valid_until ) { return false; }
+		if ( empty( $projection['reviewer_id'] ) || false === $reviewed_at || false === $generated_at || false === $valid_until ) { return false; }
 		if ( $reviewed_at > time() + 300 || abs( time() - $generated_at ) > 600 || $valid_until <= time() || $valid_until <= $reviewed_at ) { return false; }
 		return true;
 	}
