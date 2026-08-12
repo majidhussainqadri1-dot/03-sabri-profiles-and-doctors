@@ -7,7 +7,7 @@
 - Governing basis: current consolidated central governing plan plus the amended File 03 Future Professional Identity & Profile Superset 18 plan.
 - Method: each numbered round reviewed the corrected state produced by the preceding round. A proven defect was corrected before the next round began. Speculative patches were not used.
 
-## Sequential round ledger through R19
+## Sequential round ledger
 
 | Round | Result | Corrective focus |
 |---|---|---|
@@ -29,12 +29,19 @@
 | 16 | defect/fixed | File24 assurance exception isolation from native outbox recovery |
 | 17 | clean | Public/private routes, noindex/no-store and GET-side-effect boundaries |
 | 18 | clean | Explicit destructive uninstall and owned-resource recovery |
-| 19 | defect/fixed | Exact fifth-twenty branch CI coverage and permanent regression gate |
-| 20 | pending | Release identity, exact candidate QA, PR/merge and final exact-main evidence |
+| 19 | defect/fixed | Exact fifth-twenty branch CI coverage, permanent regression gate and canonical package-parity mapping |
+| 20 | defect/fixed | Material source changes required rc15 release identity, Fifth-Twenty plan marker and synchronized release/package evidence |
 
-Defect-bearing through R19: `02, 03, 05, 06, 10, 11, 12, 13, 14, 16, 19`
+Defect-bearing rounds: `02, 03, 05, 06, 10, 11, 12, 13, 14, 16, 19, 20`
 
-Clean through R19: `01, 04, 07, 08, 09, 15, 17, 18`
+Clean rounds: `01, 04, 07, 08, 09, 15, 17, 18`
+
+## Release identity decision
+
+- Source/plugin line: `1.2.0-rc15`.
+- Repository DB schema remains `1.2.0`; this review did not add/remove/rename a database table, column or index.
+- Public contract remains `1.4.0`; this review hardened authorization, degradation, privacy, provider and release semantics without removing or renaming a documented public response field.
+- Exact candidate commit/package/checksum/SBOM are established only after exact-head CI; they are not inferred from this ledger.
 
 ## Truth boundary
 
