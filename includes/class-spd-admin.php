@@ -2,139 +2,66 @@
 defined( 'ABSPATH' ) || exit;
 
 final class SPD_Admin {
+	private function admin_allowed() { return SPD_Membership_Adapter::can_operate_profiles( get_current_user_id() ); }
+	private function moderator_allowed() { return SPD_Membership_Adapter::can_moderate_profiles( get_current_user_id() ); }
+
+	private function operational_rows( $sql, $code ) {
+		global $wpdb;
+		$wpdb->last_error = '';
+		$rows = $wpdb->get_results( $sql, ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		if ( $wpdb->last_error || ! is_array( $rows ) ) {
+			return new WP_Error( sanitize_key( $code ), __( 'Operational records are temporarily unavailable because the database read could not be verified.', 'sabri-profiles-doctors' ) );
+		}
+		return $rows;
+	}
+
 	public function hooks() {
 		add_action( 'admin_menu', array( $this, 'menu' ) );
-		add_action( 'admin_post_spd_toggle_safe_mode', array( $this, 'toggle_safe_mode' ) );
-		add_action( 'admin_post_spd_repair', array( $this, 'repair' ) );
-		add_action( 'admin_post_spd_update_report', array( $this, 'update_report' ) );
-		add_action( 'admin_post_spd_requeue_outbox', array( $this, 'requeue_outbox' ) );
-		add_action( 'admin_post_spd_requeue_media_deletion', array( $this, 'requeue_media_deletion' ) );
-		add_action( 'admin_post_spd_requeue_migration', array( $this, 'requeue_migration' ) );
-		add_action( 'admin_notices', array( $this, 'dependency_notice' ) );
+		add_action( 'admin_post_spd_safe_mode', array( $this, 'safe_mode_post' ) );
+		add_action( 'admin_post_spd_repair', array( $this, 'repair_post' ) );
+		add_action( 'admin_post_spd_review_profile', array( $this, 'review_profile_post' ) );
+		add_action( 'admin_post_spd_review_report', array( $this, 'review_report_post' ) );
+		add_action( 'admin_post_spd_requeue_dead', array( $this, 'requeue_dead_post' ) );
 	}
 
-	public function menu() {
-		if ( ! $this->can_operate() ) { return; }
-		$parent = defined( 'SABRI_SHELL_VERSION' ) ? 'sabri-shell' : 'tools.php';
-		add_submenu_page( $parent, __( 'Profile System Check', 'sabri-profiles-doctors' ), __( 'Profile System Check', 'sabri-profiles-doctors' ), 'read', 'sabri-profiles-system-check', array( $this, 'status_page' ) );
-		add_submenu_page( $parent, __( 'Profile Reports', 'sabri-profiles-doctors' ), __( 'Profile Reports', 'sabri-profiles-doctors' ), 'read', 'sabri-profile-reports', array( $this, 'reports_page' ) );
-	}
-
-	private function can_operate() {
-		return SPD_Membership_Adapter::can_operate_profiles( get_current_user_id() );
-	}
-
-	private function require_operator() {
-		if ( ! $this->can_operate() ) { wp_die( esc_html__( 'Access denied.', 'sabri-profiles-doctors' ), '', array( 'response' => 403 ) ); }
-	}
+	public function menu() { add_menu_page( __( 'Profiles System Check','sabri-profiles-doctors' ), __( 'Profiles','sabri-profiles-doctors' ), 'read', 'sabri-profiles', array($this,'status_page'), 'dashicons-id-alt', 59 ); add_submenu_page('sabri-profiles',__( 'Profile Moderation','sabri-profiles-doctors' ),__( 'Moderation','sabri-profiles-doctors' ),'read','sabri-profiles-moderation',array($this,'moderation_page')); add_submenu_page('sabri-profiles',__( 'Profile Reports','sabri-profiles-doctors' ),__( 'Reports','sabri-profiles-doctors' ),'read','sabri-profile-reports',array($this,'reports_page')); }
 
 	public function status_page() {
-		global $wpdb;
-		$this->require_operator();
-		$health  = SPD_Observability::health_report();
-		$dry_run = SPD_Observability::repair( false );
-		$dead_events = SPD_DB::tables_exist() ? $wpdb->get_results( "SELECT event_uuid,event_name,attempts,last_error_code FROM " . SPD_DB::table( 'events' ) . " WHERE status='dead' ORDER BY id DESC LIMIT 50", ARRAY_A ) : array(); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$dead_media = SPD_DB::tables_exist() ? $wpdb->get_results( "SELECT deletion_uuid,attachment_id,purpose,attempts,last_error_code FROM " . SPD_DB::table( 'deletions' ) . " WHERE status='dead' ORDER BY id DESC LIMIT 50", ARRAY_A ) : array(); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$dead_migrations = SPD_DB::tables_exist() ? $wpdb->get_results( "SELECT user_id,error_code,attempts,last_attempt_at FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='dead' ORDER BY id DESC LIMIT 50", ARRAY_A ) : array(); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( ! $this->admin_allowed() ) { wp_die( esc_html__( 'You do not have permission to operate profile systems.', 'sabri-profiles-doctors' ) ); }
+		$health = SPD_Observability::health_report(); $dry = SPD_Observability::repair(false);
+		$dead_events = $this->operational_rows( "SELECT event_uuid,event_name,attempts,last_error_code,created_at FROM " . SPD_DB::table('events') . " WHERE status='dead' ORDER BY id DESC LIMIT 20", 'spd_admin_outbox_read_failed' );
+		$dead_media  = $this->operational_rows( "SELECT attachment_id,owner_user_id,purpose,attempts,last_error_code,updated_at FROM " . SPD_DB::table('deletions') . " WHERE status='dead' ORDER BY id DESC LIMIT 20", 'spd_admin_media_read_failed' );
+		$dead_migration = $this->operational_rows( "SELECT user_id,error_code,attempts,last_attempt_at FROM " . SPD_DB::table('migration_failures') . " WHERE status='dead' ORDER BY last_attempt_at DESC LIMIT 20", 'spd_admin_migration_read_failed' );
+		$operational_error = null;
+		foreach ( array( $dead_events, $dead_media, $dead_migration ) as $rows ) { if ( is_wp_error( $rows ) ) { $operational_error = $rows; break; } }
 		?>
-		<div class="wrap spd-admin">
-			<h1><?php esc_html_e( 'File 03 — Profile System Check', 'sabri-profiles-doctors' ); ?></h1>
-			<p><?php esc_html_e( 'This page reports and repairs File 03-owned resources only. It never changes companion-module records.', 'sabri-profiles-doctors' ); ?></p>
-			<table class="widefat striped"><tbody>
-			<?php foreach ( $health as $key => $value ) : ?><tr><th><?php echo esc_html( ucwords( str_replace( '_', ' ', $key ) ) ); ?></th><td><code><?php echo esc_html( is_scalar( $value ) ? (string) $value : wp_json_encode( $value ) ); ?></code></td></tr><?php endforeach; ?>
-			</tbody></table>
-
-			<h2><?php esc_html_e( 'Repair dry run', 'sabri-profiles-doctors' ); ?></h2>
-			<?php if ( $dry_run['actions'] ) : ?><ul><?php foreach ( $dry_run['actions'] as $action ) : ?><li><code><?php echo esc_html( $action ); ?></code></li><?php endforeach; ?></ul><?php else : ?><p><?php esc_html_e( 'No File 03-owned repair action is currently required.', 'sabri-profiles-doctors' ); ?></p><?php endif; ?>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="spd_repair"><?php wp_nonce_field( 'spd_repair' ); ?><button class="button" type="submit"<?php disabled( empty( $dry_run['actions'] ) ); ?>><?php esc_html_e( 'Execute File 03 repair plan', 'sabri-profiles-doctors' ); ?></button></form>
-
-			<h2><?php esc_html_e( 'Safe mode', 'sabri-profiles-doctors' ); ?></h2>
-			<p><?php echo SPD_Observability::safe_mode() ? esc_html__( 'Safe mode is active. Public safe reading remains available; profile mutations are disabled.', 'sabri-profiles-doctors' ) : esc_html__( 'Safe mode is not active.', 'sabri-profiles-doctors' ); ?></p>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="spd_toggle_safe_mode"><input type="hidden" name="enabled" value="<?php echo SPD_Observability::safe_mode() ? '0' : '1'; ?>"><?php wp_nonce_field( 'spd_toggle_safe_mode' ); ?><label><?php esc_html_e( 'Reason', 'sabri-profiles-doctors' ); ?> <input class="regular-text" name="reason" required maxlength="500"></label> <button class="button button-primary" type="submit"><?php echo SPD_Observability::safe_mode() ? esc_html__( 'Disable safe mode', 'sabri-profiles-doctors' ) : esc_html__( 'Enable safe mode', 'sabri-profiles-doctors' ); ?></button></form>
-
-			<?php $this->recovery_table( 'outbox', $dead_events ); ?>
-			<?php $this->recovery_table( 'media', $dead_media ); ?>
-			<?php $this->recovery_table( 'migration', $dead_migrations ); ?>
-		</div>
-		<?php
+		<div class="wrap"><h1><?php esc_html_e( 'Profiles & Doctors — System Check', 'sabri-profiles-doctors' ); ?></h1>
+		<p><?php esc_html_e( 'This panel verifies File 03. It does not expose identity evidence or private credentials.', 'sabri-profiles-doctors' ); ?></p>
+		<table class="widefat striped"><tbody><?php foreach(array('plugin_version','db_version','contract_version','tables','health_query_status','safe_mode','safe_mode_reason','safe_mode_changed_at','migration_cursor','migration_traversed_at','migration_completed_at','cache_generation','reconciliation_required','outbox_pending','outbox_dead','media_deletions_pending','media_deletions_dead','migration_retry','migration_dead','open_reports','last_outbox_run','last_retention_run','last_reconciliation') as $key): ?><tr><th><?php echo esc_html($key); ?></th><td><?php echo esc_html(is_bool($health[$key]??'')?(($health[$key]??false)?'yes':'no'):(string)($health[$key]??'')); ?></td></tr><?php endforeach; ?>
+		<?php foreach((array)$health['pages'] as $key=>$value): ?><tr><th><?php echo esc_html('page:'.$key); ?></th><td><?php echo esc_html($value); ?></td></tr><?php endforeach; ?>
+		<?php foreach((array)$health['cron'] as $key=>$value): ?><tr><th><?php echo esc_html('cron:'.$key); ?></th><td><?php echo esc_html($value); ?></td></tr><?php endforeach; ?>
+		<?php foreach((array)$health['provider_health'] as $key=>$value): ?><tr><th><?php echo esc_html('timeline:'.$key); ?></th><td><?php echo esc_html($value); ?></td></tr><?php endforeach; ?>
+		</tbody></table>
+		<h2><?php esc_html_e('Dry-run repair plan','sabri-profiles-doctors'); ?></h2><pre><?php echo esc_html(wp_json_encode($dry,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)); ?></pre>
+		<?php if ( $operational_error ) : ?><div class="notice notice-error inline"><p><?php echo esc_html( $operational_error->get_error_message() ); ?></p></div><?php endif; ?>
+		<?php foreach(array('outbox'=>$dead_events,'media'=>$dead_media,'migration'=>$dead_migration) as $kind=>$rows): ?>
+		<h2><?php echo esc_html(ucfirst($kind).' dead-letter items'); ?></h2>
+		<?php if ( is_wp_error( $rows ) ) : ?><p><strong><?php echo esc_html( $rows->get_error_message() ); ?></strong></p>
+		<?php elseif(!$rows): ?><p><?php esc_html_e('No dead items.','sabri-profiles-doctors'); ?></p>
+		<?php else: ?><table class="widefat striped"><thead><tr><?php foreach(array_keys($rows[0]) as $column): ?><th><?php echo esc_html($column); ?></th><?php endforeach; ?><th><?php esc_html_e('Recovery','sabri-profiles-doctors'); ?></th></tr></thead><tbody><?php foreach($rows as $row): ?><tr><?php foreach($row as $value): ?><td><?php echo esc_html((string)$value); ?></td><?php endforeach; ?><td><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="spd_requeue_dead"><input type="hidden" name="kind" value="<?php echo esc_attr($kind); ?>"><input type="hidden" name="reference" value="<?php echo esc_attr('outbox'===$kind?$row['event_uuid']:('media'===$kind?$row['attachment_id']:$row['user_id'])); ?>"><input name="reason" required maxlength="500" placeholder="<?php esc_attr_e('Recovery reason','sabri-profiles-doctors'); ?>"><?php wp_nonce_field('spd_requeue_dead','spd_nonce'); ?><button class="button"><?php esc_html_e('Requeue','sabri-profiles-doctors'); ?></button></form></td></tr><?php endforeach; ?></tbody></table><?php endif; ?>
+		<?php endforeach; ?>
+		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="spd_safe_mode"><select name="enabled"><option value="1"><?php esc_html_e('Enable safe mode','sabri-profiles-doctors'); ?></option><option value="0"><?php esc_html_e('Disable safe mode','sabri-profiles-doctors'); ?></option></select><input type="text" name="reason" required maxlength="500" placeholder="<?php esc_attr_e('Reason','sabri-profiles-doctors'); ?>"><?php wp_nonce_field('spd_safe_mode','spd_nonce'); ?><button class="button button-secondary"><?php esc_html_e('Apply','sabri-profiles-doctors'); ?></button></form>
+		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="spd_repair"><input type="hidden" name="execute" value="1"><input type="text" name="reason" required maxlength="500" placeholder="<?php esc_attr_e('Repair reason','sabri-profiles-doctors'); ?>"><?php wp_nonce_field('spd_repair','spd_nonce'); ?><button class="button button-primary"><?php esc_html_e('Execute bounded repair','sabri-profiles-doctors'); ?></button></form></div><?php
 	}
 
-	private function recovery_table( $type, array $rows ) {
-		$titles = array(
-			'outbox'   => __( 'Dead-letter outbox', 'sabri-profiles-doctors' ),
-			'media'    => __( 'Dead media deletions', 'sabri-profiles-doctors' ),
-			'migration'=> __( 'Quarantined migration records', 'sabri-profiles-doctors' ),
-		);
-		$actions = array( 'outbox' => 'spd_requeue_outbox', 'media' => 'spd_requeue_media_deletion', 'migration' => 'spd_requeue_migration' );
-		$refs    = array( 'outbox' => 'event_uuid', 'media' => 'deletion_uuid', 'migration' => 'user_id' );
-		?>
-		<h2><?php echo esc_html( $titles[ $type ] ); ?></h2>
-		<?php if ( ! $rows ) : ?><p><?php esc_html_e( 'No dead or quarantined items.', 'sabri-profiles-doctors' ); ?></p><?php return; endif; ?>
-		<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Reference', 'sabri-profiles-doctors' ); ?></th><th><?php esc_html_e( 'Status detail', 'sabri-profiles-doctors' ); ?></th><th><?php esc_html_e( 'Recovery', 'sabri-profiles-doctors' ); ?></th></tr></thead><tbody>
-		<?php foreach ( $rows as $row ) : $ref = (string) $row[ $refs[ $type ] ]; ?>
-		<tr><td><code><?php echo esc_html( $ref ); ?></code></td><td><code><?php echo esc_html( wp_json_encode( array_diff_key( $row, array( $refs[ $type ] => true ) ) ) ); ?></code></td><td><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="<?php echo esc_attr( $actions[ $type ] ); ?>"><input type="hidden" name="reference" value="<?php echo esc_attr( $ref ); ?>"><?php wp_nonce_field( $actions[ $type ] . '_' . $ref ); ?><input name="reason" required maxlength="500" placeholder="<?php esc_attr_e( 'Recovery reason', 'sabri-profiles-doctors' ); ?>"><button class="button" type="submit"><?php esc_html_e( 'Requeue', 'sabri-profiles-doctors' ); ?></button></form></td></tr>
-		<?php endforeach; ?></tbody></table>
-		<?php
-	}
+	public function moderation_page(){if(!$this->moderator_allowed())wp_die(esc_html__( 'You do not have moderation permission.','sabri-profiles-doctors'));global $wpdb;$rows=$wpdb->get_results("SELECT public_id,user_id,profile_type,state,version,updated_at FROM ".SPD_DB::table('profiles')." WHERE state IN ('active','suspended','archived') ORDER BY updated_at DESC LIMIT 100",ARRAY_A);?><div class="wrap"><h1><?php esc_html_e('Profile moderation','sabri-profiles-doctors'); ?></h1><table class="widefat striped"><thead><tr><th>Public ID</th><th>User</th><th>Type</th><th>State</th><th>Version</th><th><?php esc_html_e('Decision','sabri-profiles-doctors'); ?></th></tr></thead><tbody><?php foreach($rows as $row): ?><tr><td><?php echo esc_html($row['public_id']); ?></td><td><?php echo esc_html($row['user_id']); ?></td><td><?php echo esc_html($row['profile_type']); ?></td><td><?php echo esc_html($row['state']); ?></td><td><?php echo esc_html($row['version']); ?></td><td><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="spd_review_profile"><input type="hidden" name="public_id" value="<?php echo esc_attr($row['public_id']); ?>"><input type="hidden" name="expected_version" value="<?php echo esc_attr($row['version']); ?>"><select name="state" required><option value="active">active</option><option value="suspended">suspended</option><option value="archived">archived</option></select><input name="reason" required maxlength="1000" placeholder="<?php esc_attr_e('Reason','sabri-profiles-doctors'); ?>"><input type="hidden" name="idempotency_key" value="<?php echo esc_attr(wp_generate_uuid4()); ?>"><?php wp_nonce_field('spd_review_profile','spd_nonce'); ?><button class="button"><?php esc_html_e('Apply','sabri-profiles-doctors'); ?></button></form></td></tr><?php endforeach; ?></tbody></table></div><?php }
 
-	public function reports_page() {
-		global $wpdb;
-		$this->require_operator();
-		$table = SPD_DB::table( 'reports' );
-		$rows = $wpdb->get_results( "SELECT report_uuid,reason,details,status,version,created_at FROM {$table} ORDER BY created_at DESC LIMIT 100", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		?>
-		<div class="wrap spd-admin"><h1><?php esc_html_e( 'Profile Reports', 'sabri-profiles-doctors' ); ?></h1><p><?php esc_html_e( 'Only File 03 report orchestration is shown. Identity evidence and companion-domain decisions remain with their canonical owners.', 'sabri-profiles-doctors' ); ?></p><table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Report', 'sabri-profiles-doctors' ); ?></th><th><?php esc_html_e( 'Reason', 'sabri-profiles-doctors' ); ?></th><th><?php esc_html_e( 'Status', 'sabri-profiles-doctors' ); ?></th><th><?php esc_html_e( 'Created', 'sabri-profiles-doctors' ); ?></th><th><?php esc_html_e( 'Action', 'sabri-profiles-doctors' ); ?></th></tr></thead><tbody>
-		<?php if ( ! $rows ) : ?><tr><td colspan="5"><?php esc_html_e( 'No profile reports.', 'sabri-profiles-doctors' ); ?></td></tr><?php endif; ?>
-		<?php foreach ( $rows as $row ) : $targets = SPD_Profile_Repository::report_transition_targets( $row['status'] ); ?><tr><td><code><?php echo esc_html( $row['report_uuid'] ); ?></code><br><?php echo esc_html( wp_trim_words( $row['details'], 20 ) ); ?></td><td><?php echo esc_html( $row['reason'] ); ?></td><td><?php echo esc_html( $row['status'] ); ?> (v<?php echo esc_html( $row['version'] ); ?>)</td><td><?php echo esc_html( $row['created_at'] ); ?></td><td><?php if ( $targets ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="spd_update_report"><input type="hidden" name="report_uuid" value="<?php echo esc_attr( $row['report_uuid'] ); ?>"><input type="hidden" name="version" value="<?php echo esc_attr( $row['version'] ); ?>"><input type="hidden" name="idempotency_key" value="<?php echo esc_attr( wp_generate_uuid4() ); ?>"><?php wp_nonce_field( 'spd_update_report_' . $row['report_uuid'] ); ?><select name="status"><?php foreach ( $targets as $status ) : ?><option value="<?php echo esc_attr( $status ); ?>"><?php echo esc_html( $status ); ?></option><?php endforeach; ?></select><input name="note" placeholder="<?php esc_attr_e( 'Review note where required', 'sabri-profiles-doctors' ); ?>" maxlength="1000"><button class="button" type="submit"><?php esc_html_e( 'Update', 'sabri-profiles-doctors' ); ?></button></form><?php else : ?><?php esc_html_e( 'Final state', 'sabri-profiles-doctors' ); ?><?php endif; ?></td></tr><?php endforeach; ?>
-		</tbody></table></div>
-		<?php
-	}
+	public function reports_page(){if(!$this->moderator_allowed())wp_die(esc_html__( 'You do not have moderation permission.','sabri-profiles-doctors'));$rows=$this->operational_rows("SELECT report_uuid,reason,status,severity,version,created_at FROM ".SPD_DB::table('reports')." ORDER BY created_at DESC LIMIT 100",'spd_admin_reports_read_failed');?><div class="wrap"><h1><?php esc_html_e('Profile reports','sabri-profiles-doctors'); ?></h1><?php if(is_wp_error($rows)): ?><div class="notice notice-error inline"><p><?php echo esc_html($rows->get_error_message()); ?></p></div><?php elseif(!$rows): ?><p><?php esc_html_e('No profile reports.','sabri-profiles-doctors'); ?></p><?php else: ?><table class="widefat striped"><thead><tr><th>Report</th><th>Reason</th><th>Status</th><th>Severity</th><th>Version</th><th><?php esc_html_e('Decision','sabri-profiles-doctors'); ?></th></tr></thead><tbody><?php foreach($rows as $row): ?><tr><td><?php echo esc_html($row['report_uuid']); ?></td><td><?php echo esc_html($row['reason']); ?></td><td><?php echo esc_html($row['status']); ?></td><td><?php echo esc_html($row['severity']); ?></td><td><?php echo esc_html($row['version']); ?></td><td><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="spd_review_report"><input type="hidden" name="report_uuid" value="<?php echo esc_attr($row['report_uuid']); ?>"><input type="hidden" name="expected_version" value="<?php echo esc_attr($row['version']); ?>"><select name="status"><option value="triaged">triaged</option><option value="in_review">in_review</option><option value="actioned">actioned</option><option value="rejected">rejected</option><option value="closed">closed</option></select><input name="note" maxlength="1000" placeholder="<?php esc_attr_e('Review note','sabri-profiles-doctors'); ?>"><input type="hidden" name="idempotency_key" value="<?php echo esc_attr(wp_generate_uuid4()); ?>"><?php wp_nonce_field('spd_review_report','spd_nonce'); ?><button class="button"><?php esc_html_e('Apply','sabri-profiles-doctors'); ?></button></form></td></tr><?php endforeach; ?></tbody></table><?php endif; ?></div><?php }
 
-	public function update_report() {
-		$this->require_operator();
-		$uuid = sanitize_text_field( wp_unslash( $_POST['report_uuid'] ?? '' ) );
-		check_admin_referer( 'spd_update_report_' . $uuid );
-		$result = SPD_Profile_Repository::instance()->moderate_report( $uuid, get_current_user_id(), wp_unslash( $_POST['status'] ?? '' ), absint( $_POST['version'] ?? 0 ), wp_unslash( $_POST['note'] ?? '' ), sanitize_text_field( wp_unslash( $_POST['idempotency_key'] ?? '' ) ) );
-		if ( is_wp_error( $result ) ) { wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => 409, 'back_link' => true ) ); }
-		wp_safe_redirect( admin_url( 'admin.php?page=sabri-profile-reports' ) ); exit;
-	}
-
-	public function toggle_safe_mode() {
-		$this->require_operator(); check_admin_referer( 'spd_toggle_safe_mode' );
-		$enabled = ! empty( $_POST['enabled'] );
-		$reason  = sanitize_text_field( wp_unslash( $_POST['reason'] ?? '' ) );
-		if ( '' === $reason ) { wp_die( esc_html__( 'A reason is required.', 'sabri-profiles-doctors' ), '', array( 'response' => 400, 'back_link' => true ) ); }
-		$result = SPD_Observability::set_safe_mode( $enabled, $reason );
-		if ( is_wp_error( $result ) ) { wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => 500, 'back_link' => true ) ); }
-		wp_safe_redirect( admin_url( 'admin.php?page=sabri-profiles-system-check' ) ); exit;
-	}
-
-	public function repair() {
-		$this->require_operator(); check_admin_referer( 'spd_repair' ); $result = SPD_Observability::repair( true ); if ( is_wp_error( $result ) ) { wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => 500, 'back_link' => true ) ); } wp_safe_redirect( admin_url( 'admin.php?page=sabri-profiles-system-check' ) ); exit;
-	}
-
-	public function requeue_outbox() {
-		$this->require_operator(); $ref = sanitize_text_field( wp_unslash( $_POST['reference'] ?? '' ) ); check_admin_referer( 'spd_requeue_outbox_' . $ref );
-		if ( ! SPD_Observability::requeue_outbox( $ref, get_current_user_id(), wp_unslash( $_POST['reason'] ?? '' ) ) ) { wp_die( esc_html__( 'The outbox item could not be requeued.', 'sabri-profiles-doctors' ), '', array( 'response' => 409, 'back_link' => true ) ); }
-		wp_safe_redirect( admin_url( 'admin.php?page=sabri-profiles-system-check' ) ); exit;
-	}
-
-	public function requeue_media_deletion() {
-		$this->require_operator(); $ref = sanitize_text_field( wp_unslash( $_POST['reference'] ?? '' ) ); check_admin_referer( 'spd_requeue_media_deletion_' . $ref );
-		if ( ! SPD_Media::requeue_deletion( $ref, get_current_user_id(), wp_unslash( $_POST['reason'] ?? '' ) ) ) { wp_die( esc_html__( 'The media deletion could not be requeued.', 'sabri-profiles-doctors' ), '', array( 'response' => 409, 'back_link' => true ) ); }
-		wp_safe_redirect( admin_url( 'admin.php?page=sabri-profiles-system-check' ) ); exit;
-	}
-
-	public function requeue_migration() {
-		$this->require_operator(); $ref = absint( $_POST['reference'] ?? 0 ); check_admin_referer( 'spd_requeue_migration_' . $ref );
-		if ( ! SPD_Observability::requeue_migration_user( $ref, get_current_user_id(), wp_unslash( $_POST['reason'] ?? '' ) ) ) { wp_die( esc_html__( 'The migration record could not be requeued.', 'sabri-profiles-doctors' ), '', array( 'response' => 409, 'back_link' => true ) ); }
-		wp_safe_redirect( admin_url( 'admin.php?page=sabri-profiles-system-check' ) ); exit;
-	}
-
-	public function dependency_notice() {
-		$health = SPD_Membership_Adapter::health();
-		if ( 'available' !== $health['status'] && current_user_can( 'activate_plugins' ) ) {
-			echo '<div class="notice notice-error"><p><strong>' . esc_html__( 'Sabri Profiles and Doctors:', 'sabri-profiles-doctors' ) . '</strong> ' . esc_html__( 'File 00 — Sabri Membership Core is missing or incompatible. File 03 has failed closed and does not expose or mutate profiles.', 'sabri-profiles-doctors' ) . '</p></div>';
-		}
-	}
+	public function safe_mode_post(){if(!$this->admin_allowed())wp_die(esc_html__('Forbidden','sabri-profiles-doctors'));check_admin_referer('spd_safe_mode','spd_nonce');$reason=SPD_Helpers::sanitize_multiline(wp_unslash($_POST['reason']??''),500);$result=SPD_Observability::set_safe_mode(!empty($_POST['enabled']),$reason);if(is_wp_error($result))wp_die(esc_html($result->get_error_message()),'',array('response'=>400,'back_link'=>true));wp_safe_redirect(admin_url('admin.php?page=sabri-profiles'));exit;}
+	public function repair_post(){if(!$this->admin_allowed())wp_die(esc_html__('Forbidden','sabri-profiles-doctors'));check_admin_referer('spd_repair','spd_nonce');$reason=SPD_Helpers::sanitize_multiline(wp_unslash($_POST['reason']??''),500);if(!$reason)wp_die(esc_html__('A repair reason is required.','sabri-profiles-doctors'));$result=SPD_Observability::repair(!empty($_POST['execute']));if(is_wp_error($result))wp_die(esc_html($result->get_error_message()),'',array('response'=>500,'back_link'=>true));do_action('spd_repair_audit',array('actor_id'=>get_current_user_id(),'reason'=>$reason,'result'=>$result,'at'=>SPD_Helpers::now()));wp_safe_redirect(admin_url('admin.php?page=sabri-profiles'));exit;}
+	public function review_profile_post(){if(!$this->moderator_allowed())wp_die(esc_html__('Forbidden','sabri-profiles-doctors'));check_admin_referer('spd_review_profile','spd_nonce');$result=SPD_Profile_Repository::instance()->moderate_profile(wp_unslash($_POST['public_id']??''),get_current_user_id(),wp_unslash($_POST['state']??''),absint($_POST['expected_version']??0),wp_unslash($_POST['reason']??''),wp_unslash($_POST['idempotency_key']??''));if(is_wp_error($result))wp_die(esc_html($result->get_error_message()),'',array('response'=>$this->error_status($result),'back_link'=>true));wp_safe_redirect(admin_url('admin.php?page=sabri-profiles-moderation'));exit;}
+	public function review_report_post(){if(!$this->moderator_allowed())wp_die(esc_html__('Forbidden','sabri-profiles-doctors'));check_admin_referer('spd_review_report','spd_nonce');$result=SPD_Profile_Repository::instance()->moderate_report(wp_unslash($_POST['report_uuid']??''),get_current_user_id(),wp_unslash($_POST['status']??''),absint($_POST['expected_version']??0),wp_unslash($_POST['note']??''),wp_unslash($_POST['idempotency_key']??''));if(is_wp_error($result))wp_die(esc_html($result->get_error_message()),'',array('response'=>$this->error_status($result),'back_link'=>true));wp_safe_redirect(admin_url('admin.php?page=sabri-profile-reports'));exit;}
+	public function requeue_dead_post(){if(!$this->admin_allowed())wp_die(esc_html__('Forbidden','sabri-profiles-doctors'));check_admin_referer('spd_requeue_dead','spd_nonce');$kind=sanitize_key(wp_unslash($_POST['kind']??''));$reference=wp_unslash($_POST['reference']??'');$reason=SPD_Helpers::sanitize_multiline(wp_unslash($_POST['reason']??''),500);$ok=false;if('outbox'===$kind){$ok=SPD_Observability::requeue_outbox($reference,get_current_user_id(),$reason);}elseif('media'===$kind){$ok=SPD_Media::requeue_deletion(absint($reference),get_current_user_id(),$reason);}elseif('migration'===$kind){$ok=SPD_Observability::requeue_migration_user(absint($reference),get_current_user_id(),$reason);}if(!$ok)wp_die(esc_html__('The selected dead-letter item could not be requeued.','sabri-profiles-doctors'),'',array('response'=>409,'back_link'=>true));wp_safe_redirect(admin_url('admin.php?page=sabri-profiles'));exit;}
+	private function error_status(WP_Error $e){$data=$e->get_error_data();return is_array($data)&&!empty($data['status'])?absint($data['status']):400;}
 }
