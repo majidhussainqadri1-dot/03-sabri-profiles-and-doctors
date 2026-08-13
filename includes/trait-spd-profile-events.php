@@ -25,6 +25,10 @@ trait SPD_Profile_Events {
 		$table = SPD_DB::table( 'events' );
 		$now   = SPD_Helpers::now();
 		$uuid  = SPD_Helpers::public_id();
+		$json  = SPD_Helpers::json_encode( $payload );
+		if ( 'null' === $json ) {
+			return new WP_Error( 'spd_event_payload_invalid', __( 'The audit event payload could not be encoded safely.', 'sabri-profiles-doctors' ) );
+		}
 		$ok = $wpdb->insert(
 			$table,
 			array(
@@ -32,7 +36,7 @@ trait SPD_Profile_Events {
 				'event_name'     => sanitize_text_field( $event_name ),
 				'aggregate_type' => sanitize_key( $aggregate_type ),
 				'aggregate_id'   => sanitize_text_field( (string) $aggregate_id ),
-				'payload'        => SPD_Helpers::json_encode( $payload ),
+				'payload'        => $json,
 				'status'         => 'pending',
 				'attempts'       => 0,
 				'available_at'   => $now,
