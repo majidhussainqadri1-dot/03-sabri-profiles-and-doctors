@@ -6,6 +6,7 @@ auth = (ROOT / 'includes/class-spd-authorization.php').read_text(encoding='utf-8
 dto = (ROOT / 'includes/trait-spd-profile-public-dto.php').read_text(encoding='utf-8')
 membership = (ROOT / 'includes/class-spd-membership-adapter.php').read_text(encoding='utf-8')
 future = (ROOT / 'includes/class-spd-future-profile.php').read_text(encoding='utf-8')
+central = (ROOT / 'includes/trait-spd-profile-central.php').read_text(encoding='utf-8')
 
 def require(ok, message):
     if not ok:
@@ -54,4 +55,15 @@ require('sabri_file24_profile_provider_failure' in current_claim and "'surface' 
 require('return array();' in current_claim, 'R05 future provider exception does not degrade to empty claim')
 require('current_contract_claim' in current_claim, 'R05 future provider freshness/version validation regressed')
 
-print('File 03 seventh-cycle sequential invariants through R05: PASS')
+# R06 — delegated authorization used for editing is tri-state. Store/provider
+# uncertainty must surface 503 and must not be collapsed to genuine 403 denial.
+delegated = section(central, 'private function delegated_access_result', 'public function central_edit_model')
+for token in ('SPD_Schema_Guard::central_ready()', 'SPD_Membership_Adapter::health()', 'SPD_Membership_Adapter::claims', 'SPD_Verification_Adapter::health()', 'SPD_Verification_Adapter::projection', '$wpdb->last_error', "'status' => 503"):
+    require(token in delegated, f'R06 delegated uncertainty preflight missing: {token}')
+edit = section(central, 'public function central_edit_model', 'public function update_central_profile')
+update = section(central, 'public function update_central_profile', 'public function rotate_share_link')
+require('delegated_access_result' in edit and 'is_wp_error( $delegated )' in edit, 'R06 edit model does not propagate delegated uncertainty')
+require('delegated_access_result' in update and 'is_wp_error( $delegated )' in update, 'R06 central mutation does not propagate delegated uncertainty')
+require("'spd_safe_mode'" in edit and "'status' => 503" in edit, 'R06 delegated edit safe mode is not service-unavailable')
+
+print('File 03 seventh-cycle sequential invariants through R06: PASS')
