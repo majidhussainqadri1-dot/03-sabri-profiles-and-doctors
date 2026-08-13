@@ -14,6 +14,7 @@ def section(src, start, end=None):
 rest = text('includes/class-spd-rest.php')
 central_rest = text('includes/class-spd-central-rest.php')
 activator = text('includes/class-spd-activator.php')
+appeals = text('includes/class-spd-appeals.php')
 
 # R01 — body `version` remains a supported fallback while domain mutation payloads
 # stay strict: REST consumes it before the repository allowlist sees the body.
@@ -47,4 +48,14 @@ require(managed.count("'publish' !==") >= 2, 'R06 managed route publication-stat
 require("$changes['post_status'] = 'publish';" in managed, 'R06 stored managed route is not restored to publish')
 require("wp_update_post( array( 'ID' => absint( $slug_page->ID ), 'post_status' => 'publish' ), true )" in managed, 'R06 discovered owned/exact route is not restored to publish')
 
-print('Fifth fresh twenty-round sequential corrective invariants passed through R06.')
+# R09 — due process must let the reporter appeal a rejected complaint and the
+# profile subject appeal enforcement, then require a separate moderator to decide.
+for token in ("'reporter'", "'profile_subject'", "ProfileReportAppealed.v2", "ProfileReportAppealReviewed.v1", 'spd_appeal_independent_reviewer_required'):
+    require(token in appeals, f'R09 appeal due-process invariant missing: {token}')
+require("in_array( $status, array( 'rejected', 'closed' ), true )" in appeals, 'R09 reporter appeal eligibility missing')
+require("in_array( $status, array( 'actioned', 'closed' ), true )" in appeals, 'R09 profile-subject enforcement appeal eligibility missing')
+require("$reviewer_id === absint( $row['requested_by'] )" in appeals and "$reviewer_id === absint( $row['assigned_to'] )" in appeals, 'R09 independent-review separation missing')
+require("/appeals/(?P<appeal_uuid>" in central_rest and 'public function review_appeal' in central_rest, 'R09 appeal review REST operation missing')
+require('spd_unknown_appeal_review_field' in central_rest, 'R09 appeal review strict request shape missing')
+
+print('Fifth fresh twenty-round sequential corrective invariants passed through R09.')
