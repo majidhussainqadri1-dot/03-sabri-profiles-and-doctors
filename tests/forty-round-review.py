@@ -51,8 +51,6 @@ check(17, 'Deletion retry/dead letter', "status=$attempts>=8?'dead':'retry'" in 
 check(18, 'Exact origin', 'effective_port' in helpers and '$target_scheme !== $home_scheme' in helpers, 'scheme host and port must match')
 check(19, 'URL credentials rejected', "isset( $target['user'] ) || isset( $target['pass'] )" in helpers and 'safe_external_url' in future, 'credential-bearing URLs remain rejected; external future links are HTTPS constrained')
 check(20, 'Provider health freshness', 'current_contract_claim( $provider_health' in timeline and 'current_contract_claim' in future, 'timeline and future provider facts are current/versioned')
-# Variable naming is representation detail; the invariant is a Throwable catch
-# around provider execution plus an explicit safe provider-error result.
 provider_throw_catch = bool(re.search(r'catch\s*\(\s*Throwable\s+\$[A-Za-z_][A-Za-z0-9_]*\s*\)', timeline))
 check(21, 'Provider exception containment', provider_throw_catch and 'spd_timeline_provider_exception' in timeline, 'provider exceptions cannot break profile page')
 check(22, 'Provider result bound', 'MAX_PROVIDER_ITEMS' in timeline and 'count( $result ) > self::MAX_PROVIDER_ITEMS' in timeline and 'array_slice' in future, 'timeline and future provider payloads are bounded')
@@ -61,7 +59,7 @@ check(24, 'Future timestamp rejection', '$timestamp > time() + 300' in timeline,
 check(25, 'Thumbnail tracking prevention', '$thumbnail && ! SPD_Helpers::same_origin_url' in timeline, 'external thumbnails are dropped')
 check(26, 'Cursor bounds/integrity', 'strlen( $cursor ) > 768' in timeline and "hash_hmac( 'sha256', $body" in timeline and "base64_decode( $raw, true )" in timeline and 'spd_timeline_cursor_invalid' in timeline, 'oversized, tampered, cross-profile or cross-filter cursors fail closed')
 check(27, 'Timeline UI error handling', 'is_wp_error( $profile )' in front_timeline, 'DTO errors cannot cause array-access fatal')
-check(28, 'Clinic verified-doctor gate', '$clinic_raw = $is_verified_doctor ?' in public_dto, 'clinic projection is not shown for ordinary profiles')
+check(28, 'Clinic verified-doctor gate', '$is_verified_doctor' in public_dto and 'if ( $is_verified_doctor )' in public_dto and "sabri_file08_public_clinic_projection_v1" in public_dto, 'clinic projection is only requested for a verified doctor, independent of callback containment representation')
 check(29, 'Single verification snapshot', 'SPD_Verification_Adapter::is_verified' not in public_dto and '$is_verified_doctor' in public_dto, 'DTO does not fetch inconsistent verification snapshots')
 check(30, 'Minor contact suppression', '$is_minor = ! empty( $claims' in public_dto and 'if ( $is_minor ) { continue; }' in public_dto, 'current claims suppress minor contact')
 check(31, 'Migration visibility minimization', "$safe_audience = 'private'" in observability and 'public_profile_age_eligible' in observability, 'legacy public visibility is not blindly copied')
