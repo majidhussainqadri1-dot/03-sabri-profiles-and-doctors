@@ -85,7 +85,20 @@ final class SPD_Future_Profile {
 
 	private static function current_claim( $filter, $user_id, $viewer_id = 0, $max_age = 600, array $extra = array() ) {
 		$args = array_merge( array( null, absint( $user_id ), absint( $viewer_id ), SPD_CONTRACT_VERSION ), $extra );
-		$claim = apply_filters_ref_array( $filter, $args );
+		try {
+			$claim = apply_filters_ref_array( $filter, $args );
+		} catch ( Throwable $exception ) {
+			try {
+				do_action( 'sabri_file24_profile_provider_failure', array(
+					'owner'           => 'file03',
+					'provider'        => sanitize_key( (string) $filter ),
+					'surface'         => 'future_profile_projection',
+					'exception_class' => sanitize_key( get_class( $exception ) ),
+					'at'              => SPD_Helpers::now(),
+				) );
+			} catch ( Throwable $ignored ) {}
+			return array();
+		}
 		if ( ! SPD_Helpers::current_contract_claim( $claim, self::MIN_PROVIDER_CONTRACT, $max_age ) ) { return array(); }
 		if ( isset( $claim['user_id'] ) && absint( $claim['user_id'] ) !== absint( $user_id ) ) { return array(); }
 		return $claim;
