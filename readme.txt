@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials,
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.0-rc14
+Stable tag: 1.2.0-rc15
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -13,7 +13,7 @@ Canonical Founder, member and doctor profile domain for the Sabri Social Homeopa
 
 File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.2.0-rc14 is the repository candidate produced by the fourth fresh twenty-round sequential corrective review. It preserves all prior Future Professional Identity & Profile Superset hardening while strengthening generic mutation 401/403 truth, delegation store/provider/current-claim certainty, activation/Repair persistence evidence, current File09 verification evidence, strict core REST root-payload allowlists and File08 delegation schema-degraded behavior. DB schema remains 1.2.0 and contract remains 1.4.0.
+1.2.0-rc15 is the repository candidate for the fifth fresh twenty-round sequential corrective review. Through Round 18 it incorporates strict REST transport normalization, migration-ledger fail-closed handling, managed-page publication repair, executable safety-report appeal review/reopen flow, multilingual patient-specific clinical-intent refusal, provider-exception containment, timeline health/registry isolation, atomic outbox event encoding, lifecycle-safe browser rendering, browser delegation idempotency, legacy profile URL canonicalization and fail-closed operational health evidence. DB schema remains 1.2.0 and contract remains 1.4.0. Rounds 19–20 remain part of the same review cycle until their exact-head gates complete.
 
 No paid/pro/premium or donor-advantage gate exists in File 03. No patient chart, raw identity evidence, automatic doctor verification, cure guarantee or AI diagnosis/prescription is introduced. Missing, stale, malformed or unavailable canonical providers fail closed or degrade only the affected feature.
 
@@ -24,11 +24,25 @@ This remains a repository candidate. Source and automated-QA evidence are separa
 1. Back up and verify restore capability.
 2. Activate compatible File 00 and required companion contracts.
 3. Install and activate this plugin on staging.
-4. Run Profile System Check and verify base, central and future extension schemas, routes, cron/queues and provider health.
-5. Execute migration, privacy, provider, lifecycle, media, disclosure, accessibility, backup/restore and rollback acceptance matrices.
+4. Run Profile System Check and verify base, central and future extension schemas, published managed routes, cron/queues and current provider health.
+5. Execute migration, privacy, provider, lifecycle, media, disclosure, report/appeal, accessibility, backup/restore and rollback acceptance matrices.
 6. Do not promote to live until Founder approval and exact package/deployment parity are recorded.
 
 == Changelog ==
+
+= 1.2.0-rc15 =
+* Fifth fresh 20-round sequential corrective review; current repository candidate remains under review through Rounds 19–20.
+* Defect-bearing rounds through R18: 01, 05, 06, 11, 13, 14, 15, 16, 17, 18. Clean rounds through R18: 02, 03, 04, 07, 08, 09, 10, 12.
+* Normalizes strict REST version transport before domain allowlists and closes Central request-shape gaps.
+* Makes migration failure-ledger reads, writes, cleanup and completion counts fail closed before cursor/completion advancement.
+* Restores required managed pages to publish state during repair and reports unpublished required routes explicitly.
+* Adds strict safety-report/appeal DB certainty and executable appeal review/outcome/reopen workflow with audit events.
+* Hardens multilingual profile-work AI against patient-specific treatment requests and contains Future/timeline/provider exceptions.
+* Rejects unencodable audit/outbox payloads atomically instead of committing invalid pending events.
+* Uses the canonical lifecycle-safe personal-site projection in browser rendering, contains structured-data/provider failures, fixes browser delegation idempotency and canonicalizes legacy public_id links.
+* Makes System Check provider freshness, page publication, Safe Mode timestamp and operational DB uncertainty explicit.
+* Adds fifth-cycle exact-head package/parity requirements and updated staging acceptance gates.
+* Preserves DB 1.2.0, contract 1.4.0 and strict repository/staging/live/operational status separation.
 
 = 1.2.0-rc14 =
 * Fourth fresh 20-round sequential corrective review from exact main `998571621bae0c33afa347e515be543cb3f4b4e9`.
