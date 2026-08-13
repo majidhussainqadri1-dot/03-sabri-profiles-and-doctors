@@ -65,6 +65,11 @@ final class SPD_Central_REST {
 		return absint( $r->get_param( 'version' ) );
 	}
 	private function idem( WP_REST_Request $r ) { return trim( sanitize_text_field( (string) $r->get_header( 'Idempotency-Key' ) ) ); }
+	private function reject_unknown( array $payload, array $allowed, $code ) {
+		return array_diff( array_keys( $payload ), $allowed )
+			? new WP_Error( sanitize_key( $code ), __( 'One or more submitted fields are not supported for this operation.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) )
+			: true;
+	}
 	private function profile_store_certain( $result ) {
 		global $wpdb;
 		if ( $wpdb->last_error && is_wp_error( $result ) && 'spd_profile_unavailable' === $result->get_error_code() ) {
@@ -82,25 +87,48 @@ final class SPD_Central_REST {
 	public function update_personal_site( WP_REST_Request $r ) {
 		global $wpdb;
 		$p = (array) $r->get_json_params();
+		$allowed = array_merge( array( 'target_user_id', 'custom_slug', 'audiences', 'version' ), SPD_Central_Profile::extended_fields() );
+		$shape = $this->reject_unknown( $p, $allowed, 'spd_unknown_personal_site_field' );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape ); }
+		$version = $this->version( $r );
+		unset( $p['version'] );
 		if ( array_key_exists( 'audiences', $p ) ) {
 			$audience_guard = SPD_Authorization::validate_audience_payload( $p['audiences'], SPD_Central_Profile::extended_fields() );
 			if ( is_wp_error( $audience_guard ) ) { return $this->response( $audience_guard ); }
 		}
 		$wpdb->last_error = '';
-		$result = SPD_Profile_Repository::instance()->update_central_profile( get_current_user_id(), $p, $this->version( $r ), $this->idem( $r ) );
+		$result = SPD_Profile_Repository::instance()->update_central_profile( get_current_user_id(), $p, $version, $this->idem( $r ) );
 		return $this->response( $this->profile_store_certain( $result ) );
 	}
-	public function rotate_share( WP_REST_Request $r ) { return $this->response( SPD_Profile_Repository::instance()->rotate_share_link( get_current_user_id(), $this->version( $r ), $this->idem( $r ) ) ); }
+	public function rotate_share( WP_REST_Request $r ) {
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'version' ), 'spd_unknown_share_rotation_field' );
+		return is_wp_error( $shape ) ? $this->response( $shape ) : $this->response( SPD_Profile_Repository::instance()->rotate_share_link( get_current_user_id(), $this->version( $r ), $this->idem( $r ) ) );
+	}
 	public function delegates() { return $this->response( SPD_Profile_Repository::instance()->list_delegates( get_current_user_id() ) ); }
 	public function grant_delegate( WP_REST_Request $r ) {
 		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'delegate_user_id', 'scopes', 'expires_at' ), 'spd_unknown_delegate_field' );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape ); }
 		$delegate_id = absint( $p['delegate_user_id'] ?? 0 );
 		if ( $delegate_id && SPD_Membership_Adapter::is_minor( $delegate_id ) ) {
 			return $this->response( new WP_Error( 'spd_delegate_minor_forbidden', __( 'A minor account cannot receive delegated profile-management authority.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ) );
 		}
 		return $this->response( SPD_Profile_Repository::instance()->grant_delegate( get_current_user_id(), $delegate_id, (array) ( $p['scopes'] ?? array() ), sanitize_text_field( (string) ( $p['expires_at'] ?? '' ) ), $this->idem( $r ) ), 201 );
 	}
-	public function revoke_delegate( WP_REST_Request $r ) { return $this->response( SPD_Profile_Repository::instance()->revoke_delegate( get_current_user_id(), absint( $r['delegate_id'] ), $this->idem( $r ) ) ); }
-	public function safety_report( WP_REST_Request $r ) { $p = (array) $r->get_json_params(); return $this->response( SPD_Profile_Repository::instance()->create_safety_report( $r['public_id'], get_current_user_id(), $p['reason'] ?? '', $p['details'] ?? '', $this->idem( $r ) ), 201 ); }
-	public function appeal( WP_REST_Request $r ) { $p = (array) $r->get_json_params(); return $this->response( SPD_Profile_Repository::instance()->request_report_appeal( $r['report_uuid'], get_current_user_id(), $p['reason'] ?? '', $this->idem( $r ) ), 201 ); }
+	public function revoke_delegate( WP_REST_Request $r ) {
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array(), 'spd_unknown_delegate_revoke_field' );
+		return is_wp_error( $shape ) ? $this->response( $shape ) : $this->response( SPD_Profile_Repository::instance()->revoke_delegate( get_current_user_id(), absint( $r['delegate_id'] ), $this->idem( $r ) ) );
+	}
+	public function safety_report( WP_REST_Request $r ) {
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'reason', 'details' ), 'spd_unknown_safety_report_field' );
+		return is_wp_error( $shape ) ? $this->response( $shape ) : $this->response( SPD_Profile_Repository::instance()->create_safety_report( $r['public_id'], get_current_user_id(), $p['reason'] ?? '', $p['details'] ?? '', $this->idem( $r ) ), 201 );
+	}
+	public function appeal( WP_REST_Request $r ) {
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'reason' ), 'spd_unknown_appeal_field' );
+		return is_wp_error( $shape ) ? $this->response( $shape ) : $this->response( SPD_Profile_Repository::instance()->request_report_appeal( $r['report_uuid'], get_current_user_id(), $p['reason'] ?? '', $this->idem( $r ) ), 201 );
+	}
 }
