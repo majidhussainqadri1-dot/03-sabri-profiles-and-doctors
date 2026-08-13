@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 auth = (ROOT / 'includes/class-spd-authorization.php').read_text(encoding='utf-8')
 dto = (ROOT / 'includes/trait-spd-profile-public-dto.php').read_text(encoding='utf-8')
 membership = (ROOT / 'includes/class-spd-membership-adapter.php').read_text(encoding='utf-8')
+future = (ROOT / 'includes/class-spd-future-profile.php').read_text(encoding='utf-8')
 
 def require(ok, message):
     if not ok:
@@ -36,7 +37,7 @@ require("$url = '';" in message, 'R03 File17 message URL exception does not degr
 # R04 — every File 00 execution/filter boundary is contained by one shared
 # Throwable guard; failure must deny/hide rather than tear down the request.
 require('private static function provider_call' in membership, 'R04 shared File00 provider guard missing')
-provider_guard = section(membership, 'private static function provider_call', '/**\n\t * Return current File 00 assertions') if '/**\n\t * Return current File 00 assertions' in membership else membership[membership.find('private static function provider_call'):membership.find('public static function claims')]
+provider_guard = membership[membership.find('private static function provider_call'):membership.find('public static function claims')]
 require('catch ( Throwable $exception )' in provider_guard, 'R04 File00 provider guard lacks Throwable containment')
 require("'provider'        => 'file00_membership'" in membership and 'sabri_file24_profile_provider_failure' in membership, 'R04 File00 provider failures lack File24 evidence')
 for surface in ('membership_assertions','founder_assertion','user_status','age_guardian_claim','founder_user_id','founder_management_restriction','guardian_relationship_claim','contact_projection'):
@@ -44,4 +45,13 @@ for surface in ('membership_assertions','founder_assertion','user_status','age_g
 require("'dependency_missing'" in membership, 'R04 File00 status exception is not fail-closed')
 require("'founder_management_restriction',\n\t\t\tfalse" in membership, 'R04 Founder restriction provider failure does not deny')
 
-print('File 03 seventh-cycle sequential invariants through R04: PASS')
+# R05 — the shared Future Superset provider read must contain any upstream
+# callback exception before late identity guards execute.
+current_claim = section(future, 'private static function current_claim', 'private static function safe_external_url')
+require('apply_filters_ref_array' in current_claim, 'R05 shared future provider call missing')
+require('try {' in current_claim and 'catch ( Throwable $exception )' in current_claim, 'R05 future provider Throwable containment missing')
+require('sabri_file24_profile_provider_failure' in current_claim and "'surface'         => 'future_profile_projection'" in current_claim, 'R05 future provider failure evidence missing')
+require('return array();' in current_claim, 'R05 future provider exception does not degrade to empty claim')
+require('current_contract_claim' in current_claim, 'R05 future provider freshness/version validation regressed')
+
+print('File 03 seventh-cycle sequential invariants through R05: PASS')
