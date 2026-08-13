@@ -1,7 +1,11 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
+require_once SPD_DIR . 'includes/trait-spd-profile-report-appeals.php';
+
 trait SPD_Profile_Lifecycle {
+	use SPD_Profile_Report_Appeals;
+
 	public function completeness( array $profile, array $claims, array $professional ) {
 		$required=array('display_name'=>!empty($claims['display_name']),'bio'=>!empty($profile['bio']),'avatar'=>!empty($profile['avatar_id']),'country'=>!empty($profile['country']),'languages'=>!empty($profile['languages']));
 		if('doctor'===$profile['profile_type']){$required['verification']=SPD_Verification_Adapter::is_verified($profile['user_id']);$required['qualification']=!empty($professional['qualification']);$required['specialty']=!empty($professional['specialty']);}
