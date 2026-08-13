@@ -26,7 +26,6 @@ trait SPD_Frontend_Profile {
 
 	public function profile() {
 		$public_id = sanitize_text_field( (string) get_query_var( 'spd_public_id' ) );
-		if ( ! $public_id && isset( $_GET['public_id'] ) ) { $public_id = sanitize_text_field( wp_unslash( $_GET['public_id'] ) ); }
 		if ( ! $public_id && is_user_logged_in() ) {
 			$profile = SPD_Profile_Repository::instance()->find_by_user_id( get_current_user_id(), false );
 			$public_id = is_array( $profile ) ? (string) ( $profile['public_id'] ?? '' ) : '';
