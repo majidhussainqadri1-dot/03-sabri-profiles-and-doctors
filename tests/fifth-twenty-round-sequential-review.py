@@ -15,6 +15,8 @@ rest = text('includes/class-spd-rest.php')
 central_rest = text('includes/class-spd-central-rest.php')
 observability = text('includes/class-spd-observability.php')
 activator = text('includes/class-spd-activator.php')
+lifecycle = text('includes/trait-spd-profile-lifecycle.php')
+appeals = text('includes/trait-spd-profile-report-appeals.php')
 
 # R01 — transport `version` may be supplied in the body, but it must be
 # consumed before strict domain allowlists see the mutation payload.
@@ -55,4 +57,29 @@ require(managed.count("'publish' !==") >= 2, 'R06 managed route publication-stat
 require("$changes['post_status'] = 'publish';" in managed, 'R06 stored managed route is not restored to publish')
 require("wp_update_post( array( 'ID' => absint( $slug_page->ID ), 'post_status' => 'publish' ), true )" in managed, 'R06 discovered owned/exact route is not restored to publish')
 
-print('Fifth fresh twenty-round sequential corrective invariants passed through R06.')
+# R11 — safety-report and appeal paths must fail closed on DB uncertainty, and
+# appeal submission must have an executable assigned-review/outcome lifecycle.
+require("require_once SPD_DIR . 'includes/trait-spd-profile-report-appeals.php';" in lifecycle, 'R11 strict report/appeal workflow is not loaded')
+require('use SPD_Profile_Report_Appeals;' in lifecycle, 'R11 strict report/appeal workflow is not composed into the repository')
+for token in (
+    'create_safety_report_strict',
+    'request_report_appeal_strict',
+    'report_appeal_review_queue',
+    'moderate_report_appeal',
+    'ProfileReportAppealReviewed.v1',
+    'ProfileReportReopenedByAppeal.v1',
+    'spd_report_store_unavailable',
+    'spd_appeal_store_unavailable',
+):
+    require(token in appeals, f'R11 appeal/report invariant missing: {token}')
+strict_report = section(appeals, 'public function create_safety_report_strict', 'public function request_report_appeal_strict')
+require("$wpdb->last_error = '';" in strict_report and 'report-rate evidence could not be read safely' in strict_report, 'R11 safety-report rate evidence does not fail closed')
+strict_appeal = section(appeals, 'public function request_report_appeal_strict', 'public static function report_appeal_transition_targets')
+require("$wpdb->last_error = '';" in strict_appeal and 'spd_report_store_unavailable' in strict_appeal, 'R11 appeal source-report lookup does not fail closed')
+review = section(appeals, 'public function moderate_report_appeal', "}\n}\n\n/** REST overrides")
+require("'submitted' => array( 'in_review' )" in appeals and "'in_review' => array( 'upheld', 'rejected' )" in appeals, 'R11 assigned appeal review lifecycle missing')
+require("status='in_review'" in review and "status IN ('rejected','closed','actioned')" in review, 'R11 upheld appeal does not safely reopen its report')
+require("add_action( 'rest_api_init', 'spd_file03_register_strict_report_routes', 20 );" in appeals, 'R11 strict report/appeal REST overrides are not registered')
+require('/appeals/review-queue' in appeals and '/review' in appeals, 'R11 appeal reviewer endpoints missing')
+
+print('Fifth fresh twenty-round sequential corrective invariants passed through R11.')
