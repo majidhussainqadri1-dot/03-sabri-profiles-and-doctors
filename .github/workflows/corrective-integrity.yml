@@ -88,7 +88,8 @@ jobs:
               'THIRD-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md','tests/third-twenty-round-sequential-review.py',
               'FOURTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md','tests/fourth-twenty-round-sequential-review.py',
               'FIFTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-13.md','tests/fifth-twenty-round-sequential-review.py',
-              'tests/fifth-twenty-round-r18-release.py','tests/fifth-twenty-round-r19-contracts.py','tests/fifth-twenty-round-r20-final.py','tests/architecture-check.py',
+              'tests/fifth-twenty-round-r18-release.py','tests/fifth-twenty-round-r19-contracts.py','tests/fifth-twenty-round-r20-final.py',
+              'tests/sixth-twenty-round-r06-media.py','tests/architecture-check.py',
               'includes/class-spd-slug-privacy.php','includes/class-spd-outbox-dispatcher.php','includes/class-spd-schema-guard.php'
           }
           missing=sorted(required-all_files)
@@ -130,7 +131,8 @@ jobs:
           subprocess.run([sys.executable,'tests/fifth-twenty-round-r18-release.py'],check=True)
           subprocess.run([sys.executable,'tests/fifth-twenty-round-r19-contracts.py'],check=True)
           subprocess.run([sys.executable,'tests/fifth-twenty-round-r20-final.py'],check=True)
-          print(f'Corrective current-candidate integrity passed for {version} with fifth-cycle closure and historical provenance preserved.')
+          subprocess.run([sys.executable,'tests/sixth-twenty-round-r06-media.py'],check=True)
+          print(f'Corrective current-candidate integrity passed for {version} with fifth-cycle closure and sixth-cycle R06 media guard.')
           PY
 
   php-lint:
