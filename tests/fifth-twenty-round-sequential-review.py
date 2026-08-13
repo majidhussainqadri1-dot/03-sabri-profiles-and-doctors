@@ -14,6 +14,7 @@ def section(src, start, end=None):
 rest = text('includes/class-spd-rest.php')
 central_rest = text('includes/class-spd-central-rest.php')
 future_rest = text('includes/class-spd-future-rest.php')
+timeline = text('includes/class-spd-timeline.php')
 observability = text('includes/class-spd-observability.php')
 activator = text('includes/class-spd-activator.php')
 lifecycle = text('includes/trait-spd-profile-lifecycle.php')
@@ -86,7 +87,7 @@ require('/appeals/review-queue' in appeals and '/review' in appeals, 'R11 appeal
 # R13 — public Future surfaces fail closed on provider exceptions and the
 # grounded-work assistant rejects multilingual patient-specific treatment intent.
 require('public static function medical_scope_question' in future_rest, 'R13 shared medical-scope guard missing')
-for phrase in ('میری', 'علاج', 'دواء', 'इलाज', '诊断', 'diagnóstico', 'diagnostic', 'diagnóstico', 'রোগনির্ণয়', 'teşhis'):
+for phrase in ('میری', 'علاج', 'دواء', 'इलाज', '诊断', 'diagnóstico', 'diagnostic', 'রোগনির্ণয়', 'teşhis'):
     require(phrase in future_rest, f'R13 multilingual medical-scope coverage missing: {phrase}')
 require('patient-specific treatment advice' in future_rest, 'R13 patient-specific treatment boundary is not explicit')
 require('private function provider_exception' in future_rest and 'spd_future_provider_unavailable' in future_rest, 'R13 provider exceptions are not mapped to fail-closed 503')
@@ -96,4 +97,15 @@ for surface in ("'dossier'", "'fhir'", "'federation'", "'embed_card'", "'disclos
 require("spd_unknown_ai_question_field" in future_rest, 'R13 AI request shape is not strict')
 require("add_filter( 'sabri_file16_grounded_profile_ask_v1', 'spd_file03_guard_grounded_profile_ask_claim', PHP_INT_MAX, 6 );" in future_rest, 'R13 direct grounded-work consumers are not protected by the clinical-intent guard')
 
-print('Fifth fresh twenty-round sequential corrective invariants passed through R13.')
+# R14 — timeline provider extension and health callbacks are untrusted cross-file
+# code and must not be able to tear down the public profile timeline.
+require('private static function provider_failure' in timeline, 'R14 timeline provider failure recorder missing')
+providers = section(timeline, 'public static function providers', 'public static function query')
+require('try {' in providers and 'catch ( Throwable $exception )' in providers, 'R14 provider-registry exception is not contained')
+require("return $providers;" in providers, 'R14 provider-registry failure does not fall back to canonical providers')
+query = section(timeline, 'public static function query', 'private static function normalize_item')
+require("'timeline_provider_health'" in query and "catch ( Throwable $exception )" in query, 'R14 provider-health exception is not contained')
+require("$health[ $key ] = 'degraded';" in query, 'R14 provider-health exception is not represented as degraded')
+require("'timeline_provider_items'" in query, 'R14 item-provider exceptions are not recorded consistently')
+
+print('Fifth fresh twenty-round sequential corrective invariants passed through R14.')
