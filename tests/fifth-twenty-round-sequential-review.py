@@ -19,6 +19,8 @@ observability = text('includes/class-spd-observability.php')
 activator = text('includes/class-spd-activator.php')
 lifecycle = text('includes/trait-spd-profile-lifecycle.php')
 appeals = text('includes/trait-spd-profile-report-appeals.php')
+events = text('includes/trait-spd-profile-events.php')
+outbox = text('includes/class-spd-outbox-dispatcher.php')
 
 # R01 — transport `version` may be supplied in the body, but it must be
 # consumed before strict domain allowlists see the mutation payload.
@@ -64,14 +66,10 @@ require("wp_update_post( array( 'ID' => absint( $slug_page->ID ), 'post_status' 
 require("require_once SPD_DIR . 'includes/trait-spd-profile-report-appeals.php';" in lifecycle, 'R11 strict report/appeal workflow is not loaded')
 require('use SPD_Profile_Report_Appeals;' in lifecycle, 'R11 strict report/appeal workflow is not composed into the repository')
 for token in (
-    'create_safety_report_strict',
-    'request_report_appeal_strict',
-    'report_appeal_review_queue',
-    'moderate_report_appeal',
-    'ProfileReportAppealReviewed.v1',
-    'ProfileReportReopenedByAppeal.v1',
-    'spd_report_store_unavailable',
-    'spd_appeal_store_unavailable',
+    'create_safety_report_strict', 'request_report_appeal_strict',
+    'report_appeal_review_queue', 'moderate_report_appeal',
+    'ProfileReportAppealReviewed.v1', 'ProfileReportReopenedByAppeal.v1',
+    'spd_report_store_unavailable', 'spd_appeal_store_unavailable',
 ):
     require(token in appeals, f'R11 appeal/report invariant missing: {token}')
 strict_report = section(appeals, 'public function create_safety_report_strict', 'public function request_report_appeal_strict')
@@ -108,4 +106,13 @@ require("'timeline_provider_health'" in query and "catch ( Throwable $exception 
 require("$health[ $key ] = 'degraded';" in query, 'R14 provider-health exception is not represented as degraded')
 require("'timeline_provider_items'" in query, 'R14 item-provider exceptions are not recorded consistently')
 
-print('Fifth fresh twenty-round sequential corrective invariants passed through R14.')
+# R15 — an event is part of the same mutation transaction; unencodable payloads
+# must fail before a pending outbox row can be accepted as valid audit truth.
+event_method = section(events, 'public function event', 'private function audit_diff')
+require('$json  = SPD_Helpers::json_encode( $payload );' in event_method, 'R15 event payload is not encoded before persistence')
+require("if ( 'null' === $json )" in event_method and 'spd_event_payload_invalid' in event_method, 'R15 unencodable event payload is not rejected atomically')
+require("'payload'        => $json" in event_method, 'R15 event persistence does not use the validated payload')
+require("remove_all_actions( 'spd_dispatch_outbox' )" in outbox and "array( __CLASS__, 'dispatch' )" in outbox, 'R15 hardened dispatcher does not exclusively own the File 03 outbox hook')
+require('outbox_delivery_persist_failed' in outbox and 'outbox_failure_persist_failed' in outbox, 'R15 outbox DB uncertainty is not preserved as operational evidence')
+
+print('Fifth fresh twenty-round sequential corrective invariants passed through R15.')
