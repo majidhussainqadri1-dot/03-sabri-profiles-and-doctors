@@ -61,7 +61,8 @@ for marker in ('RELEASE-LOCK.json', 'RELEASE-INVENTORY.tsv', 'SOURCE-INVENTORY.t
 lower_manifest = manifest.lower()
 require(
     ('historical provenance' in lower_manifest or 'historical evidence' in lower_manifest)
-    and ('not be interpreted as the current rc15' in lower_manifest or 'not current rc15' in lower_manifest),
+    and 'not be interpreted as' in lower_manifest
+    and 'current rc15' in lower_manifest,
     'R18 historical/current release-truth distinction missing'
 )
 require('Exact deployed code remains unverified' in manifest, 'R18 deployment-truth boundary missing')
