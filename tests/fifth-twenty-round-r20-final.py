@@ -44,7 +44,12 @@ require("define( 'SPD_CONTRACT_VERSION', '1.4.0' )" in main, 'R20 contract versi
 require('FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'R20 final plan marker missing')
 require('fifth-twenty-round-r20-final.py' in workflow, 'R20 final closure gate is not wired into exact review workflow')
 require('exact-package-parity' in workflow and 'needs: exact-candidate-review' in workflow, 'R20 exact package gate is not chained after review')
-require('SBOM.json' in workflow and 'source/package runtime parity' in workflow, 'R20 exact package evidence is incomplete')
+require(
+    'SBOM.json' in workflow
+    and 'source/package' in workflow
+    and 'runtime parity' in workflow,
+    'R20 exact package evidence is incomplete'
+)
 
 # Deployment-status truth must remain explicit after repository closure.
 for doc, name in ((status,'STATUS'),(manifest,'RELEASE-MANIFEST'),(ledger,'ledger'),(staging,'staging')):
