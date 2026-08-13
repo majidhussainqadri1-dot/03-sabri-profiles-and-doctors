@@ -13,6 +13,7 @@ def section(src, start, end=None):
 
 rest = text('includes/class-spd-rest.php')
 central_rest = text('includes/class-spd-central-rest.php')
+future_rest = text('includes/class-spd-future-rest.php')
 observability = text('includes/class-spd-observability.php')
 activator = text('includes/class-spd-activator.php')
 lifecycle = text('includes/trait-spd-profile-lifecycle.php')
@@ -82,4 +83,17 @@ require("status='in_review'" in review and "status IN ('rejected','closed','acti
 require("add_action( 'rest_api_init', 'spd_file03_register_strict_report_routes', 20 );" in appeals, 'R11 strict report/appeal REST overrides are not registered')
 require('/appeals/review-queue' in appeals and '/review' in appeals, 'R11 appeal reviewer endpoints missing')
 
-print('Fifth fresh twenty-round sequential corrective invariants passed through R11.')
+# R13 — public Future surfaces fail closed on provider exceptions and the
+# grounded-work assistant rejects multilingual patient-specific treatment intent.
+require('public static function medical_scope_question' in future_rest, 'R13 shared medical-scope guard missing')
+for phrase in ('میری', 'علاج', 'دواء', 'इलाज', '诊断', 'diagnóstico', 'diagnostic', 'diagnóstico', 'রোগনির্ণয়', 'teşhis'):
+    require(phrase in future_rest, f'R13 multilingual medical-scope coverage missing: {phrase}')
+require('patient-specific treatment advice' in future_rest, 'R13 patient-specific treatment boundary is not explicit')
+require('private function provider_exception' in future_rest and 'spd_future_provider_unavailable' in future_rest, 'R13 provider exceptions are not mapped to fail-closed 503')
+require('private function safe_personal_site_profile' in future_rest and 'catch ( Throwable $exception )' in future_rest, 'R13 public Future projections are not exception-safe')
+for surface in ("'dossier'", "'fhir'", "'federation'", "'embed_card'", "'disclosure_projection'", "'ask_work'"):
+    require(surface in future_rest, f'R13 provider-failure surface missing: {surface}')
+require("spd_unknown_ai_question_field" in future_rest, 'R13 AI request shape is not strict')
+require("add_filter( 'sabri_file16_grounded_profile_ask_v1', 'spd_file03_guard_grounded_profile_ask_claim', PHP_INT_MAX, 6 );" in future_rest, 'R13 direct grounded-work consumers are not protected by the clinical-intent guard')
+
+print('Fifth fresh twenty-round sequential corrective invariants passed through R13.')
