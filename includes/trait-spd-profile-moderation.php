@@ -120,7 +120,7 @@ trait SPD_Profile_Moderation {
 		$profile = $this->find_by_public_id_strict( $public_id );
 		if ( is_wp_error( $profile ) ) { return $profile; }
 		if ( ! $profile || ! SPD_Authorization::profile_visibility_allows( $profile, $reporter_user_id ) ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
-		$allowed = array( 'impersonation', 'harassment', 'false_qualification', 'unsafe_media', 'privacy_breach', 'other' );
+		$allowed = SPD_Central_Profile::report_reasons();
 		$reason = sanitize_key( $reason );
 		$details = SPD_Helpers::sanitize_multiline( $details, 3000 );
 		if ( ! in_array( $reason, $allowed, true ) ) { return new WP_Error( 'spd_invalid_report_reason', __( 'Choose a valid report reason.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
@@ -139,7 +139,7 @@ trait SPD_Profile_Moderation {
 		$count = absint( $count_raw );
 		if ( $count >= 5 ) { $this->idempotency_fail( $reporter_user_id, 'create_report', $idempotency_key ); return new WP_Error( 'spd_report_rate_limited', __( 'Too many reports were submitted. Try again later.', 'sabri-profiles-doctors' ), array( 'status' => 429 ) ); }
 		$uuid = SPD_Helpers::public_id();
-		$severity = in_array( $reason, array( 'impersonation', 'privacy_breach' ), true ) ? 'high' : 'normal';
+		$severity = in_array( $reason, array( 'harm', 'child_safety', 'impersonation', 'privacy', 'privacy_breach', 'scam' ), true ) ? 'high' : 'normal';
 		$now = SPD_Helpers::now();
 		$dedupe = hash( 'sha256', gmdate( 'Y-m-d' ) . ':' . $profile['id'] . ':' . $reason . ':' . hash( 'sha256', $details ) );
 		$response = array( 'report_uuid' => $uuid, 'status' => 'submitted', 'trace_id' => SPD_Helpers::trace_id() );
