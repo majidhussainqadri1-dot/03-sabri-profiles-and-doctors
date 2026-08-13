@@ -44,7 +44,26 @@ final class SPD_Future_REST {
 		$r->header( 'X-SPD-Trace-ID', $trace ); $r->header( 'X-SPD-Contract-Version', SPD_CONTRACT_VERSION ); return $r;
 	}
 
-	private function dto( $public_id ) { return spd_get_personal_site_profile( (string) $public_id, get_current_user_id() ); }
+	private function provider_exception( Throwable $exception, $surface ) {
+		$surface = sanitize_key( (string) $surface );
+		do_action( 'sabri_file24_profile_provider_failure', array(
+			'owner' => 'file03',
+			'surface' => $surface,
+			'exception_class' => sanitize_key( get_class( $exception ) ),
+			'at' => SPD_Helpers::now(),
+		) );
+		return new WP_Error( 'spd_future_provider_unavailable', __( 'A required professional-profile provider is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+	}
+
+	private function safe_personal_site_profile( $public_id, $viewer_id = 0, $surface = 'future' ) {
+		try {
+			return spd_get_personal_site_profile( (string) $public_id, absint( $viewer_id ) );
+		} catch ( Throwable $exception ) {
+			return $this->provider_exception( $exception, $surface );
+		}
+	}
+
+	private function dto( $public_id ) { return $this->safe_personal_site_profile( $public_id, get_current_user_id(), 'future' ); }
 	private function idem( WP_REST_Request $r ) { return trim( sanitize_text_field( (string) $r->get_header( 'Idempotency-Key' ) ) ); }
 	private function reject_unknown( array $payload, array $allowed, $code ) {
 		return array_diff( array_keys( $payload ), $allowed ) ? new WP_Error( sanitize_key( $code ), __( 'One or more submitted fields are not supported for this operation.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ) : true;
@@ -69,9 +88,44 @@ final class SPD_Future_REST {
 		return $profile;
 	}
 
-	private function medical_scope_question( $question ) {
-		$q = (string) $question;
-		return 1 === preg_match( '/\b(diagnos\w*|prescrib\w*|prescription|dosage|dose|potency|emergency|urgent medical|guaranteed cure|treatment recommendation)\b|\b(what|which|recommend|suggest)\b.{0,45}\b(remedy|medicine|medication|drug|treatment|potency|dose)\b|\b(should i|can i)\b.{0,35}\b(take|use)\b.{0,35}\b(remedy|medicine|medication|drug|dose|potency)\b|\b(treat|cure)\b.{0,25}\b(my|me)\b|\b(for my|my)\b.{0,30}\b(symptom|condition|disease|pain)\b|تشخیص|نسخہ|خوراک|ایمرجنسی|علاج تجویز|کون سی دوا|کیا دوا|دوا لوں|مجھے.{0,20}دوا|میرے لیے.{0,20}دوا|پوٹینسی/ui', $q );
+	/**
+	 * Fail-closed clinical-intent gate for the profile-work assistant.
+	 * It is intentionally phrase-oriented: neutral questions about a doctor's
+	 * published work remain possible, while diagnosis, dosing, prescribing,
+	 * emergency and patient-specific treatment requests are refused locally.
+	 */
+	public static function medical_scope_question( $question ) {
+		$q = trim( (string) $question );
+		if ( '' === $q ) { return false; }
+		$patterns = array(
+			'/\b(diagnos\w*|prescrib\w*|prescription|dosage|dose|potency|emergenc\w*|urgent medical|guaranteed cure|treatment recommendation)\b/ui',
+			'/\b(what|which|recommend|suggest|best)\b.{0,45}\b(remedy|medicine|medication|drug|treatment|potency|dose)\b/ui',
+			'/\b(should i|can i|may i)\b.{0,35}\b(take|use)\b.{0,35}\b(remedy|medicine|medication|drug|dose|potency)\b/ui',
+			'/\b(treat|cure)\b.{0,30}\b(my|me|for me)\b|\b(for my|my)\b.{0,45}\b(symptom|condition|disease|pain|illness)\b/ui',
+			'/تشخیص|نسخہ|خوراک|ایمرجنسی|پوٹینسی|علاج\s*تجویز/ui',
+			'/(?:کون\s*سی|کون\s*سا|کیا|کوئی).{0,24}(?:دوا|ریمیڈی|علاج|خوراک|پوٹینسی)/ui',
+			'/(?:مجھے|میری|میرے|میرے\s*لیے).{0,60}(?:دوا|ریمیڈی|علاج|خوراک|پوٹینسی|تشخیص)/ui',
+			'/(?:دوا|ریمیڈی|علاج|خوراک|پوٹینسی).{0,30}(?:بتائیں|بتاؤ|تجویز|لوں|استعمال\s*کروں|دیں|چاہیے)/ui',
+			'/(?:بیماری|مرض|علامت|درد|شوگر|ذیابیطس|بلڈ\s*پریشر).{0,45}(?:علاج|دوا|ریمیڈی)/ui',
+			'/تشخيص|وصفة|جرعة|طوارئ|علاج\s*مقترح/ui',
+			'/(?:ما|أي|اقترح|أوص|هل).{0,30}(?:دواء|علاج|جرعة)/ui',
+			'/(?:لي|لدي|مرضي|أعراضي).{0,45}(?:دواء|علاج|جرعة|تشخيص)/ui',
+			'/निदान|नुस्खा|खुराक|आपातकाल/ui',
+			'/(?:कौन|क्या|सुझा).{0,30}(?:दवा|इलाज|खुराक)/ui',
+			'/诊断|处方|剂量|急诊|用药建议|治疗建议/u',
+			'/diagnóstico|receta|dosis|emergencia|prescripción/ui',
+			'/(?:qué|cuál|recomiend\w*|sugier\w*).{0,35}(?:medicamento|medicina|tratamiento|dosis)/ui',
+			'/diagnostic|ordonnance|posologie|urgence|prescription/ui',
+			'/(?:quel|quelle|recommand\w*|suggér\w*).{0,35}(?:médicament|traitement|dose)/ui',
+			'/diagnóstico|receita|dosagem|emergência|prescrição/ui',
+			'/(?:qual|que|recomenda\w*|suger\w*).{0,35}(?:medicamento|remédio|tratamento|dose)/ui',
+			'/রোগনির্ণয়|প্রেসক্রিপশন|ডোজ|জরুরি|চিকিৎসার\s*পরামর্শ/u',
+			'/teşhis|reçete|doz|acil|tedavi\s*önerisi/ui',
+		);
+		foreach ( $patterns as $pattern ) {
+			if ( 1 === preg_match( $pattern, $q ) ) { return true; }
+		}
+		return false;
 	}
 
 	private function mutate( WP_REST_Request $r, $command, array $payload, callable $callback, $status = 200 ) {
@@ -93,18 +147,25 @@ final class SPD_Future_REST {
 	}
 
 	public function future( WP_REST_Request $r ) { $dto = $this->dto( $r['public_id'] ); return $this->response( is_wp_error( $dto ) ? $dto : $dto['future'], 200, ! is_user_logged_in() ); }
-	public function dossier( WP_REST_Request $r ) { $dto = $this->dto( $r['public_id'] ); return $this->response( is_wp_error( $dto ) ? $dto : $dto['future']['dossier'], 200, ! is_user_logged_in() ); }
-	public function fhir( WP_REST_Request $r ) { $dto = spd_get_personal_site_profile( $r['public_id'], 0 ); return $this->response( is_wp_error( $dto ) ? $dto : $dto['future']['fhir'], 200, true ); }
-	public function federation( WP_REST_Request $r ) { $dto = spd_get_personal_site_profile( $r['public_id'], 0 ); return $this->response( is_wp_error( $dto ) ? $dto : $dto['future']['federation'], 200, true ); }
-	public function embed_card( WP_REST_Request $r ) { $dto = spd_get_personal_site_profile( $r['public_id'], 0 ); return $this->response( is_wp_error( $dto ) ? $dto : $dto['future']['embed_card'], 200, true ); }
+	public function dossier( WP_REST_Request $r ) { $dto = $this->safe_personal_site_profile( $r['public_id'], get_current_user_id(), 'dossier' ); return $this->response( is_wp_error( $dto ) ? $dto : $dto['future']['dossier'], 200, ! is_user_logged_in() ); }
+	public function fhir( WP_REST_Request $r ) { $dto = $this->safe_personal_site_profile( $r['public_id'], 0, 'fhir' ); return $this->response( is_wp_error( $dto ) ? $dto : $dto['future']['fhir'], 200, true ); }
+	public function federation( WP_REST_Request $r ) { $dto = $this->safe_personal_site_profile( $r['public_id'], 0, 'federation' ); return $this->response( is_wp_error( $dto ) ? $dto : $dto['future']['federation'], 200, true ); }
+	public function embed_card( WP_REST_Request $r ) { $dto = $this->safe_personal_site_profile( $r['public_id'], 0, 'embed_card' ); return $this->response( is_wp_error( $dto ) ? $dto : $dto['future']['embed_card'], 200, true ); }
 	public function ask_work( WP_REST_Request $r ) {
 		global $wpdb;
 		$viewer = get_current_user_id();
 		if ( ! SPD_Helpers::consume_rate_limit( 'ask_work_' . $viewer, 30, HOUR_IN_SECONDS ) ) { return $this->response( new WP_Error( 'spd_ai_rate_limited', __( 'Too many profile-work questions were submitted. Try again later.', 'sabri-profiles-doctors' ), array( 'status' => 429 ) ) ); }
-		$p = (array) $r->get_json_params(); $question = trim( SPD_Helpers::sanitize_multiline( $p['question'] ?? '', 500 ) );
-		if ( $this->medical_scope_question( $question ) ) { return $this->response( new WP_Error( 'spd_ai_scope_restricted', __( 'This assistant answers only about the professional’s published work; it does not diagnose, prescribe, dose or replace emergency care.', 'sabri-profiles-doctors' ), array( 'status' => 422 ) ) ); }
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'question' ), 'spd_unknown_ai_question_field' );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape ); }
+		$question = trim( SPD_Helpers::sanitize_multiline( $p['question'] ?? '', 500 ) );
+		if ( self::medical_scope_question( $question ) ) { return $this->response( new WP_Error( 'spd_ai_scope_restricted', __( 'This assistant answers only about the professional’s published work; it does not diagnose, prescribe, dose, give patient-specific treatment advice or replace emergency care.', 'sabri-profiles-doctors' ), array( 'status' => 422 ) ) ); }
 		$wpdb->last_error = '';
-		$result = SPD_Future_Profile::ask_about_work( $r['public_id'], $viewer, $question );
+		try {
+			$result = SPD_Future_Profile::ask_about_work( $r['public_id'], $viewer, $question );
+		} catch ( Throwable $exception ) {
+			$result = $this->provider_exception( $exception, 'ask_work' );
+		}
 		if ( $wpdb->last_error ) { $result = new WP_Error( 'spd_profile_store_unavailable', __( 'The profile store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		if ( ! is_wp_error( $result ) ) { $answer = trim( (string) ( $result['answer'] ?? '' ) ); $citations = (array) ( $result['citations'] ?? array() ); if ( '' === $answer || ! $citations ) { $result = new WP_Error( 'spd_ai_grounding_incomplete', __( 'The grounded answer did not include sufficient public source evidence.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); } }
 		return $this->response( $result );
@@ -121,7 +182,11 @@ final class SPD_Future_REST {
 	public function disclosure( WP_REST_Request $r ) {
 		global $wpdb;
 		$wpdb->last_error = '';
-		$packet = SPD_Future_Profile::disclosure_packet( $r['token'] );
+		try {
+			$packet = SPD_Future_Profile::disclosure_packet( $r['token'] );
+		} catch ( Throwable $exception ) {
+			$packet = $this->provider_exception( $exception, 'disclosure' );
+		}
 		if ( $wpdb->last_error && is_wp_error( $packet ) && 'spd_disclosure_revoked' === $packet->get_error_code() ) {
 			$packet = new WP_Error( 'spd_disclosure_store_unavailable', __( 'Disclosure verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 		}
@@ -129,7 +194,7 @@ final class SPD_Future_REST {
 		$parts = explode( '.', (string) $r['token'], 2 );
 		$raw = base64_decode( strtr( (string) ( $parts[0] ?? '' ), '-_', '+/' ) . str_repeat( '=', ( 4 - strlen( (string) ( $parts[0] ?? '' ) ) % 4 ) % 4 ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 		$payload = json_decode( (string) $raw, true );
-		$dto = is_array( $payload ) && ! empty( $payload['pid'] ) ? spd_get_personal_site_profile( sanitize_text_field( $payload['pid'] ), 0 ) : new WP_Error( 'spd_disclosure_invalid', __( 'This disclosure link is invalid.', 'sabri-profiles-doctors' ) );
+		$dto = is_array( $payload ) && ! empty( $payload['pid'] ) ? $this->safe_personal_site_profile( sanitize_text_field( $payload['pid'] ), 0, 'disclosure_projection' ) : new WP_Error( 'spd_disclosure_invalid', __( 'This disclosure link is invalid.', 'sabri-profiles-doctors' ) );
 		if ( is_wp_error( $dto ) ) { return $this->response( $dto, 200, false ); }
 		foreach ( (array) ( $packet['scopes'] ?? array() ) as $scope ) { switch ( sanitize_key( $scope ) ) { case 'credentials': $packet['credentials'] = $dto['future']['credential_wallet'] ?? array(); break; case 'expertise': $packet['expertise'] = array( 'declared' => $dto['extended'] ?? array(), 'evidence' => $dto['future']['expertise_evidence'] ?? array() ); break; case 'achievements': $packet['achievements'] = $dto['future']['learning_passport'] ?? array(); break; } }
 		return $this->response( $packet, 200, false );
@@ -176,3 +241,14 @@ final class SPD_Future_REST {
 		return $this->mutate( $r, 'set_future_profile_state', $payload, function() use ( $actor, $r, $payload ) { $mutation = $payload; unset( $mutation['public_id'] ); $result = SPD_Future_Profile::set_future_state( $actor, $r['public_id'], $mutation ); return $this->db_certain_future_result( $result ); } );
 	}
 }
+
+/**
+ * Defense in depth for direct PHP consumers of the File 16 grounded-work filter:
+ * even if they bypass this REST controller, a clinical-intent question cannot
+ * receive a provider claim through the shared filter contract.
+ */
+function spd_file03_guard_grounded_profile_ask_claim( $claim, $user_id, $viewer_id, $contract_version, $public_id, $question ) {
+	unset( $user_id, $viewer_id, $contract_version, $public_id );
+	return SPD_Future_REST::medical_scope_question( $question ) ? null : $claim;
+}
+add_filter( 'sabri_file16_grounded_profile_ask_v1', 'spd_file03_guard_grounded_profile_ask_claim', PHP_INT_MAX, 6 );
