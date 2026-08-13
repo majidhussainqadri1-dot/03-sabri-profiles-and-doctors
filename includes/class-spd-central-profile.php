@@ -95,8 +95,25 @@ final class SPD_Central_Profile {
 		return SPD_Schema_Guard::central_ready();
 	}
 
+	private static function provider_failure( $filter, Throwable $exception ) {
+		try {
+			do_action( 'sabri_file24_profile_provider_failure', array(
+				'owner'           => 'file03',
+				'provider'        => sanitize_key( (string) $filter ),
+				'surface'         => 'central_profile_projection',
+				'exception_class' => sanitize_key( get_class( $exception ) ),
+				'at'              => class_exists( 'SPD_Helpers' ) ? SPD_Helpers::now() : gmdate( 'c' ),
+			) );
+		} catch ( Throwable $ignored ) {}
+	}
+
 	public static function provider_claim( $filter, $user_id, $viewer_id = 0, $max_age = 300 ) {
-		$claim = apply_filters( $filter, null, absint( $user_id ), absint( $viewer_id ), SPD_CONTRACT_VERSION );
+		try {
+			$claim = apply_filters( $filter, null, absint( $user_id ), absint( $viewer_id ), SPD_CONTRACT_VERSION );
+		} catch ( Throwable $exception ) {
+			self::provider_failure( $filter, $exception );
+			return array();
+		}
 		if ( ! SPD_Helpers::current_contract_claim( $claim, self::MIN_PROVIDER_CONTRACT, $max_age ) ) { return array(); }
 		if ( isset( $claim['user_id'] ) && absint( $claim['user_id'] ) !== absint( $user_id ) ) { return array(); }
 		return $claim;
