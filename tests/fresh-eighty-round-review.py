@@ -46,11 +46,14 @@ assert 'spd_federation_owner_opt_in_required' in rest
 assert "'transport_owner' => 'external'" in future
 assert "! empty( $out['inbox'] ) && ! empty( $out['outbox'] )" in future
 
-# AI safety retains throttling and adds defense-in-depth medical/grounding rejection.
+# AI safety retains throttling and defense-in-depth medical/grounding rejection.
 assert "consume_rate_limit( 'ask_work_' . $viewer" in rest
 assert 'medical_scope_question' in rest
-for marker in ('potency', 'کون سی دوا', 'spd_ai_grounding_incomplete'):
+for marker in ('potency', 'spd_ai_grounding_incomplete'):
     assert marker in rest, marker
+# The current hardened multilingual regex represents the legacy Urdu sentinel
+# as whitespace-tolerant tokens rather than requiring one literal phrase.
+assert 'کون سی دوا' in rest or ('کون\\s*سی' in rest and 'دوا' in rest)
 assert "'' === $answer || ! $citations" in rest
 assert 'SPD_Helpers::same_origin_url' in future
 
