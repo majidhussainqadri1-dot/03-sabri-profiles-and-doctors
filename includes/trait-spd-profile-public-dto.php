@@ -30,7 +30,23 @@ trait SPD_Profile_Public_DTO {
 		$verification = SPD_Verification_Adapter::projection( $user_id );
 		$is_verified_doctor = 'doctor' === $profile['profile_type'] && 'doctor' === ( $claims['account_type'] ?? '' ) && ! empty( $claims['approved'] ) && ! empty( $claims['eligible'] ) && ! empty( $claims['professional_verified'] ) && empty( $claims['suspended'] ) && $verification && ! empty( $verification['trusted_contract'] ) && 'verified' === ( $verification['status'] ?? '' );
 		$professional = $is_verified_doctor ? ( $verification['approved_fields'] ?? array() ) : array();
-		$clinic_raw = $is_verified_doctor ? apply_filters( 'sabri_file08_public_clinic_projection_v1', null, $user_id, $viewer_id, SPD_CONTRACT_VERSION ) : null;
+		$clinic_raw = null;
+		if ( $is_verified_doctor ) {
+			try {
+				$clinic_raw = apply_filters( 'sabri_file08_public_clinic_projection_v1', null, $user_id, $viewer_id, SPD_CONTRACT_VERSION );
+			} catch ( Throwable $exception ) {
+				try {
+					do_action( 'sabri_file24_profile_provider_failure', array(
+						'owner'           => 'file03',
+						'provider'        => 'file08_public_clinic',
+						'surface'         => 'public_profile_dto',
+						'exception_class' => sanitize_key( get_class( $exception ) ),
+						'at'              => SPD_Helpers::now(),
+					) );
+				} catch ( Throwable $ignored ) {}
+				$clinic_raw = null;
+			}
+		}
 		$dto = array(
 			'contract_version' => SPD_CONTRACT_VERSION,
 			'public_id'        => $profile['public_id'],
