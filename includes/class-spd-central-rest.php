@@ -30,6 +30,7 @@ final class SPD_Central_REST {
 		register_rest_route( 'sabri-profiles/v1', '/me/delegates/(?P<delegate_id>[0-9]+)', array( 'methods' => WP_REST_Server::DELETABLE, 'callback' => array( $this, 'revoke_delegate' ), 'permission_callback' => array( $this, 'eligible' ) ) );
 		register_rest_route( 'sabri-profiles/v1', '/profiles/(?P<public_id>[0-9a-fA-F-]{36})/safety-reports', array( 'methods' => WP_REST_Server::CREATABLE, 'callback' => array( $this, 'safety_report' ), 'permission_callback' => array( $this, 'eligible' ), 'args' => array( 'public_id' => $uuid ) ) );
 		register_rest_route( 'sabri-profiles/v1', '/reports/(?P<report_uuid>[0-9a-fA-F-]{36})/appeal', array( 'methods' => WP_REST_Server::CREATABLE, 'callback' => array( $this, 'appeal' ), 'permission_callback' => array( $this, 'eligible' ), 'args' => array( 'report_uuid' => $uuid ) ) );
+		register_rest_route( 'sabri-profiles/v1', '/appeals/(?P<appeal_uuid>[0-9a-fA-F-]{36})', array( 'methods' => WP_REST_Server::EDITABLE, 'callback' => array( $this, 'review_appeal' ), 'permission_callback' => array( $this, 'can_moderate' ), 'args' => array( 'appeal_uuid' => $uuid ) ) );
 	}
 
 	public function eligible() {
@@ -44,6 +45,7 @@ final class SPD_Central_REST {
 		}
 		return ! empty( $claims['eligible'] ) && empty( $claims['suspended'] ) ? true : new WP_Error( 'spd_account_ineligible', __( 'This account is not currently eligible.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
 	}
+	public function can_moderate() { return SPD_Authorization::moderation_guard( get_current_user_id() ); }
 
 	private function response( $result, $success = 200, $public = false ) {
 		$trace = SPD_Helpers::trace_id();
@@ -76,6 +78,9 @@ final class SPD_Central_REST {
 			return new WP_Error( 'spd_profile_store_unavailable', __( 'The profile store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 		}
 		return $result;
+	}
+	private function appeals_service() {
+		if ( ! class_exists( 'SPD_Appeals' ) ) { require_once SPD_DIR . 'includes/class-spd-appeals.php'; }
 	}
 	public function personal_site( WP_REST_Request $r ) { return $this->response( spd_get_personal_site_profile( $r['public_id'], get_current_user_id() ), 200, ! is_user_logged_in() ); }
 	public function search_projection( WP_REST_Request $r ) { return $this->response( spd_get_search_projection( $r['public_id'] ), 200, true ); }
@@ -129,6 +134,15 @@ final class SPD_Central_REST {
 	public function appeal( WP_REST_Request $r ) {
 		$p = (array) $r->get_json_params();
 		$shape = $this->reject_unknown( $p, array( 'reason' ), 'spd_unknown_appeal_field' );
-		return is_wp_error( $shape ) ? $this->response( $shape ) : $this->response( SPD_Profile_Repository::instance()->request_report_appeal( $r['report_uuid'], get_current_user_id(), $p['reason'] ?? '', $this->idem( $r ) ), 201 );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape ); }
+		$this->appeals_service();
+		return $this->response( SPD_Appeals::request( $r['report_uuid'], get_current_user_id(), $p['reason'] ?? '' ), 201 );
+	}
+	public function review_appeal( WP_REST_Request $r ) {
+		$p = (array) $r->get_json_params();
+		$shape = $this->reject_unknown( $p, array( 'outcome', 'note', 'version' ), 'spd_unknown_appeal_review_field' );
+		if ( is_wp_error( $shape ) ) { return $this->response( $shape ); }
+		$this->appeals_service();
+		return $this->response( SPD_Appeals::review( $r['appeal_uuid'], get_current_user_id(), $p['outcome'] ?? '', $p['note'] ?? '', $this->version( $r ) ) );
 	}
 }
