@@ -51,7 +51,10 @@ check(17, 'Deletion retry/dead letter', "status=$attempts>=8?'dead':'retry'" in 
 check(18, 'Exact origin', 'effective_port' in helpers and '$target_scheme !== $home_scheme' in helpers, 'scheme host and port must match')
 check(19, 'URL credentials rejected', "isset( $target['user'] ) || isset( $target['pass'] )" in helpers and 'safe_external_url' in future, 'credential-bearing URLs remain rejected; external future links are HTTPS constrained')
 check(20, 'Provider health freshness', 'current_contract_claim( $provider_health' in timeline and 'current_contract_claim' in future, 'timeline and future provider facts are current/versioned')
-check(21, 'Provider exception containment', 'catch ( Throwable $e )' in timeline and 'spd_timeline_provider_exception' in timeline, 'provider exceptions cannot break profile page')
+# Variable naming is representation detail; the invariant is a Throwable catch
+# around provider execution plus an explicit safe provider-error result.
+provider_throw_catch = bool(re.search(r'catch\s*\(\s*Throwable\s+\$[A-Za-z_][A-Za-z0-9_]*\s*\)', timeline))
+check(21, 'Provider exception containment', provider_throw_catch and 'spd_timeline_provider_exception' in timeline, 'provider exceptions cannot break profile page')
 check(22, 'Provider result bound', 'MAX_PROVIDER_ITEMS' in timeline and 'count( $result ) > self::MAX_PROVIDER_ITEMS' in timeline and 'array_slice' in future, 'timeline and future provider payloads are bounded')
 check(23, 'Timeline owner binding', "author_user_id'] ?? 0" in timeline and 'expected_user_id' in timeline, 'cross-author items are rejected')
 check(24, 'Future timestamp rejection', '$timestamp > time() + 300' in timeline, 'future-dated timeline items are rejected')
