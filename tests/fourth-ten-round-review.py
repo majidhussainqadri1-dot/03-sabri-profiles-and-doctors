@@ -31,7 +31,7 @@ def gate(number, label, checks):
 gate(1,'historical release truth is unambiguous',[
     ('historical lock type', 'historical_source_archive_lock' in lock),
     ('fourth starting freeze preserved historically', '1ff55ecd91be68bbf6d68e54c630f78f901992af' in ledger),
-    ('historical checksums warning', 'historical provenance' in manifest.lower() and 'not' in manifest.lower()),
+    ('historical checksums warning', ('frozen historical evidence' in manifest.lower() or 'historical provenance' in manifest.lower()) and 'not' in manifest.lower() and 'current' in manifest.lower()),
 ])
 gate(2,'fallback private routes remain protected',[
     ('fallback slug helper', 'fallback_slug' in routes),
