@@ -16,6 +16,7 @@ timeline = text('includes/class-spd-timeline.php')
 front_timeline = text('includes/trait-spd-frontend-timeline.php')
 update = text('includes/trait-spd-profile-update.php')
 moderation = text('includes/trait-spd-profile-moderation.php')
+report_appeals = text('includes/trait-spd-profile-report-appeals.php')
 public_dto = text('includes/trait-spd-profile-public-dto.php')
 identity_read = text('includes/trait-spd-profile-identity-read.php')
 observability = text('includes/class-spd-observability.php')
@@ -65,7 +66,9 @@ check(30, 'Minor contact suppression', '$is_minor = ! empty( $claims' in public_
 check(31, 'Migration visibility minimization', "$safe_audience = 'private'" in observability and 'public_profile_age_eligible' in observability, 'legacy public visibility is not blindly copied')
 check(32, 'Migration contact minimization', "'_spd_public_contact'" in observability and '! SPD_Membership_Adapter::is_minor' in observability, 'legacy contact stays minor-safe')
 check(33, 'Migration repair schedule', "'spd_migrate_profiles_batch' => 'schedule_migration'" in observability, 'repair includes incomplete migration schedule')
-check(34, 'Unicode report minimum', 'SPD_Helpers::text_length( $details ) < 10' in moderation, 'minimum detail uses character count')
+# The compatibility report entry point delegates to the strict safety-report
+# command; validate Unicode-aware minimum length on the effective command.
+check(34, 'Unicode report minimum', 'create_safety_report_strict' in moderation and 'SPD_Helpers::text_length( $details ) < 10' in report_appeals, 'minimum detail uses character count on the effective strict report path')
 check(35, 'Audit error normalization', "array( 'error' => $before->get_error_code()" in update and "array( 'error' => $after->get_error_code()" in update, 'WP_Error is not serialized as a misleading DTO')
 check(36, 'JSON failure handling', "return false === $json ? 'null' : $json" in helpers and "if ( 'null' === $json )" in events, 'encoding failure cannot complete idempotency')
 runtime_files = [ROOT / 'sabri-profiles-doctors.php', ROOT / 'uninstall.php', ROOT / 'readme.txt']
