@@ -19,6 +19,7 @@ on:
       - audit/file-03-third-twenty-round-20260812
       - audit/file-03-fourth-twenty-round-20260812
       - audit/file-03-fifth-twenty-round-20260813-clean
+      - audit/file-03-sixth-twenty-round-20260813
   pull_request:
   workflow_dispatch:
 
@@ -72,6 +73,12 @@ jobs:
         run: python3 tests/fourth-twenty-round-sequential-review.py
       - name: Fifth twenty-round sequential corrective invariants
         run: python3 tests/fifth-twenty-round-sequential-review.py
+      - name: Fifth-cycle R18 release/package invariants
+        run: python3 tests/fifth-twenty-round-r18-release.py
+      - name: Fifth-cycle R19 contract invariants
+        run: python3 tests/fifth-twenty-round-r19-contracts.py
+      - name: Fifth-cycle R20 final closure invariants
+        run: python3 tests/fifth-twenty-round-r20-final.py
       - name: Future Superset 18 coverage
         run: python3 tests/future-superset-coverage.py
       - name: Latest governing-plan coverage
