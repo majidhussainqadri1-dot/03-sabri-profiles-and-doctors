@@ -4,6 +4,9 @@ OUT="${1:-dist}"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 VERSION="$(sed -n 's/^ \* Version: \(.*\)$/\1/p' "$ROOT/sabri-profiles-doctors.php" | head -1)"
 TOP='03-sabri-profiles-and-doctors'
+# Canonical reproducible-build timestamp: 2026-08-06T00:00:00Z.
+SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-1785974400}"
+export SOURCE_DATE_EPOCH
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
 WORK="$(mktemp -d)"
@@ -13,7 +16,7 @@ cp "$ROOT/sabri-profiles-doctors.php" "$ROOT/uninstall.php" "$ROOT/readme.txt" "
 cp "$ROOT"/includes/*.php "$WORK/$TOP/includes/"
 cp "$ROOT"/assets/css/* "$WORK/$TOP/assets/css/"
 cp "$ROOT"/assets/js/* "$WORK/$TOP/assets/js/"
-find "$WORK/$TOP" -type f -exec touch -t 202608060000 {} +
+find "$WORK/$TOP" -type f -exec touch -d "@${SOURCE_DATE_EPOCH}" {} +
 ZIP="$OUT/$TOP-$VERSION.zip"
 (
   cd "$WORK"
