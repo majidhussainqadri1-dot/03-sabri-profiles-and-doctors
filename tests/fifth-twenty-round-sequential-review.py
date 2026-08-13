@@ -16,6 +16,7 @@ central_rest = text('includes/class-spd-central-rest.php')
 future_rest = text('includes/class-spd-future-rest.php')
 timeline = text('includes/class-spd-timeline.php')
 observability = text('includes/class-spd-observability.php')
+admin = text('includes/class-spd-admin.php')
 activator = text('includes/class-spd-activator.php')
 lifecycle = text('includes/trait-spd-profile-lifecycle.php')
 appeals = text('includes/trait-spd-profile-report-appeals.php')
@@ -141,4 +142,24 @@ require("$this->is_mapped_or_fallback_page( 'profile', $map )" in redirects and 
 profile_method = section(frontend_profile, 'public function profile()', 'private function render_profile')
 require("$_GET['public_id']" not in profile_method, 'R16 profile renderer still consumes legacy public_id query directly')
 
-print('Fifth fresh twenty-round sequential corrective invariants passed through R16.')
+# R17 — System Check must not convert unpublished pages, stale/throwing provider
+# diagnostics, DB read failures or missing Safe Mode timestamps into healthy
+# operational evidence.
+safe = section(observability, 'public static function set_safe_mode', 'private static function operational_count')
+require("get_option( 'spd_safe_mode_changed_at', '' ) !== $changed_at" in safe, 'R17 Safe Mode audit timestamp is not verified')
+require('private static function managed_page_status' in observability and "'publish' === $status" in observability, 'R17 managed-page health is not publish-state aware')
+health = section(observability, 'public static function health_report', 'private static function provider_health')
+for key in ('founder', 'profile', 'account_profile', 'personal_site', 'private_preview'):
+    require(f"managed_page_status( $map, '{key}' )" in health, f'R17 required page health missing: {key}')
+provider_health = section(observability, 'private static function provider_health', 'public function dispatch_outbox')
+require('catch ( Throwable $exception )' in provider_health and "'system_check_provider_health'" in provider_health, 'R17 provider-health exceptions are not contained')
+require('SPD_Helpers::current_contract_claim' in provider_health and 'PROVIDER_CONTRACT_MIN' in provider_health, 'R17 provider-health freshness/contract is not validated')
+repair = section(observability, 'public static function repair', '\n\t}\n}')
+require("'publish' !== get_post_status" in repair and "'personal_site', 'private_preview'" in repair, 'R17 repair dry-run does not detect all unpublished required pages')
+require('private function operational_rows' in admin and "$wpdb->last_error = '';" in admin, 'R17 admin operational reads lack a fail-closed helper')
+status_page = section(admin, 'public function status_page', 'public function moderation_page')
+require(status_page.count('operational_rows(') >= 3 and 'is_wp_error( $rows )' in status_page, 'R17 dead-letter DB uncertainty can still look empty')
+reports_page = section(admin, 'public function reports_page', 'public function safe_mode_post')
+require('operational_rows(' in reports_page and 'is_wp_error($rows)' in reports_page, 'R17 report DB uncertainty can still look like no reports')
+
+print('Fifth fresh twenty-round sequential corrective invariants passed through R17.')
