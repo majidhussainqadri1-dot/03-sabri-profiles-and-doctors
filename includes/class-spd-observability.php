@@ -28,8 +28,12 @@ final class SPD_Observability {
 		update_option( 'spd_safe_mode', $enabled, false );
 		update_option( 'spd_safe_mode_reason', $reason, false );
 		update_option( 'spd_safe_mode_changed_at', $changed_at, false );
-		if ( (bool) get_option( 'spd_safe_mode', false ) !== $enabled || (string) get_option( 'spd_safe_mode_reason', '' ) !== $reason ) {
-			return new WP_Error( 'spd_safe_mode_persist_failed', __( 'The safe-mode state could not be persisted.', 'sabri-profiles-doctors' ) );
+		if (
+			(bool) get_option( 'spd_safe_mode', false ) !== $enabled
+			|| (string) get_option( 'spd_safe_mode_reason', '' ) !== $reason
+			|| (string) get_option( 'spd_safe_mode_changed_at', '' ) !== $changed_at
+		) {
+			return new WP_Error( 'spd_safe_mode_persist_failed', __( 'The safe-mode state and its audit timestamp could not be persisted.', 'sabri-profiles-doctors' ) );
 		}
 		do_action( 'sabri_file24_security_state_changed', 'file03', $enabled ? 'safe_mode' : 'normal', $reason );
 		return true;
@@ -50,6 +54,13 @@ final class SPD_Observability {
 			'code' => sanitize_key( (string) $record['code'] ),
 			'at'   => sanitize_text_field( (string) ( $record['at'] ?? '' ) ),
 		);
+	}
+
+	private static function managed_page_status( array $map, $key ) {
+		$key = sanitize_key( (string) $key );
+		if ( empty( $map[ $key ] ) ) { return 'missing'; }
+		$status = get_post_status( absint( $map[ $key ] ) );
+		return 'publish' === $status ? 'available' : ( $status ? 'unpublished' : 'missing' );
 	}
 
 	public static function health_report() {
@@ -84,9 +95,11 @@ final class SPD_Observability {
 			'tables' => $exists ? 'available' : 'missing',
 			'health_query_status' => ! $exists ? 'not_applicable' : ( $query_error ? 'degraded' : 'available' ),
 			'pages' => array(
-				'founder' => ! empty( $map['founder'] ) && get_post_status( $map['founder'] ) ? 'available' : 'missing',
-				'profile' => ! empty( $map['profile'] ) && get_post_status( $map['profile'] ) ? 'available' : 'missing',
-				'account_profile' => ! empty( $map['account_profile'] ) && get_post_status( $map['account_profile'] ) ? 'available' : 'missing',
+				'founder' => self::managed_page_status( $map, 'founder' ),
+				'profile' => self::managed_page_status( $map, 'profile' ),
+				'account_profile' => self::managed_page_status( $map, 'account_profile' ),
+				'personal_site' => self::managed_page_status( $map, 'personal_site' ),
+				'private_preview' => self::managed_page_status( $map, 'private_preview' ),
 			),
 			'cron' => array(
 				'outbox' => wp_next_scheduled( 'spd_dispatch_outbox' ) ? 'scheduled' : 'missing',
@@ -111,6 +124,7 @@ final class SPD_Observability {
 			) ),
 			'safe_mode' => self::safe_mode(),
 			'safe_mode_reason' => get_option( 'spd_safe_mode_reason', '' ),
+			'safe_mode_changed_at' => get_option( 'spd_safe_mode_changed_at', '' ),
 			'migration_cursor' => absint( get_option( 'spd_migration_cursor', 0 ) ),
 			'migration_traversed_at' => get_option( 'spd_migration_traversal_completed_at', '' ),
 			'migration_completed_at' => get_option( 'spd_migration_completed_at', '' ),
@@ -125,9 +139,22 @@ final class SPD_Observability {
 	private static function provider_health() {
 		$out = array();
 		foreach ( SPD_Timeline::providers() as $key => $definition ) {
-			$filter = is_array( $definition ) ? ( $definition['availability_filter'] ?? '' ) : '';
-			$value = $filter ? apply_filters( $filter, null, 0, SPD_CONTRACT_VERSION ) : null;
-			$out[ sanitize_key( $key ) ] = is_array( $value ) ? sanitize_key( (string) ( $value['status'] ?? 'invalid' ) ) : 'missing';
+			$key = sanitize_key( (string) $key );
+			$filter = is_array( $definition ) ? (string) ( $definition['availability_filter'] ?? '' ) : '';
+			if ( '' === $filter ) { $out[ $key ] = 'missing'; continue; }
+			try {
+				$value = apply_filters( $filter, null, 0, SPD_CONTRACT_VERSION );
+			} catch ( Throwable $exception ) {
+				$out[ $key ] = 'degraded';
+				do_action( 'sabri_file24_profile_provider_failure', array( 'owner' => 'file03', 'provider' => $key, 'surface' => 'system_check_provider_health', 'exception_class' => sanitize_key( get_class( $exception ) ), 'at' => SPD_Helpers::now() ) );
+				continue;
+			}
+			if ( ! SPD_Helpers::current_contract_claim( $value, SPD_Timeline::PROVIDER_CONTRACT_MIN, 300 ) ) {
+				$out[ $key ] = is_array( $value ) ? 'stale_or_invalid' : 'missing';
+				continue;
+			}
+			$status = sanitize_key( (string) ( $value['status'] ?? '' ) );
+			$out[ $key ] = in_array( $status, array( 'available', 'degraded', 'unavailable' ), true ) ? $status : 'invalid';
 		}
 		return $out;
 	}
@@ -342,7 +369,9 @@ final class SPD_Observability {
 		$plan = array();
 		if ( ! SPD_DB::tables_exist() ) { $plan[] = 'install_or_upgrade_module_tables'; }
 		$map = (array) get_option( 'spd_page_map', array() );
-		foreach ( array( 'founder', 'profile', 'account_profile' ) as $key ) { if ( empty( $map[ $key ] ) || ! get_post_status( absint( $map[ $key ] ) ) ) { $plan[] = 'restore_page:' . $key; } }
+		foreach ( array( 'founder', 'profile', 'account_profile', 'personal_site', 'private_preview' ) as $key ) {
+			if ( empty( $map[ $key ] ) || 'publish' !== get_post_status( absint( $map[ $key ] ) ) ) { $plan[] = 'restore_page:' . $key; }
+		}
 		foreach ( array( 'spd_dispatch_outbox' => 'schedule_outbox', 'spd_retention_cleanup' => 'schedule_retention', 'spd_process_media_deletions' => 'schedule_media_deletions', 'spd_migrate_profiles_batch' => 'schedule_migration' ) as $hook => $action ) { if ( ! wp_next_scheduled( $hook ) ) { $plan[] = $action; } }
 		$diagnostic_error = false;
 		if ( SPD_DB::tables_exist() ) {
