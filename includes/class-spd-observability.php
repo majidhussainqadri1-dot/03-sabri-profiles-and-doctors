@@ -185,29 +185,59 @@ final class SPD_Observability {
 		global $wpdb;
 		try {
 			$cursor = absint( get_option( 'spd_migration_cursor', 0 ) );
+			$wpdb->last_error = '';
 			$users = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->users} WHERE ID>%d ORDER BY ID ASC LIMIT 100", $cursor ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( $wpdb->last_error || ! is_array( $users ) ) {
+				update_option( 'spd_last_migration_error', array( 'code' => 'migration_user_batch_read_failed', 'at' => SPD_Helpers::now() ), false );
+				return;
+			}
 			foreach ( $users as $user_id ) {
 				$user_id = absint( $user_id );
 				$failure = $this->migration_failure( $user_id );
+				if ( is_wp_error( $failure ) ) {
+					update_option( 'spd_last_migration_error', array( 'code' => $failure->get_error_code(), 'at' => SPD_Helpers::now() ), false );
+					break;
+				}
 				if ( $failure && 'retry' === $failure['status'] && strtotime( $failure['next_attempt_at'] . ' UTC' ) > time() ) { break; }
 				if ( $failure && 'dead' === $failure['status'] ) { $cursor = $user_id; update_option( 'spd_migration_cursor', $cursor, false ); continue; }
 				$result = $this->migrate_one_user( $user_id );
 				if ( is_wp_error( $result ) ) {
 					$status = $this->record_migration_failure( $user_id, $result );
+					if ( is_wp_error( $status ) ) {
+						update_option( 'spd_last_migration_error', array( 'code' => $status->get_error_code(), 'at' => SPD_Helpers::now() ), false );
+						break;
+					}
 					if ( 'dead' === $status ) { $cursor = $user_id; update_option( 'spd_migration_cursor', $cursor, false ); continue; }
 					break;
 				}
-				$this->clear_migration_failure( $user_id );
+				$cleared = $this->clear_migration_failure( $user_id );
+				if ( is_wp_error( $cleared ) ) {
+					update_option( 'spd_last_migration_error', array( 'code' => $cleared->get_error_code(), 'at' => SPD_Helpers::now() ), false );
+					break;
+				}
 				$cursor = $user_id;
 				update_option( 'spd_migration_cursor', $cursor, false );
 			}
 			if ( count( $users ) < 100 ) {
 				update_option( 'spd_migration_traversal_completed_at', SPD_Helpers::now(), false );
-				$retry = absint( $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='retry'" ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				$dead = absint( $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='dead'" ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$wpdb->last_error = '';
+				$retry_raw = $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='retry'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$retry_error = (string) $wpdb->last_error;
+				$wpdb->last_error = '';
+				$dead_raw = $wpdb->get_var( "SELECT COUNT(*) FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE status='dead'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$dead_error = (string) $wpdb->last_error;
+				if ( $retry_error || $dead_error ) {
+					delete_option( 'spd_migration_completed_at' );
+					delete_option( 'spd_migration_traversal_completed_at' );
+					update_option( 'spd_last_migration_error', array( 'code' => 'migration_failure_count_read_failed', 'at' => SPD_Helpers::now() ), false );
+					return;
+				}
+				$retry = absint( $retry_raw );
+				$dead = absint( $dead_raw );
 				if ( ! $retry ) { wp_clear_scheduled_hook( 'spd_migrate_profiles_batch' ); }
 				if ( ! $retry && ! $dead ) { update_option( 'spd_migration_completed_at', SPD_Helpers::now(), false ); } else { delete_option( 'spd_migration_completed_at' ); }
 			}
+			delete_option( 'spd_last_migration_error' );
 		} finally { delete_transient( 'spd_migration_lock' ); }
 	}
 
@@ -219,7 +249,9 @@ final class SPD_Observability {
 
 	private function migration_failure( $user_id ) {
 		global $wpdb;
+		$wpdb->last_error = '';
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . SPD_DB::table( 'migration_failures' ) . " WHERE user_id=%d LIMIT 1", absint( $user_id ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'migration_failure_ledger_read_failed', __( 'Migration failure state could not be read safely.', 'sabri-profiles-doctors' ) ); }
 		return is_array( $row ) ? $row : array();
 	}
 
@@ -228,17 +260,26 @@ final class SPD_Observability {
 		$table = SPD_DB::table( 'migration_failures' );
 		$now = SPD_Helpers::now();
 		$old = $this->migration_failure( $user_id );
+		if ( is_wp_error( $old ) ) { return $old; }
 		$count = absint( $old['attempts'] ?? 0 ) + 1;
 		$status = $count >= self::MIGRATION_MAX_ATTEMPTS ? 'dead' : 'retry';
 		$delay = min( DAY_IN_SECONDS, 300 * ( 2 ** min( $count - 1, 7 ) ) );
 		$hash = hash( 'sha256', $error->get_error_code() . ':' . $error->get_error_message() );
 		$query = $wpdb->prepare( "INSERT INTO {$table} (user_id,error_code,detail_hash,attempts,status,next_attempt_at,last_attempt_at) VALUES (%d,%s,%s,%d,%s,%s,%s) ON DUPLICATE KEY UPDATE error_code=VALUES(error_code),detail_hash=VALUES(detail_hash),attempts=VALUES(attempts),status=VALUES(status),next_attempt_at=VALUES(next_attempt_at),last_attempt_at=VALUES(last_attempt_at)", absint( $user_id ), sanitize_key( $error->get_error_code() ), $hash, $count, $status, gmdate( 'Y-m-d H:i:s', time() + $delay ), $now );
-		$wpdb->query( $query ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->last_error = '';
+		$written = $wpdb->query( $query ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( false === $written || $wpdb->last_error ) { return new WP_Error( 'migration_failure_ledger_write_failed', __( 'Migration failure state could not be recorded safely.', 'sabri-profiles-doctors' ) ); }
 		if ( 'dead' === $status ) { do_action( 'sabri_file24_migration_quarantined', array( 'owner' => 'file03', 'user_id' => absint( $user_id ), 'error_code' => sanitize_key( $error->get_error_code() ), 'attempts' => $count ) ); }
 		return $status;
 	}
 
-	private function clear_migration_failure( $user_id ) { global $wpdb; $wpdb->delete( SPD_DB::table( 'migration_failures' ), array( 'user_id' => absint( $user_id ) ) ); }
+	private function clear_migration_failure( $user_id ) {
+		global $wpdb;
+		$wpdb->last_error = '';
+		$deleted = $wpdb->delete( SPD_DB::table( 'migration_failures' ), array( 'user_id' => absint( $user_id ) ) );
+		if ( false === $deleted || $wpdb->last_error ) { return new WP_Error( 'migration_failure_ledger_clear_failed', __( 'Migration failure state could not be cleared safely.', 'sabri-profiles-doctors' ) ); }
+		return true;
+	}
 
 	public static function requeue_migration_user( $user_id, $actor_id, $reason ) {
 		global $wpdb;
