@@ -23,12 +23,29 @@ final class SPD_Authorization {
 		return true;
 	}
 
+	private static function provider_failure( $provider, $surface, Throwable $exception ) {
+		try {
+			do_action( 'sabri_file24_profile_provider_failure', array(
+				'owner'           => 'file03',
+				'provider'        => sanitize_key( (string) $provider ),
+				'surface'         => sanitize_key( (string) $surface ),
+				'exception_class' => sanitize_key( get_class( $exception ) ),
+				'at'              => class_exists( 'SPD_Helpers' ) ? SPD_Helpers::now() : gmdate( 'c' ),
+			) );
+		} catch ( Throwable $ignored ) {}
+	}
+
 	public static function is_contact( $owner_id, $viewer_id ) {
 		$owner_id = absint( $owner_id ); $viewer_id = absint( $viewer_id );
 		if ( ! $owner_id || ! $viewer_id ) { return false; }
 		if ( $owner_id === $viewer_id ) { return true; }
 		if ( ! SPD_Membership_Adapter::is_member_eligible( $viewer_id ) ) { return false; }
-		$claim = apply_filters( 'sabri_network_contact_claim_v1', null, $owner_id, $viewer_id, SPD_CONTRACT_VERSION );
+		try {
+			$claim = apply_filters( 'sabri_network_contact_claim_v1', null, $owner_id, $viewer_id, SPD_CONTRACT_VERSION );
+		} catch ( Throwable $exception ) {
+			self::provider_failure( 'file17_contact_graph', 'contact_audience', $exception );
+			return false;
+		}
 		return SPD_Helpers::current_contract_claim( $claim, '1.0.0', 300 ) && ! empty( $claim['connected'] ) && absint( $claim['owner_user_id'] ?? 0 ) === $owner_id && absint( $claim['viewer_user_id'] ?? 0 ) === $viewer_id;
 	}
 
@@ -101,10 +118,16 @@ final class SPD_Authorization {
 	public static function moderation_guard( $actor_id ) {
 		if ( SPD_Observability::safe_mode() ) { return new WP_Error( 'spd_safe_mode', __( 'Profile moderation is temporarily unavailable while the system is in safe mode.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		$actor_id = absint( $actor_id );
-		if ( ! $actor_id ) { return new WP_Error( 'spd_login_required', __( 'A signed-in account is required for profile moderation.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
+		if ( ! $actor_id ) {
+			return new WP_Error( 'spd_login_required', __( 'A signed-in account is required for profile moderation.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) );
+		}
 		$health = SPD_Membership_Adapter::health();
-		if ( 'available' !== ( $health['status'] ?? '' ) ) { return new WP_Error( 'spd_membership_provider_unavailable', __( 'Membership authorization is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
-		if ( ! SPD_Membership_Adapter::claims( $actor_id ) ) { return new WP_Error( 'spd_membership_claim_unavailable', __( 'Current membership authorization could not be verified.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		if ( 'available' !== ( $health['status'] ?? '' ) ) {
+			return new WP_Error( 'spd_membership_provider_unavailable', __( 'Membership authorization is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		if ( ! SPD_Membership_Adapter::claims( $actor_id ) ) {
+			return new WP_Error( 'spd_membership_claim_unavailable', __( 'Current membership authorization could not be verified.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
 		return SPD_Membership_Adapter::can_moderate_profiles( $actor_id ) ? true : new WP_Error( 'spd_forbidden', __( 'Profile moderation permission is required.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
 	}
 }
