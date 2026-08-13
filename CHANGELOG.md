@@ -2,11 +2,11 @@
 
 ## 1.2.0-rc15 — fifth fresh 20-round sequential corrective review
 
-Repository candidate review cycle started from frozen baseline `157cfca2ed985ac8025b71a9373e974fca72f1a4`. Through R18, the sequential methodology has been observed: each round was reviewed completely before its consolidated corrections were made and retested. R19–R20 remain pending until R18 exact-head package and QA gates are green.
+Repository candidate review cycle started from frozen baseline `157cfca2ed985ac8025b71a9373e974fca72f1a4` and completed **20/20** rounds under the required sequence: complete review → consolidated defect list → correction → exact-state retest → next round.
 
-Defect-bearing rounds through R18: **01, 05, 06, 11, 13, 14, 15, 16, 17, 18**. Clean rounds through R18: **02, 03, 04, 07, 08, 09, 10, 12**.
+Defect-bearing rounds: **01, 05, 06, 11, 13, 14, 15, 16, 17, 18, 19, 20**. Clean rounds: **02, 03, 04, 07, 08, 09, 10, 12**. Total: **12/20 defect-bearing; 8/20 clean**.
 
-Key rc15 corrections through R18:
+Key rc15 corrections:
 - strict REST transport version normalization and unknown-field rejection;
 - fail-closed migration failure-ledger reads/writes/cleanup/completion evidence;
 - required managed-page restoration to `publish`;
@@ -18,10 +18,13 @@ Key rc15 corrections through R18:
 - replay-safe non-JavaScript delegation grant/revoke browser mutations;
 - permanent canonicalization of legacy `/profile/?public_id=...` public links;
 - System Check/repair truth for unpublished pages, stale/throwing providers, Safe Mode timestamp and admin DB uncertainty;
-- exact-head deterministic ZIP + checksum + SBOM + source/package byte parity in the current Fresh review workflow;
-- staging acceptance matrix expanded for the new critical paths.
+- exact-head deterministic ZIP + checksum + SBOM + source/package byte parity;
+- staging acceptance matrix expanded for the new critical paths;
+- published PHP integration contracts wrapped in a fail-closed Throwable boundary with explicit 503 semantics;
+- appeal review/reopen routes/events made discoverable in the rc15 contract manifest extension; and
+- final fifth-cycle closure ledger plus permanent R18/R19/R20 regression gates.
 
-Release identity is now `1.2.0-rc15`; DB schema remains `1.2.0`; public contract remains `1.4.0`. Historical release locks, inventories and checksum files remain frozen evidence for their recorded older candidates and are not rewritten as rc15 truth.
+Release identity is `1.2.0-rc15`; DB schema remains `1.2.0`; public contract remains `1.4.0`. Historical release inventories/checksums remain evidence for their recorded older candidates and are not current rc15 artifact truth.
 
 No staging/live/operational claim is made by this entry. Exact deployed code remains unverified.
 
