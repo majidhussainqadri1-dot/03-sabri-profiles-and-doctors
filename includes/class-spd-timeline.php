@@ -5,6 +5,16 @@ final class SPD_Timeline {
 	const PROVIDER_CONTRACT_MIN = '1.0.0';
 	const MAX_PROVIDER_ITEMS = 250;
 
+	private static function provider_failure( $provider, $surface, Throwable $exception ) {
+		do_action( 'sabri_file24_profile_provider_failure', array(
+			'owner' => 'file03',
+			'provider' => sanitize_key( (string) $provider ),
+			'surface' => sanitize_key( (string) $surface ),
+			'exception_class' => sanitize_key( get_class( $exception ) ),
+			'at' => gmdate( 'c' ),
+		) );
+	}
+
 	public static function providers() {
 		$providers = array(
 			'file21' => array( 'callback' => array( __CLASS__, 'file21_provider' ), 'availability_filter' => 'sabri_file21_profile_timeline_provider_health_v1' ),
@@ -12,7 +22,12 @@ final class SPD_Timeline {
 			'file11' => array( 'callback' => array( __CLASS__, 'file11_provider' ), 'availability_filter' => 'sabri_file11_profile_timeline_provider_health_v1' ),
 			'file05' => array( 'callback' => array( __CLASS__, 'file05_provider' ), 'availability_filter' => 'sabri_file05_profile_timeline_provider_health_v1' ),
 		);
-		$filtered = apply_filters( 'spd_profile_timeline_providers_v1', $providers );
+		try {
+			$filtered = apply_filters( 'spd_profile_timeline_providers_v1', $providers );
+		} catch ( Throwable $exception ) {
+			self::provider_failure( 'registry', 'timeline_provider_registry', $exception );
+			return $providers;
+		}
 		return is_array( $filtered ) ? $filtered : $providers;
 	}
 
@@ -42,13 +57,21 @@ final class SPD_Timeline {
 			if ( ! $key || ( $filter && $filter !== $key ) ) { continue; }
 			$callback = is_array( $definition ) && isset( $definition['callback'] ) ? $definition['callback'] : $definition;
 			$health_filter = is_array( $definition ) ? (string) ( $definition['availability_filter'] ?? '' ) : '';
-			$provider_health = $health_filter ? apply_filters( $health_filter, null, $profile['user_id'], SPD_CONTRACT_VERSION ) : null;
+			try {
+				$provider_health = $health_filter ? apply_filters( $health_filter, null, $profile['user_id'], SPD_CONTRACT_VERSION ) : null;
+			} catch ( Throwable $exception ) {
+				set_transient( 'spd_timeline_circuit_' . $key, 1, MINUTE_IN_SECONDS );
+				$health[ $key ] = 'degraded';
+				self::provider_failure( $key, 'timeline_provider_health', $exception );
+				continue;
+			}
 			if ( ! SPD_Helpers::current_contract_claim( $provider_health, self::PROVIDER_CONTRACT_MIN, 300 ) || 'available' !== sanitize_key( (string) ( $provider_health['status'] ?? '' ) ) || ! is_callable( $callback ) ) { $health[ $key ] = 'unavailable'; continue; }
 			if ( get_transient( 'spd_timeline_circuit_' . $key ) ) { $health[ $key ] = 'circuit_open'; continue; }
 			$started = microtime( true );
 			try {
 				$result = call_user_func( $callback, $profile['user_id'], array( 'limit' => min( self::MAX_PROVIDER_ITEMS, $limit + 1 ), 'cursor' => $cursor, 'viewer_id' => absint( $viewer_id ), 'profile_public_id' => $profile['public_id'], 'contract_version' => SPD_CONTRACT_VERSION ) );
-			} catch ( Throwable $e ) {
+			} catch ( Throwable $exception ) {
+				self::provider_failure( $key, 'timeline_provider_items', $exception );
 				$result = new WP_Error( 'spd_timeline_provider_exception', __( 'A timeline provider failed safely.', 'sabri-profiles-doctors' ) );
 			}
 			$elapsed = microtime( true ) - $started;
