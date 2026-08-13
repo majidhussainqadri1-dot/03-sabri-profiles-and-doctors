@@ -13,6 +13,7 @@ def section(src, start, end=None):
 
 rest = text('includes/class-spd-rest.php')
 central_rest = text('includes/class-spd-central-rest.php')
+activator = text('includes/class-spd-activator.php')
 
 # R01 — body `version` remains a supported fallback while domain mutation payloads
 # stay strict: REST consumes it before the repository allowlist sees the body.
@@ -39,4 +40,11 @@ central_update = section(central_rest, 'public function update_personal_site', '
 require("'version'" in central_update and '$version = $this->version( $r );' in central_update and "unset( $p['version'] );" in central_update, 'R04 Central REST version-body transport normalization missing')
 require(central_update.find('$version = $this->version( $r );') < central_update.find("unset( $p['version'] );") < central_update.find('update_central_profile'), 'R04 Central REST version ordering drifted')
 
-print('Fifth fresh twenty-round sequential corrective invariants passed through R04.')
+# R06 — activation/repair must not accept a File 03-owned required page that is
+# still draft/private/trash merely because its marker/content match.
+managed = section(activator, 'private static function managed_page', 'private static function migrate_legacy_options')
+require(managed.count("'publish' !==") >= 2, 'R06 managed route publication-state checks missing')
+require("$changes['post_status'] = 'publish';" in managed, 'R06 stored managed route is not restored to publish')
+require("wp_update_post( array( 'ID' => absint( $slug_page->ID ), 'post_status' => 'publish' ), true )" in managed, 'R06 discovered owned/exact route is not restored to publish')
+
+print('Fifth fresh twenty-round sequential corrective invariants passed through R06.')
