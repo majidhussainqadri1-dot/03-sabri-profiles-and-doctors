@@ -113,6 +113,7 @@ final class SPD_Activator {
 				$changes = array( 'ID' => $stored_id );
 				if ( trim( $page->post_content ) !== $shortcode ) { $changes['post_content'] = $shortcode; }
 				if ( $page->post_name !== $slug ) { $changes['post_name'] = $slug; }
+				if ( 'publish' !== $page->post_status ) { $changes['post_status'] = 'publish'; }
 				if ( count( $changes ) > 1 ) { $updated = wp_update_post( $changes, true ); if ( is_wp_error( $updated ) ) { return $updated; } }
 				return $stored_id;
 			}
@@ -124,6 +125,10 @@ final class SPD_Activator {
 			$is_exact = trim( $slug_page->post_content ) === $shortcode;
 			if ( $is_owned || $is_exact ) {
 				if ( ! $is_owned && false === update_post_meta( $slug_page->ID, '_spd_managed_page_key', $key ) ) { return new WP_Error( 'spd_managed_page_marker_failed', __( 'A File 03 managed-page marker could not be recorded.', 'sabri-profiles-doctors' ) ); }
+				if ( 'publish' !== $slug_page->post_status ) {
+					$published = wp_update_post( array( 'ID' => absint( $slug_page->ID ), 'post_status' => 'publish' ), true );
+					if ( is_wp_error( $published ) ) { return $published; }
+				}
 				return absint( $slug_page->ID );
 			}
 			$slug .= '-file03';

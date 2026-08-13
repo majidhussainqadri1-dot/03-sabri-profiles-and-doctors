@@ -14,6 +14,7 @@ def section(src, start, end=None):
 rest = text('includes/class-spd-rest.php')
 central_rest = text('includes/class-spd-central-rest.php')
 observability = text('includes/class-spd-observability.php')
+activator = text('includes/class-spd-activator.php')
 
 # R01 — transport `version` may be supplied in the body, but it must be
 # consumed before strict domain allowlists see the mutation payload.
@@ -33,8 +34,7 @@ for token in (
 central_update = section(central_rest, 'public function update_personal_site', 'public function rotate_share')
 require('$version = $this->version( $r );' in central_update and "unset( $p['version'] );" in central_update, 'R01 Central REST version transport normalization missing')
 
-# R05 — migration must never advance on an uncertain failure ledger. A failed
-# read/write/clear is operational uncertainty, not a retry/dead state.
+# R05 — migration must never advance on an uncertain failure ledger.
 migrate = section(observability, 'public function migrate_profiles_batch', 'private function migrate_one_user')
 require('migration_user_batch_read_failed' in migrate, 'R05 user-batch DB read uncertainty is not fail-closed')
 require('is_wp_error( $failure )' in migrate, 'R05 failure-ledger read error is not handled before migration')
@@ -48,4 +48,11 @@ require('migration_failure_ledger_write_failed' in ledger_write and 'false === $
 ledger_clear = section(observability, 'private function clear_migration_failure', 'public static function requeue_migration_user')
 require('migration_failure_ledger_clear_failed' in ledger_clear and 'false === $deleted' in ledger_clear, 'R05 failure-ledger cleanup is not verified')
 
-print('Fifth fresh twenty-round sequential corrective invariants passed through R05.')
+# R06 — required managed route pages must be publishable after repair even if a
+# previously managed/exact page was moved to draft/private/trash.
+managed = section(activator, 'private static function managed_page', 'private static function migrate_legacy_options')
+require(managed.count("'publish' !==") >= 2, 'R06 managed route publication-state checks missing')
+require("$changes['post_status'] = 'publish';" in managed, 'R06 stored managed route is not restored to publish')
+require("wp_update_post( array( 'ID' => absint( $slug_page->ID ), 'post_status' => 'publish' ), true )" in managed, 'R06 discovered owned/exact route is not restored to publish')
+
+print('Fifth fresh twenty-round sequential corrective invariants passed through R06.')
