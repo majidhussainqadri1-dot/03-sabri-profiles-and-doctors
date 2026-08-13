@@ -24,11 +24,12 @@ fresh=text('.github/workflows/fresh-eighty-round-review.yml')
 future_ci=text('.github/workflows/future-superset-18.yml')
 ledger=text('THIRD-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md')
 
-require('Version: 1.2.0-rc14' in main and "define( 'SPD_VERSION', '1.2.0-rc14' )" in main, 'current rc14 source identity missing while preserving third-twenty invariants')
+require("define( 'SPD_VERSION'," in main, 'current source version constant missing while preserving third-twenty invariants')
 require("define( 'SPD_DB_VERSION', '1.2.0' )" in main, 'DB identity drifted')
 require("define( 'SPD_CONTRACT_VERSION', '1.4.0' )" in main, 'Contract identity drifted')
 require('THIRD-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'Third twenty-round plan marker missing')
-require('FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'Current fourth twenty-round marker missing')
+require('FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'Fourth twenty-round preservation marker missing')
+require('FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'Later fifth twenty-round preservation marker missing')
 
 moderation=section(auth,'public static function moderation_guard',None)
 for token in ('spd_login_required','spd_membership_provider_unavailable','spd_membership_claim_unavailable','spd_forbidden'):
@@ -65,4 +66,4 @@ defects='01, 05, 07, 09, 12, 13, 14, 15, 17, 18, 19, 20'
 clean='02, 03, 04, 06, 08, 10, 11, 16'
 require(defects in ledger and clean in ledger, 'Third twenty-round round ledger drifted')
 require('Exact deployed code remains unverified' in ledger, 'Live/deployed truth boundary missing')
-print('Third fresh twenty-round sequential corrective invariants passed under current rc14 release identity.')
+print('Third fresh twenty-round sequential corrective invariants passed under current release identity.')
