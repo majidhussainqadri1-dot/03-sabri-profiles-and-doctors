@@ -56,10 +56,25 @@ trait SPD_Profile_Events {
 			'after_hash'  => hash( 'sha256', SPD_Helpers::json_encode( $after ) ),
 			'trace_id'    => SPD_Helpers::trace_id(),
 		);
-		if ( class_exists( 'SMC_Security' ) && is_callable( array( 'SMC_Security', 'audit' ) ) ) {
-			SMC_Security::audit( 'spd_profile_changed', absint( $profile['user_id'] ), $payload );
+		try {
+			if ( class_exists( 'SMC_Security' ) && is_callable( array( 'SMC_Security', 'audit' ) ) ) {
+				SMC_Security::audit( 'spd_profile_changed', absint( $profile['user_id'] ), $payload );
+			}
+			do_action( 'spd_profile_audit', $payload );
+		} catch ( Throwable $exception ) {
+			// This path executes after the owning mutation/idempotency response has
+			// committed. An optional audit consumer must never turn a committed
+			// mutation into an apparent client failure.
+			try {
+				do_action( 'sabri_file24_profile_audit_callback_failure', array(
+					'owner'           => 'file03',
+					'reason'          => sanitize_key( $reason ),
+					'exception_class' => sanitize_key( get_class( $exception ) ),
+					'public_id_hash'  => hash( 'sha256', (string) $profile['public_id'] ),
+					'at'              => SPD_Helpers::now(),
+				) );
+			} catch ( Throwable $ignored ) {}
 		}
-		do_action( 'spd_profile_audit', $payload );
 	}
 
 	private function idempotency_begin( $actor_id, $command, $key, $request_hash, $required = true ) {
