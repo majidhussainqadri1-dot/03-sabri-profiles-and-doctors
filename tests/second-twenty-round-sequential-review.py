@@ -26,6 +26,7 @@ future_rest = text('includes/class-spd-future-rest.php')
 media = text('includes/class-spd-media.php')
 activator = text('includes/class-spd-activator.php')
 moderation = text('includes/trait-spd-profile-moderation.php')
+report_appeals = text('includes/trait-spd-profile-report-appeals.php')
 repo = text('includes/class-spd-profile-repository.php')
 frontend = text('includes/trait-spd-frontend-profile.php')
 observability = text('includes/class-spd-observability.php')
@@ -60,9 +61,14 @@ require('spd_legacy_option_migration_failed' in legacy, 'Round 07 legacy migrati
 require("get_option( 'spd_founder_profile_legacy_read_only'" in legacy, 'Round 07 legacy target persistence is not verified')
 require(legacy.find('spd_legacy_option_migration_failed') < legacy.find("delete_option( 'spd_founder_profile' )"), 'Round 07 can still delete legacy source before persistence verification')
 
+# The compatibility report command may be a thin wrapper. Verify both the
+# delegation and the effective strict command rather than requiring old inline
+# authorization tokens to remain duplicated in the wrapper.
 base_report = section(moderation, 'public function create_report', None)
+require('create_safety_report_strict' in base_report, 'Round 09 base report route no longer delegates to the strict safety-report command')
+strict_report = section(report_appeals, 'public function create_safety_report_strict', 'public function request_report_appeal_strict')
 for token in ('SPD_Membership_Adapter::health()', 'spd_membership_provider_unavailable', 'spd_membership_claim_unavailable', 'spd_account_ineligible'):
-    require(token in base_report, f'Round 09 base report authorization invariant missing: {token}')
+    require(token in strict_report, f'Round 09 effective strict report authorization invariant missing: {token}')
 
 safety_report = section(repo, 'public function create_safety_report', 'public function request_report_appeal')
 for token in ('SPD_Membership_Adapter::health()', 'spd_membership_provider_unavailable', 'spd_membership_claim_unavailable', 'spd_account_ineligible'):
