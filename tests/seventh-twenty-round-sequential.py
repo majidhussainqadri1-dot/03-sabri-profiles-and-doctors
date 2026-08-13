@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 auth = (ROOT / 'includes/class-spd-authorization.php').read_text(encoding='utf-8')
 dto = (ROOT / 'includes/trait-spd-profile-public-dto.php').read_text(encoding='utf-8')
+membership = (ROOT / 'includes/class-spd-membership-adapter.php').read_text(encoding='utf-8')
 
 def require(ok, message):
     if not ok:
@@ -32,4 +33,15 @@ require('try {' in message and 'catch ( Throwable $exception )' in message, 'R03
 require("'provider'        => 'file17_message_profile_url'" in message, 'R03 File17 message URL failure evidence missing')
 require("$url = '';" in message, 'R03 File17 message URL exception does not degrade to hidden action')
 
-print('File 03 seventh-cycle sequential invariants through R03: PASS')
+# R04 — every File 00 execution/filter boundary is contained by one shared
+# Throwable guard; failure must deny/hide rather than tear down the request.
+require('private static function provider_call' in membership, 'R04 shared File00 provider guard missing')
+provider_guard = section(membership, 'private static function provider_call', '/**\n\t * Return current File 00 assertions') if '/**\n\t * Return current File 00 assertions' in membership else membership[membership.find('private static function provider_call'):membership.find('public static function claims')]
+require('catch ( Throwable $exception )' in provider_guard, 'R04 File00 provider guard lacks Throwable containment')
+require("'provider'        => 'file00_membership'" in membership and 'sabri_file24_profile_provider_failure' in membership, 'R04 File00 provider failures lack File24 evidence')
+for surface in ('membership_assertions','founder_assertion','user_status','age_guardian_claim','founder_user_id','founder_management_restriction','guardian_relationship_claim','contact_projection'):
+    require(surface in membership, f'R04 guarded File00 surface missing: {surface}')
+require("'dependency_missing'" in membership, 'R04 File00 status exception is not fail-closed')
+require("'founder_management_restriction',\n\t\t\tfalse" in membership, 'R04 Founder restriction provider failure does not deny')
+
+print('File 03 seventh-cycle sequential invariants through R04: PASS')
