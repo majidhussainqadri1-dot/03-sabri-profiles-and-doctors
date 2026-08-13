@@ -8,6 +8,7 @@ events = (ROOT / 'includes/trait-spd-profile-events.php').read_text(encoding='ut
 verification = (ROOT / 'includes/class-spd-verification-adapter.php').read_text(encoding='utf-8')
 central = (ROOT / 'includes/class-spd-central-profile.php').read_text(encoding='utf-8')
 public_dto = (ROOT / 'includes/trait-spd-profile-public-dto.php').read_text(encoding='utf-8')
+repo = (ROOT / 'includes/class-spd-profile-repository.php').read_text(encoding='utf-8')
 
 def require(ok, message):
     if not ok:
@@ -79,4 +80,35 @@ require('try {' in clinic and 'catch ( Throwable $exception )' in clinic, 'R08 b
 require("'provider'        => 'file08_public_clinic'" in clinic and "'surface'         => 'public_profile_dto'" in clinic, 'R08 base File08 exception evidence missing')
 require('$clinic_raw = null;' in clinic, 'R08 base File08 exception does not degrade to an empty clinic projection')
 
-print('File 03 sixth-cycle sequential invariants through R08: PASS')
+# R09 — a completed share rotation must replay before stale-version rejection.
+rotate = section(repo, 'public function rotate_share_link', 'public function grant_delegate')
+prior = rotate.find("completed_idempotency_response( $actor_id, 'rotate_share_link'")
+conflict = rotate.find("$expected_version !== absint( $profile['version'] )")
+require(prior >= 0 and conflict > prior, 'R09 share-link replay is still rejected by stale-version validation before replay lookup')
+require("absint( $prior['version'] ?? 0 ) === $expected_version + 1" in rotate and "$prior['public_id']" in rotate, 'R09 share-link replay is not bound to the original version/profile')
+require("'share_url' => SPD_Central_Profile::short_url" in rotate, 'R09 share rotation response lost deterministic share URL')
+
+# R09 — if raw central post-commit cleanup/audit throws after idempotency commit,
+# the effective repository boundary recovers the committed response instead of
+# falsifying the successful mutation to the caller.
+central_update = section(repo, 'public function update_central_profile', 'public function rotate_share_link')
+require('try {' in central_update and 'catch ( Throwable $exception )' in central_update, 'R09 central post-commit Throwable recovery missing')
+require("completed_idempotency_response( $actor_id, 'update_central_profile'" in central_update, 'R09 central committed-response recovery does not consult exact replay truth')
+require('sabri_file24_profile_post_commit_recovery' in central_update, 'R09 central post-commit recovery lacks assurance evidence')
+require('return $replay;' in central_update, 'R09 recovered committed central mutation is not returned to the caller')
+
+# R09 — delegation-store uncertainty must be distinct from genuine absence or
+# authorization denial on effective grant/revoke/list paths.
+require('private function delegation_store_error' in repo and "'spd_delegation_store_unavailable'" in repo and "'status' => 503" in repo, 'R09 delegation-store 503 error contract missing')
+grant = section(repo, 'public function grant_delegate', 'public function revoke_delegate')
+require("$wpdb->last_error = '';" in grant and '$wpdb->get_row' in grant and 'if ( $wpdb->last_error ) { return $this->delegation_store_error(); }' in grant, 'R09 delegation grant read uncertainty is not fail closed')
+require('if ( $wpdb->last_error || false === $ok ) { return $this->delegation_store_error(); }' in grant, 'R09 delegation grant write uncertainty is not fail closed')
+revoke = section(repo, 'public function revoke_delegate', 'public function list_delegates')
+require("$wpdb->last_error = '';" in revoke and 'if ( $wpdb->last_error ) { return $this->delegation_store_error(); }' in revoke, 'R09 delegation revoke read uncertainty is not fail closed')
+require("'spd_delegate_not_active'" in revoke and revoke.find('delegation_store_error') < revoke.find("'spd_delegate_not_active'"), 'R09 delegation revoke still maps DB uncertainty to genuine absence')
+listing = section(repo, 'public function list_delegates', 'public function delegate_can_manage')
+require("$wpdb->last_error = '';" in listing and 'if ( $wpdb->last_error || ! is_array( $rows ) ) { return $this->delegation_store_error(); }' in listing, 'R09 delegation list uncertainty can still look like an empty list')
+edit = section(repo, 'public function central_edit_model', 'public function update_profile')
+require("is_wp_error( $result['delegations'] )" in edit and "return $result['delegations'];" in edit, 'R09 owner edit model does not propagate delegation-store uncertainty')
+
+print('File 03 sixth-cycle sequential invariants through R09: PASS')
