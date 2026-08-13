@@ -40,7 +40,15 @@ The expected top-level package directory remains `03-sabri-profiles-and-doctors`
 
 ## Historical release evidence
 
-Historical inventories/checksum ledgers remain provenance evidence for the older candidates they describe. Their version/SHA/checksum values must not be interpreted as the current rc15 exact-head package. Current package truth comes only from the exact-head workflow artifact and its generated checksum/SBOM for that SHA.
+The following repository files are **historical provenance/evidence only** and must not be interpreted as current rc15 exact-head package truth:
+
+- `RELEASE-LOCK.json`
+- `RELEASE-INVENTORY.tsv`
+- `SOURCE-INVENTORY.tsv`
+- `CHECKSUMS.sha256`
+- `RELEASE-CHECKSUMS.sha256`
+
+Their recorded version/SHA/checksum values describe older historical source/archive boundaries. Current rc15 package truth comes only from the exact-head workflow artifact and its generated checksum/SBOM for that SHA.
 
 ## Fifth-cycle correction boundary — final 20/20
 
