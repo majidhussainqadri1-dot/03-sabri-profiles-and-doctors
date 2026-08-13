@@ -25,6 +25,7 @@ base_privacy = text('includes/class-spd-privacy.php')
 central_privacy = text('includes/class-spd-central-privacy.php')
 future_privacy = text('includes/class-spd-future-privacy.php')
 moderation = text('includes/trait-spd-profile-moderation.php')
+report_appeals = text('includes/trait-spd-profile-report-appeals.php')
 repo = text('includes/class-spd-profile-repository.php')
 activator = text('includes/class-spd-activator.php')
 plugin = text('includes/class-spd-plugin.php')
@@ -47,7 +48,13 @@ for name, src, end in (
     require("absint( $page ) > 1" not in erase, f'{name} privacy eraser can still terminate retries solely from page number')
     require("'done' => ! $retry" in erase or "'done' => empty( $result['retry'] )" in erase or "'done' => false" in erase, f'{name} privacy eraser lacks retry-aware completion evidence')
 
-require("spd_report_store_unavailable" in moderation and "$wpdb->last_error" in moderation and "$count_raw" in moderation, 'Base report moderation/rate reads are not DB-certain')
+# The base report entry point may be intentionally reduced to a compatibility
+# wrapper. Verify that it delegates to the strict command and that DB certainty
+# lives on the effective target rather than requiring duplicated old code.
+base_report = section(moderation, 'public function create_report', None)
+require('create_safety_report_strict' in base_report, 'Base report entry point no longer delegates to strict safety-report handling')
+strict_report = section(report_appeals, 'public function create_safety_report_strict', 'public function request_report_appeal_strict')
+require("spd_report_store_unavailable" in strict_report and "$wpdb->last_error" in strict_report and "$count_raw" in strict_report, 'Effective strict report moderation/rate reads are not DB-certain')
 require("public function create_safety_report" in repo and "spd_report_store_unavailable" in repo and "public function request_report_appeal" in repo, 'Central report/appeal DB-certainty overrides are missing')
 
 for option in ("spd_db_version", "spd_central_schema_version", "spd_future_schema_version"):
