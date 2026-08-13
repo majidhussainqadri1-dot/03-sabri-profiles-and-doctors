@@ -41,6 +41,28 @@ final class SPD_Membership_Adapter {
 		return array( 'status' => 'available', 'reason' => '', 'version' => (string) SMC_VERSION, 'contract_version' => (string) SMC_CONTRACT_VERSION );
 	}
 
+	private static function provider_failure( $surface, Throwable $exception ) {
+		try {
+			do_action( 'sabri_file24_profile_provider_failure', array(
+				'owner'           => 'file03',
+				'provider'        => 'file00_membership',
+				'surface'         => sanitize_key( (string) $surface ),
+				'exception_class' => sanitize_key( get_class( $exception ) ),
+				'at'              => class_exists( 'SPD_Helpers' ) ? SPD_Helpers::now() : gmdate( 'c' ),
+			) );
+		} catch ( Throwable $ignored ) {}
+	}
+
+	/** Execute untrusted File 00 extension code and degrade to the supplied fail-closed value. */
+	private static function provider_call( callable $callback, $surface, $fallback = null ) {
+		try {
+			return $callback();
+		} catch ( Throwable $exception ) {
+			self::provider_failure( $surface, $exception );
+			return $fallback;
+		}
+	}
+
 	/**
 	 * Return current File 00 assertions normalized for File 03.
 	 *
@@ -53,7 +75,7 @@ final class SPD_Membership_Adapter {
 			return array();
 		}
 
-		$raw = smc_membership_assertions( $user_id );
+		$raw = self::provider_call( static function () use ( $user_id ) { return smc_membership_assertions( $user_id ); }, 'membership_assertions', null );
 		if ( ! is_array( $raw ) ) {
 			return array();
 		}
@@ -73,7 +95,7 @@ final class SPD_Membership_Adapter {
 		$approved_types = array_values( array_unique( array_filter( array_map( 'sanitize_key', (array) ( $raw['approved_membership_types'] ?? array() ) ) ) ) );
 		$membership_type = sanitize_key( (string) ( $raw['membership_type'] ?? '' ) );
 		$account_class = sanitize_key( (string) ( $raw['account_class'] ?? '' ) );
-		$is_founder = function_exists( 'smc_is_founder' ) && smc_is_founder( $user_id );
+		$is_founder = function_exists( 'smc_is_founder' ) && (bool) self::provider_call( static function () use ( $user_id ) { return smc_is_founder( $user_id ); }, 'founder_assertion', false );
 
 		if ( $is_founder ) {
 			$account_type = 'founder';
@@ -87,8 +109,11 @@ final class SPD_Membership_Adapter {
 			$account_type = 'member';
 		}
 
-		$status = sanitize_key( (string) ( $raw['status'] ?? smc_user_status( $user_id ) ) );
-		$hard_blocked = ! empty( $raw['suspended'] ) || in_array( $status, array( 'rejected', 'suspended', 'expired', 'appeal_review', 'erasure_pending', 'invalid_application', 'erased' ), true );
+		$status_raw = array_key_exists( 'status', $raw )
+			? $raw['status']
+			: self::provider_call( static function () use ( $user_id ) { return smc_user_status( $user_id ); }, 'user_status', 'dependency_missing' );
+		$status = sanitize_key( (string) $status_raw );
+		$hard_blocked = ! empty( $raw['suspended'] ) || in_array( $status, array( 'rejected', 'suspended', 'expired', 'appeal_review', 'erasure_pending', 'invalid_application', 'erased', 'dependency_missing' ), true );
 		$eligible = ! $hard_blocked && ! empty( $raw['eligible'] );
 
 		$age = self::age_guardian_claim( $user_id );
@@ -134,11 +159,16 @@ final class SPD_Membership_Adapter {
 	 * age-assurance contract is available.
 	 */
 	private static function age_guardian_claim( $user_id ) {
-		$claim = apply_filters( 'smc_profile_age_guardian_claim_v1', null, absint( $user_id ), SPD_CONTRACT_VERSION );
+		$user_id = absint( $user_id );
+		$claim = self::provider_call(
+			static function () use ( $user_id ) { return apply_filters( 'smc_profile_age_guardian_claim_v1', null, $user_id, SPD_CONTRACT_VERSION ); },
+			'age_guardian_claim',
+			null
+		);
 		if ( ! is_array( $claim ) ) {
 			return array( 'age_known' => false );
 		}
-		if ( absint( $claim['user_id'] ?? 0 ) !== absint( $user_id ) ) {
+		if ( absint( $claim['user_id'] ?? 0 ) !== $user_id ) {
 			return array( 'age_known' => false );
 		}
 		if ( ! SPD_Helpers::current_contract_claim( $claim, self::MIN_CONTRACT_VERSION, 600 ) ) {
@@ -149,16 +179,14 @@ final class SPD_Membership_Adapter {
 			return array( 'age_known' => false );
 		}
 		return array(
-			'age_known'        => true,
-			'age'              => $age,
-			'is_minor'         => isset( $claim['is_minor'] ) ? (bool) $claim['is_minor'] : $age < 18,
-			'guardian_verified'=> ! empty( $claim['guardian_verified'] ),
+			'age_known'         => true,
+			'age'               => $age,
+			'is_minor'          => isset( $claim['is_minor'] ) ? (bool) $claim['is_minor'] : $age < 18,
+			'guardian_verified' => ! empty( $claim['guardian_verified'] ),
 		);
 	}
 
-	public static function profile( $user_id ) {
-		return self::claims( $user_id );
-	}
+	public static function profile( $user_id ) { return self::claims( $user_id ); }
 
 	public static function status( $user_id ) {
 		$claims = self::claims( $user_id );
@@ -206,10 +234,8 @@ final class SPD_Membership_Adapter {
 	}
 
 	public static function founder_id() {
-		if ( ! self::available() ) {
-			return 0;
-		}
-		$founder_id = absint( smc_founder_user_id() );
+		if ( ! self::available() ) { return 0; }
+		$founder_id = absint( self::provider_call( static function () { return smc_founder_user_id(); }, 'founder_user_id', 0 ) );
 		return $founder_id && self::is_founder( $founder_id ) ? $founder_id : 0;
 	}
 
@@ -218,8 +244,13 @@ final class SPD_Membership_Adapter {
 		$claims = self::claims( $user_id );
 		$founder_id = self::founder_id();
 		$allowed = $claims && $user_id === $founder_id && ! empty( $claims['eligible'] ) && ! empty( $claims['session_two_factor'] ) && ! empty( $claims['is_founder'] );
-		// This filter can only narrow a valid File 00 decision; it cannot grant.
-		return $allowed && (bool) apply_filters( 'spd_restrict_founder_management', true, $user_id );
+		if ( ! $allowed ) { return false; }
+		// This filter can only narrow a valid File 00 decision; provider failure denies.
+		return (bool) self::provider_call(
+			static function () use ( $user_id ) { return apply_filters( 'spd_restrict_founder_management', true, $user_id ); },
+			'founder_management_restriction',
+			false
+		);
 	}
 
 	public static function can_moderate_profiles( $user_id = 0 ) {
@@ -232,9 +263,7 @@ final class SPD_Membership_Adapter {
 
 	public static function can_operate_profiles( $user_id = 0 ) {
 		$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
-		if ( self::can_manage_founder( $user_id ) ) {
-			return true;
-		}
+		if ( self::can_manage_founder( $user_id ) ) { return true; }
 		$claims = self::claims( $user_id );
 		$user = $user_id ? get_userdata( $user_id ) : false;
 		return $claims && $user && ! empty( $claims['eligible'] ) && ! empty( $claims['session_two_factor'] ) && user_can( $user, 'smc_manage_membership' );
@@ -246,7 +275,11 @@ final class SPD_Membership_Adapter {
 		if ( ! $guardian_id || ! $child_id || ! self::is_member_eligible( $guardian_id ) || ! self::is_minor( $child_id ) ) {
 			return false;
 		}
-		$assertion = apply_filters( 'smc_guardian_relationship_claim_v1', null, $guardian_id, $child_id, SPD_CONTRACT_VERSION );
+		$assertion = self::provider_call(
+			static function () use ( $guardian_id, $child_id ) { return apply_filters( 'smc_guardian_relationship_claim_v1', null, $guardian_id, $child_id, SPD_CONTRACT_VERSION ); },
+			'guardian_relationship_claim',
+			null
+		);
 		return SPD_Helpers::current_contract_claim( $assertion, self::MIN_CONTRACT_VERSION, 600 )
 			&& ! empty( $assertion['verified'] )
 			&& absint( $assertion['guardian_user_id'] ?? 0 ) === $guardian_id
@@ -267,14 +300,14 @@ final class SPD_Membership_Adapter {
 	public static function contact( $user_id, $key ) {
 		$user_id = absint( $user_id );
 		$key = sanitize_key( $key );
-		if ( ! in_array( $key, array( 'email', 'phone', 'whatsapp' ), true ) ) {
-			return '';
-		}
+		if ( ! in_array( $key, array( 'email', 'phone', 'whatsapp' ), true ) ) { return ''; }
 		$claims = self::claims( $user_id );
-		if ( ! $claims ) {
-			return '';
-		}
-		$projection = apply_filters( 'smc_profile_contact_projection_v1', null, $user_id, $key, SPD_CONTRACT_VERSION );
+		if ( ! $claims ) { return ''; }
+		$projection = self::provider_call(
+			static function () use ( $user_id, $key ) { return apply_filters( 'smc_profile_contact_projection_v1', null, $user_id, $key, SPD_CONTRACT_VERSION ); },
+			'contact_projection',
+			null
+		);
 		if ( SPD_Helpers::current_contract_claim( $projection, self::MIN_CONTRACT_VERSION, 300 )
 			&& absint( $projection['user_id'] ?? 0 ) === $user_id
 			&& sanitize_key( (string) ( $projection['channel'] ?? '' ) ) === $key
