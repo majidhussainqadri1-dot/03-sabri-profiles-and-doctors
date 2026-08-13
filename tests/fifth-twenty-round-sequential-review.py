@@ -21,6 +21,9 @@ lifecycle = text('includes/trait-spd-profile-lifecycle.php')
 appeals = text('includes/trait-spd-profile-report-appeals.php')
 events = text('includes/trait-spd-profile-events.php')
 outbox = text('includes/class-spd-outbox-dispatcher.php')
+frontend = text('includes/class-spd-frontend.php')
+frontend_profile = text('includes/trait-spd-frontend-profile.php')
+routes = text('includes/class-spd-routes.php')
 
 # R01 — transport `version` may be supplied in the body, but it must be
 # consumed before strict domain allowlists see the mutation payload.
@@ -115,4 +118,27 @@ require("'payload'        => $json" in event_method, 'R15 event persistence does
 require("remove_all_actions( 'spd_dispatch_outbox' )" in outbox and "array( __CLASS__, 'dispatch' )" in outbox, 'R15 hardened dispatcher does not exclusively own the File 03 outbox hook')
 require('outbox_delivery_persist_failed' in outbox and 'outbox_failure_persist_failed' in outbox, 'R15 outbox DB uncertainty is not preserved as operational evidence')
 
-print('Fifth fresh twenty-round sequential corrective invariants passed through R15.')
+# R16 — browser rendering must use the canonical lifecycle-safe projection,
+# contain cross-file provider exceptions, make non-JS delegation mutations
+# idempotent, and canonicalize legacy public_id query links rather than render a
+# second indexable profile representation.
+render = section(frontend_profile, 'private function render_profile', '\n\t}\n}')
+require('spd_get_personal_site_profile( $public_id, get_current_user_id() )' in render, 'R16 public profile does not use canonical lifecycle-safe projection')
+require('SPD_Future_Profile::augment_personal_site_dto' not in render, 'R16 public profile still bypasses canonical lifecycle suppression')
+require('catch ( Throwable $exception )' in render and "'surface' => 'frontend_profile'" in render, 'R16 frontend profile provider exception is not contained')
+require('SPD_Frontend_Central::structured_data as private central_structured_data;' in frontend, 'R16 structured-data implementation is not wrapped')
+structured = section(frontend, 'public function structured_data', '\n\t}\n}')
+require('$this->central_structured_data();' in structured and 'catch ( Throwable $exception )' in structured, 'R16 structured-data provider exception is not contained')
+require('SPD_Frontend_Central::personal_site_settings as private central_personal_site_settings;' in frontend, 'R16 delegation form wrapper missing')
+personal = section(frontend, 'public function personal_site_settings', 'public function grant_delegate_post')
+require(personal.count('idempotency_key') >= 2 and 'wp_generate_uuid4()' in personal, 'R16 grant/revoke browser forms do not receive replay keys')
+grant = section(frontend, 'public function grant_delegate_post', 'public function revoke_delegate_post')
+revoke = section(frontend, 'public function revoke_delegate_post', 'public function structured_data')
+require("$_POST['idempotency_key']" in grant and "$_POST['idempotency_key']" in revoke, 'R16 delegation browser handlers do not pass replay keys to repository commands')
+redirects = section(routes, 'public function redirects', 'public function current_context')
+require("isset( $_GET['public_id'] )" in redirects and 'SPD_Helpers::valid_uuid( $legacy_public_id )' in redirects, 'R16 legacy public_id migration edge is not explicitly validated')
+require("$this->is_mapped_or_fallback_page( 'profile', $map )" in redirects and 'SPD_Helpers::canonical_profile_url' in redirects and '301' in redirects, 'R16 legacy public_id link is not canonicalized on the File 03 profile page')
+profile_method = section(frontend_profile, 'public function profile()', 'private function render_profile')
+require("$_GET['public_id']" not in profile_method, 'R16 profile renderer still consumes legacy public_id query directly')
+
+print('Fifth fresh twenty-round sequential corrective invariants passed through R16.')
