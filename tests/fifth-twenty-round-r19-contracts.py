@@ -23,15 +23,18 @@ for function_name in (
     'spd_get_search_projection',
     'spd_get_profile_timeline',
 ):
-    start = main.find(f'function {function_name}')
+    # Match the exact public function signature; internal helpers such as
+    # *_unchecked must not be mistaken for the published boundary.
+    marker = f'function {function_name}('
+    start = main.find(marker)
     require(start >= 0, f'R19 published contract missing: {function_name}')
-    chunk = main[start:start+1200]
+    chunk = main[start:start+1600]
     require('spd_file03_contract_call' in chunk, f'R19 published contract is not guarded: {function_name}')
 require('function spd_delegate_can_manage_profile_scope' in main and 'return false;' in main, 'R19 boolean delegation contract is not fail closed')
 
 # R19 — the machine-readable contract must discover the strict appeal workflow
 # added during this same candidate without pretending that another file owns it.
-manifest_start = main.find('function spd_get_profile_contract_manifest')
+manifest_start = main.find('function spd_get_profile_contract_manifest(')
 require(manifest_start >= 0, 'R19 published manifest function missing')
 manifest = main[manifest_start:manifest_start+3500]
 for marker in (
@@ -42,7 +45,7 @@ for marker in (
     'ProfileReportAppealed.v1',
     'ProfileReportAppealReviewed.v1',
     'ProfileReportReopenedByAppeal.v1',
-    "'owner' => 'file03'",
+    "'owner'  => 'file03'",
 ):
     require(marker in manifest, f'R19 manifest extension missing: {marker}')
 
