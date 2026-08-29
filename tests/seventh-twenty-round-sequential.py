@@ -81,4 +81,15 @@ strict_response = section(provider_guards, 'public static function normalize_str
 for token in ("is_strict_report_route", "'spd_account_ineligible'", "'spd_membership_claim_unavailable'", 'set_status( 503 )'):
     require(token in strict_response, f'R07 strict report/appeal response normalization missing: {token}')
 
-print('File 03 seventh-cycle sequential invariants through R07: PASS')
+# R08 — mutation authorization must preserve provider/store uncertainty as 503.
+# This closes the remaining path where founder/guardian callback failure could
+# otherwise be flattened by can_edit_profile() into an apparent 403 denial.
+mutation = section(auth, 'public static function mutation_guard', 'public static function moderation_guard')
+for token in ('SPD_Membership_Adapter::health()', 'SPD_Membership_Adapter::claims( $actor_id )', 'SPD_Membership_Adapter::claims( $owner_id )', "'spd_membership_claim_unavailable'", "'status' => 503"):
+    require(token in mutation, f'R08 mutation dependency preflight missing: {token}')
+require('public static function file00_dependency_uncertain()' in provider_guards, 'R08 request-local dependency uncertainty accessor missing')
+require('SPD_Provider_Guards::file00_dependency_uncertain()' in mutation, 'R08 mutation denial does not consult provider-failure evidence')
+require("'spd_membership_dependency_unavailable'" in mutation, 'R08 mutation provider failure does not surface 503 dependency error')
+require("'spd_forbidden'" in mutation, 'R08 genuine authorization denial path was lost')
+
+print('File 03 seventh-cycle sequential invariants through R08: PASS')
