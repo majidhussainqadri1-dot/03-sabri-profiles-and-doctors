@@ -12,6 +12,12 @@ trait SPD_Profile_Identity_Create {
 		if ( $wpdb->last_error ) { return new WP_Error( 'spd_profile_identity_read_failed', __( 'The profile identity store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		$type = ! empty( $claims['is_founder'] ) ? 'founder' : ( SPD_Membership_Adapter::is_doctor( $user_id ) ? 'doctor' : 'member' );
 		if ( 'founder' === $type && SPD_Membership_Adapter::founder_id() !== $user_id ) { return new WP_Error( 'spd_founder_identity_conflict', __( 'The Founder identity did not match File 00.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
+		// R15 — once the institutional Founder profile exists, a refresh may not
+		// silently demote it because of a contradictory/transient identity claim.
+		// Preserve the canonical Founder record and require explicit reconciliation.
+		if ( $row && 'founder' === sanitize_key( (string) $row['profile_type'] ) && 'founder' !== $type ) {
+			return new WP_Error( 'spd_founder_identity_refresh_conflict', __( 'The official Founder identity conflicts with current membership assertions and requires reconciliation.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) );
+		}
 		$state = $this->runtime_state( $user_id, $row['state'] ?? 'incomplete' ); $locale = SPD_Helpers::normalize_locale( $claims['locale'] ?? get_user_locale( $user_id ) );
 		$custom_slug_locked = false;
 		if ( $row ) {
