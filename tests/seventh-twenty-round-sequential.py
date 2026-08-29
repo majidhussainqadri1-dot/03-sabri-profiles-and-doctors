@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +19,11 @@ identity_create = (ROOT / 'includes/trait-spd-profile-identity-create.php').read
 verification = (ROOT / 'includes/class-spd-verification-adapter.php').read_text(encoding='utf-8')
 central_profile = (ROOT / 'includes/class-spd-central-profile.php').read_text(encoding='utf-8')
 lifecycle = (ROOT / 'includes/trait-spd-profile-lifecycle.php').read_text(encoding='utf-8')
+plugin = (ROOT / 'includes/class-spd-plugin.php').read_text(encoding='utf-8')
+outbox = (ROOT / 'includes/class-spd-outbox-dispatcher.php').read_text(encoding='utf-8')
+build_package = (ROOT / 'build-package.sh').read_text(encoding='utf-8')
+release_manifest = (ROOT / 'RELEASE-MANIFEST.md').read_text(encoding='utf-8')
+release_lock = json.loads((ROOT / 'RELEASE-LOCK.json').read_text(encoding='utf-8'))
 
 def require(ok, message):
     if not ok:
@@ -145,4 +151,22 @@ require("SPD_Membership_Adapter::is_founder($user_id)" in erasure, 'R17 current 
 require("catch ( Throwable $exception )" in erasure and "'provider'=>'profile_legal_hold'" in erasure, 'R17 legal-hold callback exceptions are not contained/evidenced')
 require("'retry'=>true" in erasure and 'retention or legal-hold status could not be verified safely' in erasure, 'R17 legal-hold uncertainty does not fail closed')
 
-print('File 03 seventh-cycle sequential invariants through R17: PASS')
+# R18 — packaging/release/provenance audit: clean. Repository evidence must stay
+# reproducible and must not be allowed to masquerade as staging/live truth.
+for token in ('zip -X', 'sha256sum', 'SBOM.json', "TOP='03-sabri-profiles-and-doctors'", 'SOURCE_DATE_EPOCH'):
+    require(token in build_package, f'R18 deterministic package invariant missing: {token}')
+require(release_lock.get('production_authorized') is False, 'R18 release lock unexpectedly authorizes production')
+require(release_lock.get('staging_authorized') is False, 'R18 release lock unexpectedly authorizes staging')
+require(release_lock.get('deployed_version_verified') is False, 'R18 release lock falsely claims deployed-version verification')
+require('Repository evidence does not establish staging or live deployment.' in release_lock.get('note', ''), 'R18 release-lock live/repository boundary missing')
+require('This manifest is **repository candidate evidence only**.' in release_manifest, 'R18 release manifest no longer separates repository from deployment truth')
+
+# R19 — operational failure evidence. Retention must not silently disappear when
+# its owned schema is unavailable, and outbox persistence/lease failures remain visible.
+retention = section(plugin, 'public function run_retention_cleanup', 'public function assets')
+for token in ("'retention_schema_unavailable'", "update_option( 'spd_last_retention_error'", "do_action( 'sabri_file24_retention_failure'", 'return;'):
+    require(token in retention, f'R19 retention schema failure evidence missing: {token}')
+for token in ('outbox_schema_unavailable', 'outbox_lease_reset_failed', 'outbox_queue_read_failed', 'outbox_delivery_persist_failed', 'outbox_failure_persist_failed'):
+    require(token in outbox, f'R19 outbox operational evidence missing: {token}')
+
+print('File 03 seventh-cycle sequential invariants through R19: PASS')
