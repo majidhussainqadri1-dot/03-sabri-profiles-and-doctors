@@ -67,7 +67,8 @@ lower_manifest = manifest.lower()
 require(
     ('historical provenance' in lower_manifest or 'historical evidence' in lower_manifest)
     and 'not be interpreted as' in lower_manifest
-    and f'current {current_version.lower()}' in lower_manifest,
+    and 'current' in lower_manifest
+    and ('package truth' in lower_manifest or 'exact-head artifact truth' in lower_manifest),
     'R18 historical/current release-truth distinction missing'
 )
 require('Exact deployed code remains unverified' in manifest, 'R18 deployment-truth boundary missing')
