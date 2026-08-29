@@ -215,7 +215,10 @@ final class SPD_Membership_Adapter {
 
 	public static function is_minor( $user_id ) {
 		$claims = self::claims( $user_id );
-		return ! empty( $claims['is_minor'] );
+		// R11 — absence/invalidity of current File 00 assertions is age uncertainty,
+		// never evidence of adulthood. Treat it as minor-safe until current claims
+		// are available so legacy migration/contact paths cannot broaden exposure.
+		return ! $claims || ! empty( $claims['is_minor'] );
 	}
 
 	public static function age_known( $user_id ) {
