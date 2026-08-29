@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.2.0-rc16 — seventh fresh 20-round sequential corrective review
+
+The seventh cycle completed **20/20** rounds under the required sequence: complete review → consolidated defect list → correction → exact-state retest → next round.
+
+Defect-bearing rounds: **03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20**. Clean rounds: **01, 02, 09, 10, 12, 13, 16, 18**. Total: **12/20 defect-bearing; 8/20 clean**.
+
+Key seventh-cycle corrections:
+- contain File 17 contact/message provider Throwables and preserve fail-closed public-profile rendering;
+- centralize File 00 provider exception containment and preserve dependency evidence;
+- contain Future projection provider failures and stale/malformed claims;
+- distinguish delegated and profile mutation dependency/store uncertainty from genuine authorization denial;
+- keep legacy contact migration fail-closed when age/guardian state is unknown;
+- enforce current viewer audience authorization on profile timeline items;
+- prevent an established official Founder profile from silent identity demotion;
+- protect persisted Founder identity and legal-hold uncertainty during erasure;
+- surface retention schema failure as explicit operational/File24 evidence instead of a silent worker return; and
+- reconcile repository/release identity in R20 by advancing the materially changed source candidate from rc15 to `1.2.0-rc16`, adding sixth/seventh plan-lineage markers, synchronizing current repository truth documents, and adding a permanent seventh-cycle R20 closure gate.
+
+Release identity is `1.2.0-rc16`; DB schema remains `1.2.0`; public contract remains `1.4.0`. Historical release inventories/checksums remain evidence for their recorded older candidates and are not current rc16 artifact truth.
+
+No staging/live/operational claim is made by this entry. Exact deployed code remains unverified.
+
 ## 1.2.0-rc15 — fifth fresh 20-round sequential corrective review
 
 Repository candidate review cycle started from frozen baseline `157cfca2ed985ac8025b71a9373e974fca72f1a4` and completed **20/20** rounds under the required sequence: complete review → consolidated defect list → correction → exact-state retest → next round.
