@@ -2,7 +2,10 @@
 defined( 'ABSPATH' ) || exit;
 
 final class SPD_REST {
-	public function hooks() { add_action( 'rest_api_init', array( $this, 'register_routes' ) ); }
+	public function hooks() {
+		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
+		add_filter( 'rest_endpoints', array( $this, 'harden_strict_report_permissions' ), PHP_INT_MAX );
+	}
 
 	public function register_routes() {
 		$uuid_args = array( 'validate_callback' => array( $this, 'valid_uuid_arg' ) );
@@ -26,6 +29,24 @@ final class SPD_REST {
 		register_rest_route( 'sabri-profiles/v1', '/reports/(?P<report_uuid>[0-9a-fA-F-]{36})', array( 'methods' => WP_REST_Server::EDITABLE, 'callback' => array( $this, 'moderate_report' ), 'permission_callback' => array( $this, 'can_moderate' ), 'args' => array( 'report_uuid' => $uuid_args ) ) );
 		register_rest_route( 'sabri-profiles/v1', '/me/edit-model', array( 'methods' => WP_REST_Server::READABLE, 'callback' => array( $this, 'edit_model' ), 'permission_callback' => array( $this, 'eligible_member' ) ) );
 		register_rest_route( 'sabri-profiles/v1', '/me/professional', array( 'methods' => WP_REST_Server::EDITABLE, 'callback' => array( $this, 'submit_professional' ), 'permission_callback' => array( $this, 'eligible_member' ) ) );
+	}
+
+	public function harden_strict_report_permissions( $endpoints ) {
+		$routes = array(
+			'/sabri-profiles/v1/profiles/(?P<public_id>[0-9a-fA-F-]{36})/safety-reports',
+			'/sabri-profiles/v1/reports/(?P<report_uuid>[0-9a-fA-F-]{36})/appeal',
+		);
+		foreach ( $routes as $route ) {
+			if ( empty( $endpoints[ $route ] ) || ! is_array( $endpoints[ $route ] ) ) { continue; }
+			foreach ( $endpoints[ $route ] as $index => $definition ) {
+				if ( ! is_array( $definition ) || empty( $definition['methods'] ) ) { continue; }
+				$methods = is_array( $definition['methods'] ) ? $definition['methods'] : array( $definition['methods'] );
+				if ( in_array( 'POST', array_map( 'strtoupper', array_keys( array_filter( $methods ) ) ), true ) || in_array( 'POST', array_map( 'strtoupper', $methods ), true ) ) {
+					$endpoints[ $route ][ $index ]['permission_callback'] = array( $this, 'eligible_member' );
+				}
+			}
+		}
+		return $endpoints;
 	}
 
 	public function valid_uuid_arg( $value ) { return SPD_Helpers::valid_uuid( (string) $value ); }
