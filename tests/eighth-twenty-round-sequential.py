@@ -35,4 +35,17 @@ require('strlen( $v ) >= 85 && strlen( $v ) <= 2113' in future_rest,
 require('harden_strict_report_permissions' in rest and 'rest_endpoints' in rest and "eligible_member'" in rest,
         'R01 strict report routes are not normalized to health-aware permission checks')
 
-print('File 03 eighth twenty-round sequential invariants through R01: PASS')
+# R02 — DB certainty, operational queues and recovery identifiers.
+obs = text('includes/class-spd-observability.php')
+media = text('includes/class-spd-media.php')
+admin = text('includes/class-spd-admin.php')
+for marker in ('outbox_lease_reset_failed','outbox_queue_read_failed','outbox_claim_failed','outbox_claim_read_failed','outbox_delivery_persist_failed','outbox_failure_persist_failed'):
+    require(marker in obs, f'R02 outbox DB-certainty marker missing: {marker}')
+for marker in ('retention_idempotency_delete_failed','retention_report_anonymize_failed','retention_event_delete_failed','spd_last_retention_error'):
+    require(marker in obs, f'R02 retention certainty marker missing: {marker}')
+require('spd_outbox_store_unavailable' in obs and 'spd_migration_store_unavailable' in obs, 'R02 operational requeue DB failures are not explicit')
+require('spd_media_queue_store_unavailable' in media, 'R02 media requeue DB failure is not explicit')
+require('SELECT deletion_uuid,attachment_id' in admin and "$row['deletion_uuid']" in admin and 'requeue_deletion($reference' in admin, 'R02 media dead-letter recovery is not UUID-correct')
+require('is_wp_error($ok)' in admin, 'R02 admin recovery does not preserve 503 DB uncertainty')
+
+print('File 03 eighth twenty-round sequential invariants through R02: PASS')

@@ -56,6 +56,10 @@ final class SPD_Observability {
 		);
 	}
 
+	private static function record_operational_error( $option, $code ) {
+		update_option( sanitize_key( $option ), array( 'code' => sanitize_key( $code ), 'at' => SPD_Helpers::now() ), false );
+	}
+
 	private static function managed_page_status( array $map, $key ) {
 		$key = sanitize_key( (string) $key );
 		if ( empty( $map[ $key ] ) ) { return 'missing'; }
@@ -163,24 +167,35 @@ final class SPD_Observability {
 		global $wpdb;
 		if ( ! SPD_DB::tables_exist() ) { return; }
 		$table = SPD_DB::table( 'events' );
-		$wpdb->query( "UPDATE {$table} SET status='retry',lease_token='',lease_expires=NULL,available_at=UTC_TIMESTAMP(),last_error_code='lease_expired' WHERE status='processing' AND lease_expires<UTC_TIMESTAMP()" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->last_error = '';
+		$reset = $wpdb->query( "UPDATE {$table} SET status='retry',lease_token='',lease_expires=NULL,available_at=UTC_TIMESTAMP(),last_error_code='lease_expired' WHERE status='processing' AND lease_expires<UTC_TIMESTAMP()" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( false === $reset || $wpdb->last_error ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_lease_reset_failed' ); return; }
+		$wpdb->last_error = '';
 		$ids = $wpdb->get_col( "SELECT id FROM {$table} WHERE status IN ('pending','retry') AND available_at<=UTC_TIMESTAMP() ORDER BY id ASC LIMIT 50" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error || ! is_array( $ids ) ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_queue_read_failed' ); return; }
 		foreach ( $ids as $id ) {
 			$token = hash( 'sha256', SPD_Helpers::trace_id() . ':' . absint( $id ) );
 			$lease = gmdate( 'Y-m-d H:i:s', time() + 300 );
+			$wpdb->last_error = '';
 			$claimed = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='processing',lease_token=%s,lease_expires=%s WHERE id=%d AND status IN ('pending','retry') AND available_at<=UTC_TIMESTAMP()", $token, $lease, absint( $id ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( false === $claimed || $wpdb->last_error ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_claim_failed' ); return; }
 			if ( 1 !== $claimed ) { continue; }
+			$wpdb->last_error = '';
 			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id=%d AND lease_token=%s LIMIT 1", absint( $id ), $token ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			if ( ! $row ) { continue; }
+			if ( $wpdb->last_error ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_claim_read_failed' ); return; }
+			if ( ! $row ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_claim_missing' ); continue; }
 			$payload = json_decode( $row['payload'], true );
 			$attempts = absint( $row['attempts'] ) + 1;
 			if ( ! is_array( $payload ) ) { $this->fail_outbox_claim( $row, $token, $attempts, 'invalid_payload' ); continue; }
 			try {
 				do_action( 'spd_outbox_event_v1', $row['event_name'], $payload, $row );
 				do_action( 'sabri_platform_event', $row['event_name'], $payload, array( 'owner' => 'file03', 'event_uuid' => $row['event_uuid'] ) );
-				$wpdb->update( $table, array( 'status' => 'delivered', 'attempts' => $attempts, 'delivered_at' => SPD_Helpers::now(), 'lease_token' => '', 'lease_expires' => null, 'last_error_code' => '' ), array( 'id' => absint( $id ), 'lease_token' => $token ) );
-			} catch ( Throwable $exception ) { $this->fail_outbox_claim( $row, $token, $attempts, sanitize_key( get_class( $exception ) ) ); }
+				$wpdb->last_error = '';
+				$saved = $wpdb->update( $table, array( 'status' => 'delivered', 'attempts' => $attempts, 'delivered_at' => SPD_Helpers::now(), 'lease_token' => '', 'lease_expires' => null, 'last_error_code' => '' ), array( 'id' => absint( $id ), 'lease_token' => $token ) );
+				if ( 1 !== $saved || $wpdb->last_error ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_delivery_persist_failed' ); return; }
+			} catch ( Throwable $exception ) { if ( ! $this->fail_outbox_claim( $row, $token, $attempts, sanitize_key( get_class( $exception ) ) ) ) { return; } }
 		}
+		delete_option( 'spd_last_outbox_error' );
 		update_option( 'spd_last_outbox_run', SPD_Helpers::now(), false );
 	}
 
@@ -188,7 +203,10 @@ final class SPD_Observability {
 		global $wpdb;
 		$status = $attempts >= self::OUTBOX_MAX_ATTEMPTS ? 'dead' : 'retry';
 		$delay = min( HOUR_IN_SECONDS, 30 * ( 2 ** min( $attempts, 6 ) ) );
-		$wpdb->update( SPD_DB::table( 'events' ), array( 'status' => $status, 'attempts' => $attempts, 'available_at' => gmdate( 'Y-m-d H:i:s', time() + $delay ), 'lease_token' => '', 'lease_expires' => null, 'last_error_code' => sanitize_key( $error_code ) ), array( 'id' => absint( $row['id'] ), 'lease_token' => $token ) );
+		$wpdb->last_error = '';
+		$saved = $wpdb->update( SPD_DB::table( 'events' ), array( 'status' => $status, 'attempts' => $attempts, 'available_at' => gmdate( 'Y-m-d H:i:s', time() + $delay ), 'lease_token' => '', 'lease_expires' => null, 'last_error_code' => sanitize_key( $error_code ) ), array( 'id' => absint( $row['id'] ), 'lease_token' => $token ) );
+		if ( 1 !== $saved || $wpdb->last_error ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_failure_persist_failed' ); return false; }
+		return true;
 	}
 
 	public static function requeue_outbox( $event_uuid, $actor_id, $reason ) {
@@ -198,7 +216,9 @@ final class SPD_Observability {
 		if ( ! SPD_Membership_Adapter::can_operate_profiles( $actor_id ) || ! $reason ) { return false; }
 		$table = SPD_DB::table( 'events' );
 		$event_uuid = sanitize_text_field( $event_uuid );
+		$wpdb->last_error = '';
 		$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='retry',attempts=0,available_at=UTC_TIMESTAMP(),lease_token='',lease_expires=NULL,last_error_code='manual_requeue' WHERE event_uuid=%s AND status='dead'", $event_uuid ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( false === $updated || $wpdb->last_error ) { return new WP_Error( 'spd_outbox_store_unavailable', __( 'The outbox store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		if ( 1 === $updated ) {
 			do_action( 'spd_operational_recovery', array( 'queue' => 'outbox', 'reference' => $event_uuid, 'actor_id' => $actor_id, 'reason' => $reason, 'at' => SPD_Helpers::now() ) );
 			return true;
@@ -313,7 +333,9 @@ final class SPD_Observability {
 		$user_id = absint( $user_id ); $actor_id = absint( $actor_id ); $reason = SPD_Helpers::sanitize_multiline( $reason, 500 );
 		if ( ! $user_id || ! $reason || ! SPD_Membership_Adapter::can_operate_profiles( $actor_id ) ) { return false; }
 		$table = SPD_DB::table( 'migration_failures' );
+		$wpdb->last_error = '';
 		$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='retry',attempts=0,next_attempt_at=UTC_TIMESTAMP(),last_attempt_at=UTC_TIMESTAMP() WHERE user_id=%d AND status='dead'", $user_id ) );
+		if ( false === $updated || $wpdb->last_error ) { return new WP_Error( 'spd_migration_store_unavailable', __( 'Migration recovery state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		if ( 1 !== $updated ) { return false; }
 		$current = absint( get_option( 'spd_migration_cursor', 0 ) );
 		if ( $current >= $user_id ) { update_option( 'spd_migration_cursor', max( 0, $user_id - 1 ), false ); }
@@ -358,9 +380,17 @@ final class SPD_Observability {
 		global $wpdb;
 		if ( ! SPD_DB::tables_exist() ) { return; }
 		$events = SPD_DB::table( 'events' ); $idempotency = SPD_DB::table( 'idempotency' ); $reports = SPD_DB::table( 'reports' );
-		$wpdb->query( "DELETE FROM {$idempotency} WHERE expires_at<UTC_TIMESTAMP()" );
-		$wpdb->query( "UPDATE {$reports} SET reporter_user_id=0,details='',decision_note='',dedupe_hash=SHA2(CONCAT(report_uuid,':retained'),256) WHERE reporter_user_id<>0 AND status IN ('closed','rejected') AND updated_at<(UTC_TIMESTAMP()-INTERVAL 365 DAY)" );
-		$wpdb->query( "DELETE FROM {$events} WHERE status='delivered' AND created_at<(UTC_TIMESTAMP()-INTERVAL 730 DAY) AND event_name NOT IN ('ProfileTombstoned.v1','ProfileReported.v1','ProfileReportReviewed.v1')" );
+		$queries = array(
+			array( "DELETE FROM {$idempotency} WHERE expires_at<UTC_TIMESTAMP()", 'retention_idempotency_delete_failed' ),
+			array( "UPDATE {$reports} SET reporter_user_id=0,details='',decision_note='',dedupe_hash=SHA2(CONCAT(report_uuid,':retained'),256) WHERE reporter_user_id<>0 AND status IN ('closed','rejected') AND updated_at<(UTC_TIMESTAMP()-INTERVAL 365 DAY)", 'retention_report_anonymize_failed' ),
+			array( "DELETE FROM {$events} WHERE status='delivered' AND created_at<(UTC_TIMESTAMP()-INTERVAL 730 DAY) AND event_name NOT IN ('ProfileTombstoned.v1','ProfileReported.v1','ProfileReportReviewed.v1')", 'retention_event_delete_failed' ),
+		);
+		foreach ( $queries as $entry ) {
+			$wpdb->last_error = '';
+			$result = $wpdb->query( $entry[0] ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			if ( false === $result || $wpdb->last_error ) { self::record_operational_error( 'spd_last_retention_error', $entry[1] ); return; }
+		}
+		delete_option( 'spd_last_retention_error' );
 		update_option( 'spd_last_retention_run', SPD_Helpers::now(), false );
 	}
 

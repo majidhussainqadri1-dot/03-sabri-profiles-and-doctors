@@ -213,7 +213,9 @@ final class SPD_Media {
 		if ( ! $reason || ! SPD_Membership_Adapter::can_operate_profiles( $actor_id ) ) { return false; }
 		$table = SPD_DB::table( 'deletions' );
 		$deletion_uuid = sanitize_text_field( $deletion_uuid );
+		$wpdb->last_error = '';
 		$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='retry',attempts=0,available_at=UTC_TIMESTAMP(),lease_token='',lease_expires=NULL,last_error_code='manual_requeue' WHERE deletion_uuid=%s AND status='dead'", $deletion_uuid ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( false === $updated || $wpdb->last_error ) { return new WP_Error( 'spd_media_queue_store_unavailable', __( 'The media deletion queue is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		if ( 1 === $updated ) {
 			do_action( 'spd_operational_recovery', array( 'queue' => 'media_deletion', 'reference' => $deletion_uuid, 'actor_id' => $actor_id, 'reason' => $reason, 'at' => SPD_Helpers::now() ) );
 			return true;
