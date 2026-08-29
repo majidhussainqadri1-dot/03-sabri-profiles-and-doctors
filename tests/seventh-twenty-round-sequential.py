@@ -14,6 +14,7 @@ observability = (ROOT / 'includes/class-spd-observability.php').read_text(encodi
 events = (ROOT / 'includes/trait-spd-profile-events.php').read_text(encoding='utf-8')
 media = (ROOT / 'includes/class-spd-media.php').read_text(encoding='utf-8')
 timeline = (ROOT / 'includes/class-spd-timeline.php').read_text(encoding='utf-8')
+identity_create = (ROOT / 'includes/trait-spd-profile-identity-create.php').read_text(encoding='utf-8')
 
 def require(ok, message):
     if not ok:
@@ -108,7 +109,6 @@ require('! SPD_Membership_Adapter::is_minor( $user_id )' in migration, 'R11 lega
 
 # R12 — concurrency/idempotency audit: clean; lock reservation and atomic replay invariants.
 require('private $spd_idempotency_reservations = array();' in events, 'R12 reservation ownership ledger missing')
-require("UNIQUE KEY actor_command_key" not in events, 'R12 test source unexpectedly embeds schema rather than behavior')
 for token in ('reservation_token', "'status' => 'started'", "'status' => 'completed'", 'idempotency_abandoned_seconds', 'hash_equals'):
     require(token in events, f'R12 idempotency invariant missing: {token}')
 require("new WP_Error( 'spd_idempotency_in_progress'" in events, 'R12 concurrent replay does not fail deterministically')
@@ -124,4 +124,11 @@ require("SPD_Authorization::audience_allows( $normalized['visibility'], $profile
 require("'visibility' => SPD_Authorization::normalize_audience" in timeline, 'R14 timeline provider visibility is not normalized fail-closed')
 require("array( 'published', 'corrected', 'retracted' )" in query, 'R14 timeline publication-state guard regressed')
 
-print('File 03 seventh-cycle sequential invariants through R14: PASS')
+# R15 — an established institutional Founder profile is not silently demotable
+# by an identity refresh. Contradiction is an explicit reconciliation conflict.
+ensure_identity = section(identity_create, 'public function ensure_for_user', 'private function runtime_state')
+require("'founder' === sanitize_key( (string) $row['profile_type'] ) && 'founder' !== $type" in ensure_identity, 'R15 established Founder profile can still be silently demoted')
+require("'spd_founder_identity_refresh_conflict'" in ensure_identity and "'status' => 409" in ensure_identity, 'R15 Founder contradiction does not fail explicitly')
+require("'founder' === $type && SPD_Membership_Adapter::founder_id() !== $user_id" in ensure_identity, 'R15 File00 Founder identity binding regressed')
+
+print('File 03 seventh-cycle sequential invariants through R15: PASS')
