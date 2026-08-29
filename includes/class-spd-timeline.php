@@ -45,6 +45,7 @@ final class SPD_Timeline {
 			$profile = $repo->find_by_public_id_strict( (string) $identity );
 			if ( is_wp_error( $profile ) ) { return $profile; }
 		}
+		$viewer_id = absint( $viewer_id );
 		if ( ! $profile || ! SPD_Authorization::profile_visibility_allows( $profile, $viewer_id ) ) { return new WP_Error( 'spd_timeline_unavailable', __( 'This timeline is private or unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$limit  = min( 50, max( 1, absint( $args['limit'] ?? 20 ) ) );
 		$filter = sanitize_key( (string) ( $args['provider'] ?? '' ) );
@@ -69,7 +70,7 @@ final class SPD_Timeline {
 			if ( get_transient( 'spd_timeline_circuit_' . $key ) ) { $health[ $key ] = 'circuit_open'; continue; }
 			$started = microtime( true );
 			try {
-				$result = call_user_func( $callback, $profile['user_id'], array( 'limit' => min( self::MAX_PROVIDER_ITEMS, $limit + 1 ), 'cursor' => $cursor, 'viewer_id' => absint( $viewer_id ), 'profile_public_id' => $profile['public_id'], 'contract_version' => SPD_CONTRACT_VERSION ) );
+				$result = call_user_func( $callback, $profile['user_id'], array( 'limit' => min( self::MAX_PROVIDER_ITEMS, $limit + 1 ), 'cursor' => $cursor, 'viewer_id' => $viewer_id, 'profile_public_id' => $profile['public_id'], 'contract_version' => SPD_CONTRACT_VERSION ) );
 			} catch ( Throwable $exception ) {
 				self::provider_failure( $key, 'timeline_provider_items', $exception );
 				$result = new WP_Error( 'spd_timeline_provider_exception', __( 'A timeline provider failed safely.', 'sabri-profiles-doctors' ) );
@@ -83,7 +84,7 @@ final class SPD_Timeline {
 			$health[ $key ] = empty( $result ) ? 'empty' : 'available';
 			foreach ( $result as $item ) {
 				$normalized = self::normalize_item( $key, $item, $profile['user_id'] );
-				if ( ! $normalized || 'public' !== $normalized['visibility'] || ! in_array( $normalized['status'], array( 'published', 'corrected', 'retracted' ), true ) ) { continue; }
+				if ( ! $normalized || ! SPD_Authorization::audience_allows( $normalized['visibility'], $profile['user_id'], $viewer_id ) || ! in_array( $normalized['status'], array( 'published', 'corrected', 'retracted' ), true ) ) { continue; }
 				if ( $cursor && ! self::before_cursor( $normalized, $cursor ) ) { continue; }
 				$items[] = $normalized;
 			}
@@ -116,7 +117,7 @@ final class SPD_Timeline {
 			'excerpt' => wp_kses_post( (string) ( $item['excerpt'] ?? '' ) ),
 			'url' => $url,
 			'published_at' => gmdate( 'Y-m-d H:i:s', $timestamp ),
-			'visibility' => sanitize_key( (string) ( $item['visibility'] ?? 'private' ) ),
+			'visibility' => SPD_Authorization::normalize_audience( $item['visibility'] ?? 'private' ),
 			'status' => sanitize_key( (string) ( $item['status'] ?? 'published' ) ),
 			'thumbnail_url' => $thumbnail,
 			'correction' => sanitize_text_field( (string) ( $item['correction'] ?? '' ) ),
