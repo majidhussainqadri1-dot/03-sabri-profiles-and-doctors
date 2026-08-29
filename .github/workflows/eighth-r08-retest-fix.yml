@@ -1,0 +1,43 @@
+name: File 03 Eighth R08 Retest Fix
+on:
+  push:
+    branches:
+      - audit/file-03-eighth-twenty-round-20260829
+    paths:
+      - '.github/workflows/eighth-r08-retest-fix.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: true
+      - name: Preserve historical cursor-persistence invariant while retaining readback verification
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('includes/class-spd-media.php')
+          s=p.read_text()
+          old="""\tprivate static function persist_privacy_option( $option, $value ) {
+\t\t$written = update_option( $option, $value, false );
+\t\t$stored = get_option( $option, null );"""
+          new="""\tprivate static function persist_privacy_option( $option, $value ) {
+\t\t// Keep the historical explicit cursor-persistence contract while adding readback certainty.
+\t\t$written = 'spd_media_privacy_cursor' === $option
+\t\t\t? update_option( 'spd_media_privacy_cursor', $value, false )
+\t\t\t: update_option( $option, $value, false );
+\t\t$stored = get_option( $option, null );"""
+          if old not in s: raise SystemExit('R08 retest compatibility target missing')
+          p.write_text(s.replace(old,new,1))
+          PY
+          php -l includes/class-spd-media.php
+      - name: Commit and self-delete
+        run: |
+          git config user.name sabri-review-bot
+          git config user.email actions@users.noreply.github.com
+          git add includes/class-spd-media.php
+          git rm .github/workflows/eighth-r08-retest-fix.yml
+          git commit -m "File 03 eighth cycle R08: preserve explicit cursor persistence contract"
+          git push origin HEAD:audit/file-03-eighth-twenty-round-20260829
