@@ -432,6 +432,12 @@ final class SPD_Observability {
 		if ( $execute && $plan ) {
 			$repair = SPD_Activator::repair_owned_resources();
 			if ( is_wp_error( $repair ) ) { return $repair; }
+			if ( in_array( 'schedule_migration', $plan, true ) && ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) {
+				$scheduled = wp_schedule_event( time() + 60, 'spd_five_minutes', 'spd_migrate_profiles_batch' );
+				if ( ! $scheduled || ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) {
+					return new WP_Error( 'spd_repair_migration_schedule_failed', __( 'Repair could not restore the File 03 migration schedule.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+				}
+			}
 			if ( get_option( 'spd_reconciliation_required', false ) ) {
 				if ( function_exists( 'wp_cache_flush_group' ) ) { wp_cache_flush_group( 'spd' ); } else { update_option( 'spd_profile_cache_generation', SPD_Profile_Repository::cache_generation() + 1, false ); }
 				do_action( 'sabri_file26_reconcile_profile_index_v1', array( 'owner' => 'file03', 'contract_version' => SPD_CONTRACT_VERSION ) );
