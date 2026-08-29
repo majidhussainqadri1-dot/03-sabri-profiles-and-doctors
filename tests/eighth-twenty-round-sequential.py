@@ -66,4 +66,14 @@ state_flip = block.index("UPDATE {$table} SET status='retry'")
 require(status_read < rewind < schedule < state_flip,
         'R05 migration recovery changes dead state before cursor/schedule certainty')
 
-print('File 03 eighth twenty-round sequential invariants through R05: PASS')
+# R06 — bounded repair must execute and verify the migration action it advertises.
+repair = obs.index('public static function repair')
+repair_block = obs[repair:]
+for marker in (
+    "in_array( 'schedule_migration', $plan, true )",
+    "$scheduled = wp_schedule_event( time() + 60, 'spd_five_minutes', 'spd_migrate_profiles_batch' )",
+    'spd_repair_migration_schedule_failed',
+):
+    require(marker in repair_block, f'R06 repair migration-schedule marker missing: {marker}')
+
+print('File 03 eighth twenty-round sequential invariants through R06: PASS')
