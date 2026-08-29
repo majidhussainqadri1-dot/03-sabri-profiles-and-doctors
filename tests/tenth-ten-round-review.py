@@ -39,7 +39,10 @@ require('migration_integrity_read_failed' in plugin and 'spd_last_migration_erro
 require("function_exists( 'load_plugin_textdomain' )" in plugin and "function_exists( 'add_filter' )" in plugin and "function_exists( 'remove_action' )" in plugin, 'Plugin boot does not remain safe when an isolated/incomplete WordPress runtime loads the source tree')
 
 require('media_privacy_profile_read_failed' in media and "! empty( $profile['_fields_read_failed'] )" in media, 'Media privacy reconciliation does not stop on uncertain profile/field reads')
-require("update_option( 'spd_media_privacy_cursor'" in media, 'Media privacy reconciliation cursor persistence is missing')
+require(
+    "update_option( 'spd_media_privacy_cursor'" in media or "persist_privacy_option( 'spd_media_privacy_cursor'" in media,
+    'Media privacy reconciliation cursor persistence is missing'
+)
 
 require('spd_profile_create_read_failed' in identity and 'spd_profile_refresh_read_failed' in identity, 'Identity post-commit DB-certain read errors are missing')
 require("$final = $this->find_by_id" in identity and "! empty( $final['_fields_read_failed'] )" in identity, 'Identity refresh does not use one validated final hydrated read')
