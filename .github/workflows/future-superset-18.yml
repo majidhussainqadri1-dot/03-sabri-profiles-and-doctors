@@ -16,6 +16,9 @@ on:
       - 'audit/file-03-second-twenty-round-20260812'
       - 'audit/file-03-third-twenty-round-20260812'
       - 'audit/file-03-fourth-twenty-round-20260812'
+      - 'audit/file-03-fifth-twenty-round-20260813-clean'
+      - 'audit/file-03-sixth-twenty-round-20260813'
+      - 'audit/file-03-seventh-twenty-round-20260813'
   pull_request:
     branches: [main]
 
@@ -101,15 +104,19 @@ jobs:
         with:
           persist-credentials: false
       - name: Build twice
+        id: package
         run: |
           set -euo pipefail
+          VERSION="$(sed -n 's/^ \* Version: \(.*\)$/\1/p' sabri-profiles-doctors.php | head -1)"
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           ./build-package.sh "$RUNNER_TEMP/a"
           ./build-package.sh "$RUNNER_TEMP/b"
       - name: Verify determinism and packaged corrective files
         run: |
           set -euo pipefail
-          VERSION="$(sed -n 's/^ \* Version: \(.*\)$/\1/p' sabri-profiles-doctors.php | head -1)"
-          test "$VERSION" = "1.2.0-rc14"
+          VERSION="${{ steps.package.outputs.version }}"
+          test -n "$VERSION"
           NAME="03-sabri-profiles-and-doctors-$VERSION.zip"
           cmp "$RUNNER_TEMP/a/$NAME" "$RUNNER_TEMP/b/$NAME"
           (cd "$RUNNER_TEMP/a" && sha256sum -c "$NAME.sha256")
@@ -123,7 +130,7 @@ jobs:
           diff -u uninstall.php "$TOP/uninstall.php"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: file03-future-superset-18-1.2.0-rc14-fourth-twenty-round
+          name: file03-future-superset-18-${{ steps.package.outputs.version }}-${{ github.sha }}
           path: |
             ${{ runner.temp }}/a/*.zip
             ${{ runner.temp }}/a/*.sha256
