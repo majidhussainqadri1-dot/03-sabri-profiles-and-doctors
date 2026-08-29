@@ -23,12 +23,29 @@ final class SPD_Authorization {
 		return true;
 	}
 
+	private static function provider_failure( $provider, $surface, Throwable $exception ) {
+		try {
+			do_action( 'sabri_file24_profile_provider_failure', array(
+				'owner'           => 'file03',
+				'provider'        => sanitize_key( (string) $provider ),
+				'surface'         => sanitize_key( (string) $surface ),
+				'exception_class' => sanitize_key( get_class( $exception ) ),
+				'at'              => class_exists( 'SPD_Helpers' ) ? SPD_Helpers::now() : gmdate( 'c' ),
+			) );
+		} catch ( Throwable $ignored ) {}
+	}
+
 	public static function is_contact( $owner_id, $viewer_id ) {
 		$owner_id = absint( $owner_id ); $viewer_id = absint( $viewer_id );
 		if ( ! $owner_id || ! $viewer_id ) { return false; }
 		if ( $owner_id === $viewer_id ) { return true; }
 		if ( ! SPD_Membership_Adapter::is_member_eligible( $viewer_id ) ) { return false; }
-		$claim = apply_filters( 'sabri_network_contact_claim_v1', null, $owner_id, $viewer_id, SPD_CONTRACT_VERSION );
+		try {
+			$claim = apply_filters( 'sabri_network_contact_claim_v1', null, $owner_id, $viewer_id, SPD_CONTRACT_VERSION );
+		} catch ( Throwable $exception ) {
+			self::provider_failure( 'file17_contact_graph', 'contact_audience', $exception );
+			return false;
+		}
 		return SPD_Helpers::current_contract_claim( $claim, '1.0.0', 300 ) && ! empty( $claim['connected'] ) && absint( $claim['owner_user_id'] ?? 0 ) === $owner_id && absint( $claim['viewer_user_id'] ?? 0 ) === $viewer_id;
 	}
 
@@ -76,13 +93,40 @@ final class SPD_Authorization {
 		return true;
 	}
 
+	/** Canonical authenticated REST gate: dependency uncertainty is 503, not false 403. */
+	public static function rest_authenticated_eligible() {
+		if ( ! is_user_logged_in() ) { return new WP_Error( 'spd_login_required', __( 'Authentication is required.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
+		$health = SPD_Membership_Adapter::health();
+		if ( 'available' !== ( $health['status'] ?? '' ) ) { return new WP_Error( 'spd_membership_provider_unavailable', __( 'Membership authorization is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		$claims = SPD_Membership_Adapter::claims( get_current_user_id() );
+		if ( ! $claims ) { return new WP_Error( 'spd_membership_claim_unavailable', __( 'Current membership authorization could not be verified.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		return ! empty( $claims['eligible'] ) && empty( $claims['suspended'] )
+			? true
+			: new WP_Error( 'spd_account_ineligible', __( 'This account is not currently eligible.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+	}
+
 	public static function mutation_guard( array $profile, $actor_id ) {
 		if ( SPD_Observability::safe_mode() ) { return new WP_Error( 'spd_safe_mode', __( 'Profile changes are temporarily unavailable while the system is in safe mode.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		$actor_id = absint( $actor_id );
 		if ( ! $actor_id ) { return new WP_Error( 'spd_login_required', __( 'A signed-in account is required to change a profile.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
 		if ( ! empty( $profile['_fields_read_failed'] ) ) { return new WP_Error( 'spd_profile_field_store_unavailable', __( 'Profile visibility data is temporarily unavailable; no changes were made.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		if ( ! self::profile_mutation_state_allows( $profile ) ) { return new WP_Error( 'spd_profile_state_locked', __( 'This profile state does not allow owner or delegated edits. A governed state transition is required first.', 'sabri-profiles-doctors' ), array( 'status' => 409 ) ); }
-		if ( ! self::can_edit_profile( $profile, $actor_id ) ) { return new WP_Error( 'spd_forbidden', __( 'You are not authorized to change this profile.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
+
+		// R08 — authorization denial and dependency uncertainty are different states.
+		// Re-read current File 00 health/claims at the mutation boundary, then inspect
+		// request-local provider-failure evidence if a narrower callback denied.
+		$health = SPD_Membership_Adapter::health();
+		if ( 'available' !== ( $health['status'] ?? '' ) ) { return new WP_Error( 'spd_membership_provider_unavailable', __( 'Membership authorization is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		$owner_id = absint( $profile['user_id'] ?? 0 );
+		$actor_claims = SPD_Membership_Adapter::claims( $actor_id );
+		$owner_claims = $owner_id === $actor_id ? $actor_claims : SPD_Membership_Adapter::claims( $owner_id );
+		if ( ! $actor_claims || ! $owner_claims ) { return new WP_Error( 'spd_membership_claim_unavailable', __( 'Current profile authorization could not be verified.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		if ( ! self::can_edit_profile( $profile, $actor_id ) ) {
+			if ( class_exists( 'SPD_Provider_Guards' ) && SPD_Provider_Guards::file00_dependency_uncertain() ) {
+				return new WP_Error( 'spd_membership_dependency_unavailable', __( 'Profile authorization is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+			}
+			return new WP_Error( 'spd_forbidden', __( 'You are not authorized to change this profile.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+		}
 		return true;
 	}
 

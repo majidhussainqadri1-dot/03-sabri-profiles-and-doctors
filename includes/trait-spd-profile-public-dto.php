@@ -30,7 +30,23 @@ trait SPD_Profile_Public_DTO {
 		$verification = SPD_Verification_Adapter::projection( $user_id );
 		$is_verified_doctor = 'doctor' === $profile['profile_type'] && 'doctor' === ( $claims['account_type'] ?? '' ) && ! empty( $claims['approved'] ) && ! empty( $claims['eligible'] ) && ! empty( $claims['professional_verified'] ) && empty( $claims['suspended'] ) && $verification && ! empty( $verification['trusted_contract'] ) && 'verified' === ( $verification['status'] ?? '' );
 		$professional = $is_verified_doctor ? ( $verification['approved_fields'] ?? array() ) : array();
-		$clinic_raw = $is_verified_doctor ? apply_filters( 'sabri_file08_public_clinic_projection_v1', null, $user_id, $viewer_id, SPD_CONTRACT_VERSION ) : null;
+		$clinic_raw = null;
+		if ( $is_verified_doctor ) {
+			try {
+				$clinic_raw = apply_filters( 'sabri_file08_public_clinic_projection_v1', null, $user_id, $viewer_id, SPD_CONTRACT_VERSION );
+			} catch ( Throwable $exception ) {
+				try {
+					do_action( 'sabri_file24_profile_provider_failure', array(
+						'owner'           => 'file03',
+						'provider'        => 'file08_public_clinic',
+						'surface'         => 'public_profile_dto',
+						'exception_class' => sanitize_key( get_class( $exception ) ),
+						'at'              => SPD_Helpers::now(),
+					) );
+				} catch ( Throwable $ignored ) {}
+				$clinic_raw = null;
+			}
+		}
 		$dto = array(
 			'contract_version' => SPD_CONTRACT_VERSION,
 			'public_id'        => $profile['public_id'],
@@ -76,7 +92,21 @@ trait SPD_Profile_Public_DTO {
 		}
 		$internal = $profile['fields']['internal_message'] ?? array( 'audience' => 'private', 'field_value' => '0' );
 		if ( '1' === (string) $internal['field_value'] && SPD_Authorization::audience_allows( $internal['audience'], $user_id, $viewer_id ) && ! $is_minor ) {
-			$url = (string) apply_filters( 'sabri_network_message_profile_url', '', $user_id, $viewer_id, SPD_CONTRACT_VERSION );
+			$url = '';
+			try {
+				$url = (string) apply_filters( 'sabri_network_message_profile_url', '', $user_id, $viewer_id, SPD_CONTRACT_VERSION );
+			} catch ( Throwable $exception ) {
+				try {
+					do_action( 'sabri_file24_profile_provider_failure', array(
+						'owner'           => 'file03',
+						'provider'        => 'file17_message_profile_url',
+						'surface'         => 'public_profile_dto',
+						'exception_class' => sanitize_key( get_class( $exception ) ),
+						'at'              => SPD_Helpers::now(),
+					) );
+				} catch ( Throwable $ignored ) {}
+				$url = '';
+			}
 			if ( SPD_Helpers::same_origin_url( $url ) ) { $dto['contacts']['internal_message_url'] = esc_url_raw( $url ); }
 		}
 		if ( 0 === $viewer_id ) { $this->set_anonymous_public_dto_cache( $profile, $dto ); }

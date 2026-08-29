@@ -1,8 +1,8 @@
 # File 03 — Latest Governing Plan Traceability
 
-Candidate: `1.1.0-rc1`  
-Plan: `SSH-F03-PLAN-2026-v1.0 + 2026-08-07 central addendum`  
-Contract: `1.3.0`  
+Candidate: `1.2.0-rc15`  
+Plan: `SSH-F03-PLAN-2026-v1.0 + 2026-08-07 central addendum + FUTURE-SUPERSET-18 + fifth twenty-round corrective closure`  
+Contract: `1.4.0`  
 Base DB schema: `1.2.0`  
 Central extension schema: `1.0.0`
 

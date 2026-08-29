@@ -12,11 +12,28 @@ final class SPD_Verification_Adapter {
 		return array( 'status' => 'available', 'version' => 'contract-v1', 'reason' => '' );
 	}
 
+	private static function provider_failure( $surface, Throwable $exception ) {
+		try {
+			do_action( 'sabri_file24_profile_provider_failure', array(
+				'owner'           => 'file03',
+				'provider'        => 'file09_verification',
+				'surface'         => sanitize_key( (string) $surface ),
+				'exception_class' => sanitize_key( get_class( $exception ) ),
+				'at'              => class_exists( 'SPD_Helpers' ) ? SPD_Helpers::now() : gmdate( 'c' ),
+			) );
+		} catch ( Throwable $ignored ) {}
+	}
+
 	public static function projection( $user_id ) {
 		$user_id = absint( $user_id );
 		if ( ! $user_id || ! self::available() ) { return array(); }
-		$data = apply_filters( 'sabri_doctor_verification_public_projection_v1', null, $user_id, SPD_CONTRACT_VERSION );
-		if ( ! is_array( $data ) || true !== gdo_validate_public_projection( $data, $user_id, SPD_CONTRACT_VERSION ) ) { return array(); }
+		try {
+			$data = apply_filters( 'sabri_doctor_verification_public_projection_v1', null, $user_id, SPD_CONTRACT_VERSION );
+			if ( ! is_array( $data ) || true !== gdo_validate_public_projection( $data, $user_id, SPD_CONTRACT_VERSION ) ) { return array(); }
+		} catch ( Throwable $exception ) {
+			self::provider_failure( 'verification_projection', $exception );
+			return array();
+		}
 		$normalized = self::normalize( $data, $user_id );
 		return self::is_current_projection( $normalized, $user_id ) ? $normalized : array();
 	}

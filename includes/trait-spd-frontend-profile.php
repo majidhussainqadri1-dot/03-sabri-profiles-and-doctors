@@ -26,7 +26,6 @@ trait SPD_Frontend_Profile {
 
 	public function profile() {
 		$public_id = sanitize_text_field( (string) get_query_var( 'spd_public_id' ) );
-		if ( ! $public_id && isset( $_GET['public_id'] ) ) { $public_id = sanitize_text_field( wp_unslash( $_GET['public_id'] ) ); }
 		if ( ! $public_id && is_user_logged_in() ) {
 			$profile = SPD_Profile_Repository::instance()->find_by_user_id( get_current_user_id(), false );
 			$public_id = is_array( $profile ) ? (string) ( $profile['public_id'] ?? '' ) : '';
@@ -35,12 +34,16 @@ trait SPD_Frontend_Profile {
 	}
 
 	private function render_profile( $public_id ) {
-		$dto = SPD_Central_Profile::personal_site_dto( $public_id, get_current_user_id() );
+		try {
+			$dto = spd_get_personal_site_profile( $public_id, get_current_user_id() );
+		} catch ( Throwable $exception ) {
+			do_action( 'sabri_file24_profile_provider_failure', array( 'owner' => 'file03', 'surface' => 'frontend_profile', 'exception_class' => sanitize_key( get_class( $exception ) ), 'at' => SPD_Helpers::now() ) );
+			return $this->notice( __( 'This profile is temporarily unavailable because a required profile provider failed safely.', 'sabri-profiles-doctors' ), 'error' );
+		}
 		if ( is_wp_error( $dto ) ) { return $this->notice( $dto->get_error_message(), 'error' ); }
 		$owner = SPD_Profile_Repository::instance()->find_by_public_id_strict( $public_id );
 		if ( is_wp_error( $owner ) ) { return $this->notice( $owner->get_error_message(), 'error' ); }
 		if ( ! $owner ) { return $this->notice( __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), 'error' ); }
-		$dto = SPD_Future_Profile::augment_personal_site_dto( $dto, $owner, get_current_user_id() );
 		$avatar = $dto['media']['avatar'] ?? array();
 		$cover = $dto['media']['cover'] ?? array();
 		$is_owner = absint( $owner['user_id'] ) === get_current_user_id();

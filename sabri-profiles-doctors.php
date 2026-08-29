@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Profiles and Doctors
  * Plugin URI: https://www.sabrihomeopathy.com/
  * Description: Canonical, privacy-controlled Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
- * Version: 1.2.0-rc14
+ * Version: 1.2.0-rc16
  * Requires at least: 7.0
  * Requires PHP: 8.1
  * Author: Dr. Allamah Majid Hussain Sabri
@@ -13,10 +13,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SPD_VERSION', '1.2.0-rc14' );
+define( 'SPD_VERSION', '1.2.0-rc16' );
 define( 'SPD_DB_VERSION', '1.2.0' );
 define( 'SPD_CONTRACT_VERSION', '1.4.0' );
-define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW+FIFTH-TEN-ROUND-CORRECTIVE-REVIEW+SIXTH-TEN-ROUND-CORRECTIVE-REVIEW+SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW+EIGHTH-TEN-ROUND-CORRECTIVE-REVIEW+NINTH-TEN-ROUND-CORRECTIVE-REVIEW+TENTH-TEN-ROUND-CORRECTIVE-REVIEW+TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SECOND-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+THIRD-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' );
+define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW+FIFTH-TEN-ROUND-CORRECTIVE-REVIEW+SIXTH-TEN-ROUND-CORRECTIVE-REVIEW+SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW+EIGHTH-TEN-ROUND-CORRECTIVE-REVIEW+NINTH-TEN-ROUND-CORRECTIVE-REVIEW+TENTH-TEN-ROUND-CORRECTIVE-REVIEW+TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SECOND-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+THIRD-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' );
 define( 'SPD_FILE', __FILE__ );
 define( 'SPD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SPD_URL', plugin_dir_url( __FILE__ ) );
@@ -47,10 +47,41 @@ function spd_read_future_profile_state( $profile_id ) {
 	return $row ?: array( 'federation_opt_in' => 0, 'professional_lifecycle' => 'active', 'lifecycle_reason' => '', 'lifecycle_changed_at' => '', 'version' => 1, 'updated_at' => '' );
 }
 
+/**
+ * Fail-closed boundary for File-03 published PHP contracts consumed by companion modules.
+ * Cross-file/provider Throwables must never tear down a caller or become fabricated data.
+ */
+function spd_file03_contract_call( $callback, $surface ) {
+	try {
+		return call_user_func( $callback );
+	} catch ( Throwable $exception ) {
+		do_action(
+			'sabri_file24_profile_contract_failure',
+			array(
+				'owner'   => 'file03',
+				'surface' => sanitize_key( (string) $surface ),
+				'code'    => 'spd_profile_contract_provider_unavailable',
+				'at'      => class_exists( 'SPD_Helpers' ) ? SPD_Helpers::now() : gmdate( 'c' ),
+			)
+		);
+		return new WP_Error(
+			'spd_profile_contract_provider_unavailable',
+			__( 'Profile information is temporarily unavailable.', 'sabri-profiles-doctors' ),
+			array( 'status' => 503 )
+		);
+	}
+}
+
 /** Public, versioned query contract for companion modules. */
-function spd_get_public_profile( $identity, $viewer_id = 0 ) { return SPD_Profile_Repository::instance()->public_dto( $identity, absint( $viewer_id ) ); }
-/** Public, versioned personal-site projection, including the future superset. */
-function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
+function spd_get_public_profile( $identity, $viewer_id = 0 ) {
+	return spd_file03_contract_call(
+		function () use ( $identity, $viewer_id ) { return SPD_Profile_Repository::instance()->public_dto( $identity, absint( $viewer_id ) ); },
+		'public_profile'
+	);
+}
+
+/** Internal implementation behind the guarded personal-site public contract. */
+function spd_get_personal_site_profile_unchecked( $identity, $viewer_id = 0 ) {
 	$viewer_id = absint( $viewer_id );
 	$dto = SPD_Central_Profile::personal_site_dto( $identity, $viewer_id );
 	if ( is_wp_error( $dto ) ) { return $dto; }
@@ -101,8 +132,17 @@ function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
 	$dto['future']['fhir'] = SPD_Future_Profile::fhir_projection( $dto );
 	return $dto;
 }
-/** File 26 current, public-safe search projection. */
-function spd_get_search_projection( $identity ) {
+
+/** Public, versioned personal-site projection, including the future superset. */
+function spd_get_personal_site_profile( $identity, $viewer_id = 0 ) {
+	return spd_file03_contract_call(
+		function () use ( $identity, $viewer_id ) { return spd_get_personal_site_profile_unchecked( $identity, $viewer_id ); },
+		'personal_site_profile'
+	);
+}
+
+/** Internal implementation behind the guarded File-26 search contract. */
+function spd_get_search_projection_unchecked( $identity ) {
 	$out = SPD_Central_Profile::search_projection( $identity );
 	if ( is_wp_error( $out ) ) { return $out; }
 	$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( (string) ( $out['canonical_id'] ?? '' ) );
@@ -115,18 +155,91 @@ function spd_get_search_projection( $identity ) {
 	$out['professional_lifecycle'] = $status;
 	return $out;
 }
+
+/** File 26 current, public-safe search projection. */
+function spd_get_search_projection( $identity ) {
+	return spd_file03_contract_call(
+		function () use ( $identity ) { return spd_get_search_projection_unchecked( $identity ); },
+		'search_projection'
+	);
+}
+
 /** Future professional identity superset projection. */
-function spd_get_future_profile_projection( $identity, $viewer_id = 0 ) { $dto = spd_get_personal_site_profile( $identity, absint( $viewer_id ) ); return is_wp_error( $dto ) ? $dto : (array) ( $dto['future'] ?? array() ); }
+function spd_get_future_profile_projection( $identity, $viewer_id = 0 ) {
+	return spd_file03_contract_call(
+		function () use ( $identity, $viewer_id ) {
+			$dto = spd_get_personal_site_profile_unchecked( $identity, absint( $viewer_id ) );
+			return is_wp_error( $dto ) ? $dto : (array) ( $dto['future'] ?? array() );
+		},
+		'future_profile_projection'
+	);
+}
+
 /** Public-safe FHIR Practitioner/PractitionerRole projection. */
-function spd_get_fhir_professional_projection( $identity ) { $dto = spd_get_personal_site_profile( $identity, 0 ); return is_wp_error( $dto ) ? $dto : (array) ( $dto['future']['fhir'] ?? array() ); }
+function spd_get_fhir_professional_projection( $identity ) {
+	return spd_file03_contract_call(
+		function () use ( $identity ) {
+			$dto = spd_get_personal_site_profile_unchecked( $identity, 0 );
+			return is_wp_error( $dto ) ? $dto : (array) ( $dto['future']['fhir'] ?? array() );
+		},
+		'fhir_projection'
+	);
+}
+
 /** Federation-ready public actor projection; transport remains external. */
-function spd_get_federation_profile_projection( $identity ) { $dto = spd_get_personal_site_profile( $identity, 0 ); return is_wp_error( $dto ) ? $dto : (array) ( $dto['future']['federation'] ?? array() ); }
+function spd_get_federation_profile_projection( $identity ) {
+	return spd_file03_contract_call(
+		function () use ( $identity ) {
+			$dto = spd_get_personal_site_profile_unchecked( $identity, 0 );
+			return is_wp_error( $dto ) ? $dto : (array) ( $dto['future']['federation'] ?? array() );
+		},
+		'federation_projection'
+	);
+}
+
 /** Public, versioned timeline query contract. */
-function spd_get_profile_timeline( $identity, array $args = array(), $viewer_id = 0 ) { return SPD_Timeline::query( $identity, $args, absint( $viewer_id ) ); }
+function spd_get_profile_timeline( $identity, array $args = array(), $viewer_id = 0 ) {
+	return spd_file03_contract_call(
+		function () use ( $identity, $args, $viewer_id ) { return SPD_Timeline::query( $identity, $args, absint( $viewer_id ) ); },
+		'profile_timeline'
+	);
+}
+
 /** Machine-readable profile-domain contract manifest. */
-function spd_get_profile_contract_manifest() { return SPD_Contracts::manifest(); }
+function spd_get_profile_contract_manifest() {
+	return spd_file03_contract_call(
+		function () {
+			$manifest = SPD_Contracts::manifest();
+			$manifest['rc15_extensions'] = array(
+				'owner'  => 'file03',
+				'routes' => array(
+					'/sabri-profiles/v1/reports/{report_uuid}/appeal',
+					'/sabri-profiles/v1/appeals/review-queue',
+					'/sabri-profiles/v1/appeals/{appeal_uuid}/review',
+				),
+				'events' => array(
+					'ProfileReportAppealed.v1',
+					'ProfileReportAppealReviewed.v1',
+					'ProfileReportReopenedByAppeal.v1',
+				),
+			);
+			return $manifest;
+		},
+		'contract_manifest'
+	);
+}
+
 /** Delegated authority claim for File 08. This is authorization context, never appointment truth. */
-function spd_delegate_can_manage_profile_scope( $owner_user_id, $delegate_user_id, $scope ) { return SPD_Profile_Repository::instance()->delegate_can_manage( absint( $owner_user_id ), absint( $delegate_user_id ), sanitize_key( $scope ) ); }
+function spd_delegate_can_manage_profile_scope( $owner_user_id, $delegate_user_id, $scope ) {
+	$result = spd_file03_contract_call(
+		function () use ( $owner_user_id, $delegate_user_id, $scope ) {
+			return SPD_Profile_Repository::instance()->delegate_can_manage( absint( $owner_user_id ), absint( $delegate_user_id ), sanitize_key( $scope ) );
+		},
+		'delegation_scope'
+	);
+	if ( is_wp_error( $result ) ) { return false; }
+	return true === $result;
+}
 
 function spd_migration_integrity_guard() {
 	global $wpdb;

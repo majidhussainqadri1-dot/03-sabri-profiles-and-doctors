@@ -4,6 +4,7 @@ defined( 'ABSPATH' ) || exit;
 /** Final consumer-side guard for cross-file profile projections. */
 final class SPD_Provider_Guards {
 	private static $registered = false;
+	private static $file00_membership_uncertain = false;
 
 	public static function register() {
 		if ( self::$registered ) { return; }
@@ -13,6 +14,13 @@ final class SPD_Provider_Guards {
 		);
 		foreach ( $hooks as $hook ) { add_filter( $hook, array( __CLASS__, 'bind_user' ), 9999, 8 ); }
 		add_filter( 'sabri_file26_profile_search_projection_v1', array( __CLASS__, 'guard_file03_search_projection' ), 9999, 2 );
+
+		// R07 — provider exceptions are fail-closed, but a boolean denial must not
+		// erase the distinction between genuine ineligibility (403) and dependency
+		// uncertainty (503) on strict report/appeal routes.
+		add_action( 'sabri_file24_profile_provider_failure', array( __CLASS__, 'remember_file00_membership_failure' ), 1, 1 );
+		add_action( 'wp_error_added', array( __CLASS__, 'normalize_service_error' ), 10, 4 );
+		add_filter( 'rest_post_dispatch', array( __CLASS__, 'normalize_strict_report_response' ), 90, 3 );
 	}
 
 	public static function bind_user( $claim, $requested_user_id = 0 ) {
@@ -33,5 +41,54 @@ final class SPD_Provider_Guards {
 	public static function guard_file03_search_projection( $claim, $identity ) {
 		if ( ! is_array( $claim ) || 'file03' !== sanitize_key( (string) ( $claim['owner'] ?? '' ) ) ) { return $claim; }
 		return spd_get_search_projection( $identity );
+	}
+
+	public static function remember_file00_membership_failure( $evidence ) {
+		$evidence = is_array( $evidence ) ? $evidence : array();
+		if ( 'file00_membership' !== sanitize_key( (string) ( $evidence['provider'] ?? '' ) ) ) { return; }
+		$surface = sanitize_key( (string) ( $evidence['surface'] ?? '' ) );
+		if ( in_array( $surface, array( 'membership_assertions', 'user_status', 'founder_assertion', 'age_guardian_claim', 'founder_user_id', 'founder_management_restriction', 'guardian_relationship_claim', 'contact_projection' ), true ) ) {
+			self::$file00_membership_uncertain = true;
+		}
+	}
+
+	/** R08 request-local signal used to preserve 503 dependency semantics after fail-closed provider callbacks. */
+	public static function file00_dependency_uncertain() {
+		return self::$file00_membership_uncertain;
+	}
+
+	public static function normalize_service_error( $code, $message, $data, $error ) {
+		unset( $message );
+		if ( ! $error instanceof WP_Error ) { return; }
+		$code = sanitize_key( (string) $code );
+		$current = is_array( $data ) ? $data : array();
+		if ( 'spd_idempotency_store_failed' === $code ) {
+			$current['status'] = 503;
+			$error->add_data( $current, $code );
+			return;
+		}
+		if ( self::$file00_membership_uncertain && 'spd_account_ineligible' === $code ) {
+			$current['status'] = 503;
+			$current['dependency'] = 'file00_membership';
+			$error->add_data( $current, $code );
+		}
+	}
+
+	private static function is_strict_report_route( $route ) {
+		$route = (string) $route;
+		return 1 === preg_match( '#^/sabri-profiles/v1/(?:profiles/[0-9a-fA-F-]{36}/safety-reports|reports/[0-9a-fA-F-]{36}/appeal)$#', $route );
+	}
+
+	public static function normalize_strict_report_response( $response, $server, $request ) {
+		unset( $server );
+		if ( ! self::$file00_membership_uncertain || ! is_object( $request ) || ! method_exists( $request, 'get_route' ) || ! self::is_strict_report_route( $request->get_route() ) ) { return $response; }
+		if ( ! is_object( $response ) || ! method_exists( $response, 'get_data' ) || ! method_exists( $response, 'set_data' ) || ! method_exists( $response, 'set_status' ) ) { return $response; }
+		$data = $response->get_data();
+		if ( ! is_array( $data ) || 'spd_account_ineligible' !== sanitize_key( (string) ( $data['code'] ?? '' ) ) ) { return $response; }
+		$data['code'] = 'spd_membership_claim_unavailable';
+		$data['message'] = __( 'Membership verification is temporarily unavailable.', 'sabri-profiles-doctors' );
+		$response->set_data( $data );
+		$response->set_status( 503 );
+		return $response;
 	}
 }

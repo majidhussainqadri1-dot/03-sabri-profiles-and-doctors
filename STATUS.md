@@ -1,22 +1,22 @@
-# File 03 Status — 1.2.0-rc14
+# File 03 Status — 1.2.0-rc16
 
 | Status | Evidence / decision |
 |---|---|
 | Specified | File 03 amended plan + central governing plan + `FUTURE-SUPERSET-18.md` |
-| Repository identity | Plugin `1.2.0-rc14` · DB schema `1.2.0` · contract `1.4.0` |
-| Coded | Repository-owned File 03 scope plus `F03-FUT-01..18` and sequential corrective hardening |
-| Prior review history | Original/fresh 80-round, third–tenth ten-round, first/second/third twenty-round ledgers retained as historical regression evidence |
-| Fourth 20-round sequential review | `FOURTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md` |
-| Fourth twenty-round defect-bearing | `01, 04, 06, 14, 16, 18, 19, 20` |
-| Fourth twenty-round clean | `02, 03, 05, 07, 08, 09, 10, 11, 12, 13, 15, 17` |
-| Frozen starting main | `998571621bae0c33afa347e515be543cb3f4b4e9` · tree `dd8269834b86413e1394884eaab3da3d41ba57dd` |
-| Exact reviewed candidate | `b83671ea1359e118fa5a8ec3ef24bb057718d38e` · tree `4c7e9581a372e34db1ecc4ad324695bdf3e66381` |
-| Candidate QA | Corrective `31590070336` SUCCESS · Fresh `31590070346` SUCCESS · Future `31590070472` SUCCESS · PHP 8.1/8.3/8.4 SUCCESS · Fourth-Twenty permanent gate SUCCESS · two fresh post-correction gates SUCCESS · deterministic package/checksum/SBOM/source-parity SUCCESS |
-| PR / merge | PR #31 merged exact reviewed head; code-bearing merge `a19b931db4c54e29c030a6c5a3d980077ed7348b` |
-| Code-bearing merge parity | Merge tree `4c7e9581a372e34db1ecc4ad324695bdf3e66381` exactly equals reviewed candidate tree |
-| Code-bearing main QA | Baseline `31590590095` SUCCESS · Fresh `31590590293` SUCCESS · Future `31590589935` SUCCESS · PHP 8.1/8.3/8.4 SUCCESS · Fourth-Twenty gate SUCCESS · two fresh gates SUCCESS · deterministic package/checksum/SBOM/parity SUCCESS |
-| Contract decision | DB remains `1.2.0`; contract remains `1.4.0` because no table/column/index or documented public response-field contract changed |
-| Correction themes | mutation 401/403 separation; delegation store/provider/current-claim certainty; activation/repair persistence; current File09 projection; strict base REST payload allowlists; File08 schema-degraded fail-closed behavior; exact-branch/permanent Fourth-Twenty QA; rc14 identity |
+| Repository identity | Plugin `1.2.0-rc16` · DB schema `1.2.0` · public contract `1.4.0` |
+| Coded | Repository-owned File 03 scope plus Future Superset 18 and retained corrective hardening through the seventh twenty-round cycle |
+| Seventh 20-round review | **20/20 completed** using complete review → consolidated defect ledger → correction → retest → next round |
+| Seventh-cycle defect-bearing | `03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20` |
+| Seventh-cycle clean | `01, 02, 09, 10, 12, 13, 16, 18` |
+| Seventh-cycle totals | `12/20` defect-bearing · `8/20` clean |
+| R20 pre-correction exact HEAD | `95c90da025d2157b578126d69559fc6bac733918` |
+| Current seventh-review branch | `audit/file-03-seventh-twenty-round-20260813` |
+| Permanent cycle ledger | `SEVENTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-29.md` |
+| Automated review gate | `.github/workflows/fresh-eighty-round-review.yml` runs retained historical/fresh/sequential gates plus seventh-cycle and R20 closure assertions |
+| Exact package gate | Same exact-HEAD workflow builds twice, verifies deterministic ZIP/checksum/SBOM and source/package runtime parity, then uploads the exact artifact |
+| PHP compatibility gate | Corrective Integrity covers PHP 8.1, 8.3 and 8.4 plus source-integrity/security checks |
+| Contract decision | DB remains `1.2.0`; public contract remains `1.4.0`; rc16 is a source/release-candidate identity advance, not a DB/public-contract version advance |
+| Historical release inventories/checksums | Historical provenance only; not current rc16 package truth |
 | Staging-Accepted | **Pending / unverified** |
 | Live-Deployed | **Unverified** |
 | Live DB / migration | **Unverified** |
@@ -25,7 +25,7 @@
 
 ## Repository closure boundary
 
-The exact reviewed rc14 source tree has passed candidate QA, PR QA and code-bearing `main` QA. This document-only closure changes repository documentation and therefore creates a later `main` SHA; that final documentation-closed `main` must itself pass exact-HEAD automated gates before repository closure is reported.
+The seventh sequential review contains 20 completed rounds. Its final R20 review found the release/source identity and repository-evidence synchronization defects only after the full review was completed; those findings were frozen as one consolidated ledger before correction began. Repository closure still requires both exact-head CI workflows to succeed on the final corrected SHA. Any later merge SHA must be re-tested separately.
 
 Repository and CI evidence do not establish Hostinger staging or live state. External acceptance remains: staging reality freeze → exact installed package/version/checksum → DB/schema/migration verification → current companion contracts → representative browser/mobile/RTL/WCAG journeys → backup/restore/rollback → Founder acceptance → controlled deployment → live re-test → parity confirmation.
 

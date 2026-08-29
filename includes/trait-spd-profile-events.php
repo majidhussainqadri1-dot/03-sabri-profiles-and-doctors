@@ -25,6 +25,10 @@ trait SPD_Profile_Events {
 		$table = SPD_DB::table( 'events' );
 		$now   = SPD_Helpers::now();
 		$uuid  = SPD_Helpers::public_id();
+		$json  = SPD_Helpers::json_encode( $payload );
+		if ( 'null' === $json ) {
+			return new WP_Error( 'spd_event_payload_invalid', __( 'The audit event payload could not be encoded safely.', 'sabri-profiles-doctors' ) );
+		}
 		$ok = $wpdb->insert(
 			$table,
 			array(
@@ -32,7 +36,7 @@ trait SPD_Profile_Events {
 				'event_name'     => sanitize_text_field( $event_name ),
 				'aggregate_type' => sanitize_key( $aggregate_type ),
 				'aggregate_id'   => sanitize_text_field( (string) $aggregate_id ),
-				'payload'        => SPD_Helpers::json_encode( $payload ),
+				'payload'        => $json,
 				'status'         => 'pending',
 				'attempts'       => 0,
 				'available_at'   => $now,
@@ -52,10 +56,25 @@ trait SPD_Profile_Events {
 			'after_hash'  => hash( 'sha256', SPD_Helpers::json_encode( $after ) ),
 			'trace_id'    => SPD_Helpers::trace_id(),
 		);
-		if ( class_exists( 'SMC_Security' ) && is_callable( array( 'SMC_Security', 'audit' ) ) ) {
-			SMC_Security::audit( 'spd_profile_changed', absint( $profile['user_id'] ), $payload );
+		try {
+			if ( class_exists( 'SMC_Security' ) && is_callable( array( 'SMC_Security', 'audit' ) ) ) {
+				SMC_Security::audit( 'spd_profile_changed', absint( $profile['user_id'] ), $payload );
+			}
+			do_action( 'spd_profile_audit', $payload );
+		} catch ( Throwable $exception ) {
+			// This path executes after the owning mutation/idempotency response has
+			// committed. An optional audit consumer must never turn a committed
+			// mutation into an apparent client failure.
+			try {
+				do_action( 'sabri_file24_profile_audit_callback_failure', array(
+					'owner'           => 'file03',
+					'reason'          => sanitize_key( $reason ),
+					'exception_class' => sanitize_key( get_class( $exception ) ),
+					'public_id_hash'  => hash( 'sha256', (string) $profile['public_id'] ),
+					'at'              => SPD_Helpers::now(),
+				) );
+			} catch ( Throwable $ignored ) {}
 		}
-		do_action( 'spd_profile_audit', $payload );
 	}
 
 	private function idempotency_begin( $actor_id, $command, $key, $request_hash, $required = true ) {

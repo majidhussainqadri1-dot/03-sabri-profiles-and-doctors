@@ -146,7 +146,13 @@ final class SPD_Plugin {
 
 	public function run_retention_cleanup() {
 		global $wpdb;
-		if ( ! SPD_Schema_Guard::base_ready() ) { return; }
+		if ( ! SPD_Schema_Guard::base_ready() ) {
+			$code = 'retention_schema_unavailable';
+			$record = array( 'code' => $code, 'at' => SPD_Helpers::now() );
+			update_option( 'spd_last_retention_error', $record, false );
+			do_action( 'sabri_file24_retention_failure', array_merge( array( 'owner' => 'file03' ), $record ) );
+			return;
+		}
 		$events = SPD_DB::table( 'events' );
 		$idempotency = SPD_DB::table( 'idempotency' );
 		$reports = SPD_DB::table( 'reports' );

@@ -1,7 +1,11 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
+require_once SPD_DIR . 'includes/trait-spd-profile-report-appeals.php';
+
 trait SPD_Profile_Lifecycle {
+	use SPD_Profile_Report_Appeals;
+
 	public function completeness( array $profile, array $claims, array $professional ) {
 		$required=array('display_name'=>!empty($claims['display_name']),'bio'=>!empty($profile['bio']),'avatar'=>!empty($profile['avatar_id']),'country'=>!empty($profile['country']),'languages'=>!empty($profile['languages']));
 		if('doctor'===$profile['profile_type']){$required['verification']=SPD_Verification_Adapter::is_verified($profile['user_id']);$required['qualification']=!empty($professional['qualification']);$required['specialty']=!empty($professional['specialty']);}
@@ -14,8 +18,17 @@ trait SPD_Profile_Lifecycle {
 		$profile=$this->find_by_user_id($user_id,false);
 		if($wpdb->last_error){return array('removed'=>false,'retained'=>true,'retry'=>true,'messages'=>array(__( 'Profile data could not be read safely for erasure; retry is required.','sabri-profiles-doctors')));}
 		if(!$profile){return array('removed'=>false,'retained'=>false,'messages'=>array());}
-		if(apply_filters('spd_profile_legal_hold',false,$user_id,$profile)){return array('removed'=>false,'retained'=>true,'messages'=>array(__( 'Profile data is retained under an active legal or governance hold.','sabri-profiles-doctors')));}
-		if(SPD_Membership_Adapter::is_founder($user_id)){return array('removed'=>false,'retained'=>true,'messages'=>array(__( 'The official Founder profile requires an authorized governance decision before removal.','sabri-profiles-doctors')));}
+		try {
+			$legal_hold=(bool)apply_filters('spd_profile_legal_hold',false,$user_id,$profile);
+		} catch ( Throwable $exception ) {
+			try { do_action('sabri_file24_profile_provider_failure',array('owner'=>'file03','provider'=>'profile_legal_hold','surface'=>'profile_erasure','exception_class'=>sanitize_key(get_class($exception)),'at'=>SPD_Helpers::now())); } catch ( Throwable $ignored ) {}
+			return array('removed'=>false,'retained'=>true,'retry'=>true,'messages'=>array(__( 'Profile erasure is temporarily paused because retention or legal-hold status could not be verified safely.','sabri-profiles-doctors')));
+		}
+		if($legal_hold){return array('removed'=>false,'retained'=>true,'messages'=>array(__( 'Profile data is retained under an active legal or governance hold.','sabri-profiles-doctors')));}
+		// R17 — the persisted institutional Founder identity is an independent
+		// fail-closed guard. File 00 outage/claim uncertainty must never turn the
+		// official Founder profile into an erasable ordinary profile.
+		if('founder'===sanitize_key((string)($profile['profile_type']??''))||SPD_Membership_Adapter::is_founder($user_id)){return array('removed'=>false,'retained'=>true,'messages'=>array(__( 'The official Founder profile requires an authorized governance decision before removal.','sabri-profiles-doctors')));}
 		$profiles=SPD_DB::table('profiles');$fields=SPD_DB::table('fields');$media=SPD_DB::table('media');$attachments=array('avatar'=>absint($profile['avatar_id']),'cover'=>absint($profile['cover_id']));
 		$result=SPD_DB::transaction(function() use($wpdb,$profile,$profiles,$fields,$media,$attachments,$user_id){
 			foreach($attachments as $purpose=>$attachment_id){if($attachment_id){$queued=SPD_Media::queue_owned_deletion($attachment_id,$user_id,$purpose);if(is_wp_error($queued)){return $queued;}}}

@@ -2,19 +2,60 @@
 defined( 'ABSPATH' ) || exit;
 
 trait SPD_Profile_Central {
+	/**
+	 * Tri-state delegated authorization. Genuine denial returns false; provider
+	 * or delegation-store uncertainty returns an explicit 503 WP_Error.
+	 */
+	private function delegated_access_result( $owner_id, $delegate_id, $scope ) {
+		global $wpdb;
+		$owner_id = absint( $owner_id );
+		$delegate_id = absint( $delegate_id );
+		$scope = sanitize_key( $scope );
+		if ( ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_Schema_Guard::central_ready() ) {
+			return new WP_Error( 'spd_delegation_store_unavailable', __( 'Delegated profile management is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$membership_health = SPD_Membership_Adapter::health();
+		if ( 'available' !== ( $membership_health['status'] ?? '' ) ) {
+			return new WP_Error( 'spd_membership_provider_unavailable', __( 'Membership authorization is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$owner_claims = SPD_Membership_Adapter::claims( $owner_id );
+		$delegate_claims = SPD_Membership_Adapter::claims( $delegate_id );
+		if ( ! $owner_claims || ! $delegate_claims ) {
+			return new WP_Error( 'spd_membership_claim_unavailable', __( 'Current delegation eligibility could not be verified.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$verification_health = SPD_Verification_Adapter::health();
+		if ( 'available' !== ( $verification_health['status'] ?? '' ) ) {
+			return new WP_Error( 'spd_verification_provider_unavailable', __( 'Doctor verification is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$owner_verification = SPD_Verification_Adapter::projection( $owner_id );
+		if ( ! $owner_verification ) {
+			return new WP_Error( 'spd_verification_claim_unavailable', __( 'Current doctor-verification evidence could not be verified.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$wpdb->last_error = '';
+		$allowed = $this->delegate_can_manage( $owner_id, $delegate_id, $scope );
+		if ( $wpdb->last_error ) {
+			return new WP_Error( 'spd_delegation_store_unavailable', __( 'Delegated profile management is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		return (bool) $allowed;
+	}
+
 	public function central_edit_model( $actor_id, $target_user_id = 0 ) {
 		$actor_id = absint( $actor_id );
 		$target_user_id = $target_user_id ? absint( $target_user_id ) : $actor_id;
 		$profile = $this->find_by_user_id( $target_user_id, false );
 		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$is_owner = $actor_id === absint( $profile['user_id'] );
-		$delegated = ! $is_owner && $this->delegate_can_manage( $profile['user_id'], $actor_id, 'profile_presentation' );
+		$delegated = false;
+		if ( ! $is_owner ) {
+			$delegated = $this->delegated_access_result( $profile['user_id'], $actor_id, 'profile_presentation' );
+			if ( is_wp_error( $delegated ) ) { return $delegated; }
+		}
 		if ( ! $is_owner && ! $delegated ) { return new WP_Error( 'spd_forbidden', __( 'You cannot manage this personal-site profile.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		if ( ! $delegated ) {
 			$guard = SPD_Authorization::mutation_guard( $profile, $actor_id );
 			if ( is_wp_error( $guard ) ) { return $guard; }
-		} elseif ( ! SPD_Membership_Adapter::is_member_eligible( $actor_id ) || SPD_Observability::safe_mode() ) {
-			return new WP_Error( 'spd_delegate_unavailable', __( 'Delegated profile management is not currently available.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+		} elseif ( SPD_Observability::safe_mode() ) {
+			return new WP_Error( 'spd_safe_mode', __( 'Delegated profile management is temporarily unavailable while the system is in safe mode.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 		}
 		$values = array();
 		$audiences = array();
@@ -46,12 +87,18 @@ trait SPD_Profile_Central {
 		$profile = $this->find_by_user_id( $target_user_id, false );
 		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$is_owner = $actor_id === $target_user_id;
-		$delegated = ! $is_owner && $this->delegate_can_manage( $target_user_id, $actor_id, 'profile_presentation' );
+		$delegated = false;
+		if ( ! $is_owner ) {
+			$delegated = $this->delegated_access_result( $target_user_id, $actor_id, 'profile_presentation' );
+			if ( is_wp_error( $delegated ) ) { return $delegated; }
+		}
 		if ( $is_owner ) {
 			$guard = SPD_Authorization::mutation_guard( $profile, $actor_id );
 			if ( is_wp_error( $guard ) ) { return $guard; }
-		} elseif ( ! $delegated || SPD_Observability::safe_mode() || ! SPD_Membership_Adapter::is_member_eligible( $actor_id ) ) {
+		} elseif ( ! $delegated ) {
 			return new WP_Error( 'spd_forbidden', __( 'You are not authorized to change these profile fields.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+		} elseif ( SPD_Observability::safe_mode() ) {
+			return new WP_Error( 'spd_safe_mode', __( 'Delegated profile management is temporarily unavailable while the system is in safe mode.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 		}
 		$expected_version = absint( $expected_version );
 		if ( $expected_version < 1 ) { return new WP_Error( 'spd_version_required', __( 'A current profile version is required.', 'sabri-profiles-doctors' ), array( 'status' => 428 ) ); }

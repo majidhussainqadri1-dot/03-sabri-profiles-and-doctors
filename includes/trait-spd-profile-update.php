@@ -28,7 +28,10 @@ trait SPD_Profile_Update {
 		$request_hash = hash( 'sha256', SPD_Helpers::json_encode( array( $input, $expected_version, $target_user_id, $this->prepared_media_hashes( $prepared_media ) ) ) );
 		$idem = $this->idempotency_begin( $actor_id, 'update_profile', $idempotency_key, $request_hash, true );
 		if ( is_wp_error( $idem ) ) { return $idem; }
-		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
+		if ( is_array( $idem ) && isset( $idem['replay'] ) ) {
+			$this->cleanup_replayed_prepared_media( $profile, $prepared_media, $target_user_id );
+			return $idem['response'];
+		}
 
 		$clean = array(
 			'bio'           => array_key_exists( 'bio', $input ) ? SPD_Helpers::sanitize_multiline( $input['bio'], 5000 ) : (string) $profile['bio'],
@@ -190,15 +193,34 @@ trait SPD_Profile_Update {
 		return true;
 	}
 
+	private function cleanup_replayed_prepared_media( array $profile, array $prepared_media, $target_user_id ) {
+		foreach ( $prepared_media as $purpose => $prepared ) {
+			$purpose = sanitize_key( $purpose );
+			$attachment_id = absint( $prepared['attachment_id'] ?? 0 );
+			$current_id = in_array( $purpose, array( 'avatar', 'cover' ), true ) ? absint( $profile[ $purpose . '_id' ] ?? 0 ) : 0;
+			if ( ! $attachment_id || $attachment_id === $current_id ) { continue; }
+			if ( SPD_Media::delete_owned( $attachment_id, $target_user_id, $purpose ) ) { continue; }
+			$queued = SPD_Media::queue_owned_deletion( $attachment_id, $target_user_id, $purpose );
+			if ( is_wp_error( $queued ) ) {
+				update_post_meta( $attachment_id, SPD_Media::STATE_META, 'rejected' );
+				try {
+					do_action( 'sabri_file24_profile_media_cleanup_failed', array( 'attachment_id' => $attachment_id, 'owner_user_id' => absint( $target_user_id ), 'purpose' => $purpose, 'error_code' => $queued->get_error_code(), 'reason' => 'idempotency_replay_cleanup' ) );
+				} catch ( Throwable $ignored ) {}
+			}
+		}
+	}
+
 	private function prepared_media_hashes( array $prepared_media ) {
 		$out = array();
 		foreach ( $prepared_media as $purpose => $prepared ) {
 			$out[ sanitize_key( $purpose ) ] = array(
-				'attachment_id' => absint( $prepared['attachment_id'] ?? 0 ),
-				'scan_reference'=> sanitize_text_field( (string) ( $prepared['scan_reference'] ?? '' ) ),
-				'scan_sha256'  => strtolower( sanitize_text_field( (string) ( $prepared['scan_sha256'] ?? '' ) ) ),
-				'focal_x'       => SPD_Helpers::normalize_focal( $prepared['focal_x'] ?? 50 ),
-				'focal_y'       => SPD_Helpers::normalize_focal( $prepared['focal_y'] ?? 50 ),
+				// Logical request identity intentionally excludes WordPress attachment
+				// IDs and scanner reference IDs because both may change on a safe retry.
+				'scan_sha256'          => strtolower( sanitize_text_field( (string) ( $prepared['scan_sha256'] ?? '' ) ) ),
+				'scan_contract_version'=> sanitize_text_field( (string) ( $prepared['scan_contract_version'] ?? '' ) ),
+				'alt_text'             => sanitize_text_field( (string) ( $prepared['alt_text'] ?? '' ) ),
+				'focal_x'              => SPD_Helpers::normalize_focal( $prepared['focal_x'] ?? 50 ),
+				'focal_y'              => SPD_Helpers::normalize_focal( $prepared['focal_y'] ?? 50 ),
 			);
 		}
 		ksort( $out );

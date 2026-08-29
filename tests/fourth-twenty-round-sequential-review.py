@@ -21,10 +21,11 @@ fresh=text('.github/workflows/fresh-eighty-round-review.yml')
 future_ci=text('.github/workflows/future-superset-18.yml')
 ledger=text('FOURTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-12.md')
 
-require('Version: 1.2.0-rc14' in main and "define( 'SPD_VERSION', '1.2.0-rc14' )" in main, 'rc14 source identity missing')
+require("define( 'SPD_VERSION'," in main, 'current source version constant missing')
 require("define( 'SPD_DB_VERSION', '1.2.0' )" in main, 'DB identity drifted')
 require("define( 'SPD_CONTRACT_VERSION', '1.4.0' )" in main, 'Contract identity drifted')
 require('FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'Fourth twenty-round plan marker missing')
+require('FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'Later fifth twenty-round preservation marker missing')
 
 mutation=section(auth,'public static function mutation_guard','public static function moderation_guard')
 require('spd_login_required' in mutation and "'status' => 401" in mutation, 'R01 unauthenticated mutation 401 invariant missing')
@@ -54,4 +55,4 @@ defects='01, 04, 06, 14, 16, 18, 19, 20'
 clean='02, 03, 05, 07, 08, 09, 10, 11, 12, 13, 15, 17'
 require(defects in ledger and clean in ledger, 'Fourth twenty-round ledger drifted')
 require('Exact deployed code remains unverified' in ledger, 'Live/deployed truth boundary missing')
-print('Fourth fresh twenty-round sequential corrective invariants passed.')
+print('Fourth fresh twenty-round sequential corrective invariants passed under current release identity.')

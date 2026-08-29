@@ -74,7 +74,33 @@ final class SPD_Routes {
 			if ( $profile && SPD_Authorization::profile_visibility_allows( $profile, 0 ) ) { wp_safe_redirect( SPD_Helpers::canonical_profile_url( $profile['public_id'] ), 301 ); exit; }
 			status_header( 404 ); return;
 		}
+
 		$map = (array) get_option( 'spd_page_map', array() );
+
+		// Historical /profile/?public_id=<UUID> links are accepted only as a
+		// migration edge. They must never render a second public representation:
+		// public records move permanently to the immutable UUID route, while
+		// invalid/private/uncertain records fail without exposing object existence.
+		$legacy_public_id = '';
+		if ( ! get_query_var( 'spd_public_id' ) && isset( $_GET['public_id'] ) && $this->is_mapped_or_fallback_page( 'profile', $map ) ) {
+			$legacy_public_id = sanitize_text_field( wp_unslash( $_GET['public_id'] ) );
+		}
+		if ( '' !== $legacy_public_id ) {
+			if ( ! SPD_Helpers::valid_uuid( $legacy_public_id ) ) { status_header( 404 ); return; }
+			$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( $legacy_public_id );
+			if ( is_wp_error( $profile ) ) {
+				$data = $profile->get_error_data();
+				status_header( is_array( $data ) && ! empty( $data['status'] ) ? absint( $data['status'] ) : 503 );
+				return;
+			}
+			if ( $profile && SPD_Authorization::profile_visibility_allows( $profile, 0 ) ) {
+				wp_safe_redirect( SPD_Helpers::canonical_profile_url( $profile['public_id'] ), 301 );
+				exit;
+			}
+			status_header( 404 );
+			return;
+		}
+
 		if ( ! empty( $map['legacy_profile'] ) && is_page( absint( $map['legacy_profile'] ) ) && isset( $_GET['user'] ) ) {
 			$user = get_user_by( 'slug', sanitize_title( wp_unslash( $_GET['user'] ) ) );
 			if ( $user ) {
