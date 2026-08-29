@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 def text(path): return (ROOT / path).read_text(encoding='utf-8')
@@ -15,18 +16,24 @@ manifest = text('RELEASE-MANIFEST.md')
 workflow = text('.github/workflows/fresh-eighty-round-review.yml')
 builder = text('build-package.sh')
 
-# R18 — current release identity must describe the fifth-cycle candidate without
-# changing DB/public-contract versions.
-require("Version: 1.2.0-rc15" in main, 'R18 plugin header is not rc15')
-require("define( 'SPD_VERSION', '1.2.0-rc15' )" in main, 'R18 runtime version is not rc15')
+# Historical R18 guarantee: the fifth-cycle rc15 release boundary must remain in
+# repository history, while later corrective cycles are allowed to advance the
+# current source-candidate version without changing DB/public-contract identity.
+m = re.search(r"define\( 'SPD_VERSION', '1\.2\.0-rc(\d+)' \);", main)
+require(m is not None and int(m.group(1)) >= 15, 'R18 current source candidate regressed below rc15')
+current_version = f"1.2.0-rc{m.group(1)}"
+require(f'Version: {current_version}' in main, 'R18 plugin header/runtime version mismatch')
+require(f'Stable tag: {current_version}' in readme, 'R18 readme/current runtime version mismatch')
 require("define( 'SPD_DB_VERSION', '1.2.0' )" in main, 'R18 DB version drifted')
 require("define( 'SPD_CONTRACT_VERSION', '1.4.0' )" in main, 'R18 contract version drifted')
 require('FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'R18 fifth-cycle plan marker missing')
-require('Stable tag: 1.2.0-rc15' in readme, 'R18 readme stable tag is stale')
+require('= 1.2.0-rc15 =' in readme, 'R18 historical rc15 WordPress changelog entry missing')
+require('## 1.2.0-rc15 — fifth fresh 20-round sequential corrective review' in changelog, 'R18 historical rc15 changelog entry missing')
+
+# Current truth documents may advance beyond rc15, but they must remain coherent
+# and continue to preserve R19/R20 closure history.
 for doc, name in ((status,'STATUS'), (changelog,'CHANGELOG'), (manifest,'RELEASE-MANIFEST')):
-    require('1.2.0-rc15' in doc, f'R18 {name} is not aligned to rc15')
-    # R19/R20 must remain visible in final history/closure, but the completed
-    # fifth cycle must not be forced back into a stale "pending" state.
+    require(current_version in doc, f'R18 {name} is not aligned to current candidate {current_version}')
     require('R19' in doc and 'R20' in doc, f'R18 {name} lost R19/R20 closure history')
 
 # R18 — exact current review workflow must produce reproducible package evidence
@@ -43,7 +50,7 @@ require('tests/fifth-twenty-round-r18-release.py' in workflow, 'R18 release regr
 for marker in ('SOURCE_DATE_EPOCH', 'SBOM.json', 'sha256'):
     require(marker in builder, f'R18 deterministic builder evidence missing: {marker}')
 
-# R18 — staging acceptance must explicitly test the newly corrected critical paths.
+# R18 — staging acceptance must explicitly test the corrected critical paths.
 for marker in (
     'appeal review', 'reopens', 'patient-specific', 'provider exception',
     'retired', 'legacy', 'delegation', 'idempotency', '301', 'public_id',
@@ -53,18 +60,16 @@ for marker in (
     require(marker.lower() in staging.lower(), f'R18 staging acceptance marker missing: {marker}')
 
 # Historical inventory/checksum values remain provenance for older snapshots and
-# must be explicitly distinguished from current rc15 exact-head artifact truth.
-# RELEASE-LOCK.json is a mixed record: immutable historical fields plus a current
-# candidate boundary, so the whole file must not be falsely described as frozen.
+# must be explicitly distinguished from current exact-head artifact truth.
 for marker in ('RELEASE-LOCK.json', 'RELEASE-INVENTORY.tsv', 'SOURCE-INVENTORY.tsv', 'CHECKSUMS.sha256', 'RELEASE-CHECKSUMS.sha256'):
     require(marker in manifest, f'R18 historical evidence boundary missing: {marker}')
 lower_manifest = manifest.lower()
 require(
     ('historical provenance' in lower_manifest or 'historical evidence' in lower_manifest)
     and 'not be interpreted as' in lower_manifest
-    and 'current rc15' in lower_manifest,
+    and f'current {current_version.lower()}' in lower_manifest,
     'R18 historical/current release-truth distinction missing'
 )
 require('Exact deployed code remains unverified' in manifest, 'R18 deployment-truth boundary missing')
 
-print('File 03 fifth-cycle R18 release/package invariants: PASS')
+print('File 03 fifth-cycle R18 historical release/package invariants: PASS')
