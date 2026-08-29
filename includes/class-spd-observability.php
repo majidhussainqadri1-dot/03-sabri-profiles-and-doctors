@@ -334,13 +334,25 @@ final class SPD_Observability {
 		if ( ! $user_id || ! $reason || ! SPD_Membership_Adapter::can_operate_profiles( $actor_id ) ) { return false; }
 		$table = SPD_DB::table( 'migration_failures' );
 		$wpdb->last_error = '';
-		$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='retry',attempts=0,next_attempt_at=UTC_TIMESTAMP(),last_attempt_at=UTC_TIMESTAMP() WHERE user_id=%d AND status='dead'", $user_id ) );
-		if ( false === $updated || $wpdb->last_error ) { return new WP_Error( 'spd_migration_store_unavailable', __( 'Migration recovery state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
-		if ( 1 !== $updated ) { return false; }
+		$status = $wpdb->get_var( $wpdb->prepare( "SELECT status FROM {$table} WHERE user_id=%d LIMIT 1", $user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_migration_store_unavailable', __( 'Migration recovery state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		if ( 'dead' !== (string) $status ) { return false; }
 		$current = absint( get_option( 'spd_migration_cursor', 0 ) );
-		if ( $current >= $user_id ) { update_option( 'spd_migration_cursor', max( 0, $user_id - 1 ), false ); }
+		if ( $current >= $user_id ) {
+			$rewind = max( 0, $user_id - 1 );
+			$persisted = update_option( 'spd_migration_cursor', $rewind, false );
+			if ( false === $persisted && $rewind !== absint( get_option( 'spd_migration_cursor', 0 ) ) ) { return new WP_Error( 'spd_migration_cursor_rewind_failed', __( 'The migration cursor could not be rewound safely for recovery.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+			if ( $rewind !== absint( get_option( 'spd_migration_cursor', 0 ) ) ) { return new WP_Error( 'spd_migration_cursor_rewind_failed', __( 'The migration cursor could not be verified after recovery rewind.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		}
+		if ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) {
+			$scheduled = wp_schedule_event( time() + 60, 'spd_five_minutes', 'spd_migrate_profiles_batch' );
+			if ( ! $scheduled || ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) { return new WP_Error( 'spd_migration_schedule_failed', __( 'The migration recovery schedule could not be created safely.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		}
+		$wpdb->last_error = '';
+		$updated = $wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='retry',attempts=0,next_attempt_at=UTC_TIMESTAMP(),last_attempt_at=UTC_TIMESTAMP() WHERE user_id=%d AND status='dead'", $user_id ) );
+		if ( false === $updated || $wpdb->last_error ) { return new WP_Error( 'spd_migration_store_unavaile', __( 'Migration recovery state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		if ( 1 !== $updated ) { return false; }
 		delete_option( 'spd_migration_completed_at' ); delete_option( 'spd_migration_traversal_completed_at' );
-		if ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) { wp_schedule_event( time() + 60, 'spd_five_minutes', 'spd_migrate_profiles_batch' ); }
 		do_action( 'spd_operational_recovery', array( 'queue' => 'migration', 'reference' => $user_id, 'actor_id' => $actor_id, 'reason' => $reason, 'at' => SPD_Helpers::now() ) );
 		return true;
 	}
