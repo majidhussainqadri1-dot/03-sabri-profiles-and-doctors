@@ -15,6 +15,9 @@ events = (ROOT / 'includes/trait-spd-profile-events.php').read_text(encoding='ut
 media = (ROOT / 'includes/class-spd-media.php').read_text(encoding='utf-8')
 timeline = (ROOT / 'includes/class-spd-timeline.php').read_text(encoding='utf-8')
 identity_create = (ROOT / 'includes/trait-spd-profile-identity-create.php').read_text(encoding='utf-8')
+verification = (ROOT / 'includes/class-spd-verification-adapter.php').read_text(encoding='utf-8')
+central_profile = (ROOT / 'includes/class-spd-central-profile.php').read_text(encoding='utf-8')
+lifecycle = (ROOT / 'includes/trait-spd-profile-lifecycle.php').read_text(encoding='utf-8')
 
 def require(ok, message):
     if not ok:
@@ -124,11 +127,22 @@ require("SPD_Authorization::audience_allows( $normalized['visibility'], $profile
 require("'visibility' => SPD_Authorization::normalize_audience" in timeline, 'R14 timeline provider visibility is not normalized fail-closed')
 require("array( 'published', 'corrected', 'retracted' )" in query, 'R14 timeline publication-state guard regressed')
 
-# R15 — an established institutional Founder profile is not silently demotable
-# by an identity refresh. Contradiction is an explicit reconciliation conflict.
+# R15 — an established institutional Founder profile is not silently demotable.
 ensure_identity = section(identity_create, 'public function ensure_for_user', 'private function runtime_state')
 require("'founder' === sanitize_key( (string) $row['profile_type'] ) && 'founder' !== $type" in ensure_identity, 'R15 established Founder profile can still be silently demoted')
 require("'spd_founder_identity_refresh_conflict'" in ensure_identity and "'status' => 409" in ensure_identity, 'R15 Founder contradiction does not fail explicitly')
 require("'founder' === $type && SPD_Membership_Adapter::founder_id() !== $user_id" in ensure_identity, 'R15 File00 Founder identity binding regressed')
 
-print('File 03 seventh-cycle sequential invariants through R15: PASS')
+# R16 — verification/clinic projection audit: clean; stale or malformed owner facts never become verified truth.
+for token in ('gdo_validate_public_projection', 'is_current_projection', 'valid_until', 'generated_at', 'reviewed_at', "'verified' === $p['status']"):
+    require(token in verification, f'R16 verification freshness/binding invariant missing: {token}')
+require("'sabri_file08_public_clinic_projection_v1'" in central_profile and "'doctor_user_id'" in central_profile and "'owner_version'" in central_profile, 'R16 File08 clinic owner projection invariant regressed')
+
+# R17 — erasure must fail closed for Founder identity and legal-hold uncertainty.
+erasure = section(lifecycle, 'public function erase_profile', None)
+require("'founder'===sanitize_key((string)($profile['profile_type']??''))" in erasure, 'R17 persisted Founder identity is not protected from erasure')
+require("SPD_Membership_Adapter::is_founder($user_id)" in erasure, 'R17 current Founder assertion guard regressed')
+require("catch ( Throwable $exception )" in erasure and "'provider'=>'profile_legal_hold'" in erasure, 'R17 legal-hold callback exceptions are not contained/evidenced')
+require("'retry'=>true" in erasure and 'retention or legal-hold status could not be verified safely' in erasure, 'R17 legal-hold uncertainty does not fail closed')
+
+print('File 03 seventh-cycle sequential invariants through R17: PASS')
