@@ -1,0 +1,88 @@
+name: File 03 Eighth R02 Apply
+
+on:
+  push:
+    branches: [audit/file-03-eighth-twenty-round-20260829]
+    paths: ['.github/workflows/eighth-r02-apply.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: true
+      - name: Apply frozen R02 defect ledger
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def sub1(path, pattern, replacement, flags=0):
+              p=Path(path); s=p.read_text(encoding='utf-8'); n=re.subn(pattern,replacement,s,count=1,flags=flags)
+              if n[1] != 1: raise SystemExit(f'expected one replacement in {path}, got {n[1]}')
+              p.write_text(n[0],encoding='utf-8')
+
+          obs=Path('includes/class-spd-observability.php')
+          s=obs.read_text(encoding='utf-8')
+          anchor="\tprivate static function managed_page_status( array $map, $key ) {"
+          helper="""\tprivate static function record_operational_error( $option, $code ) {\n\t\tupdate_option( sanitize_key( $option ), array( 'code' => sanitize_key( $code ), 'at' => SPD_Helpers::now() ), false );\n\t}\n\n"""
+          if helper.strip() not in s:
+              if anchor not in s: raise SystemExit('observability helper anchor missing')
+              s=s.replace(anchor,helper+anchor,1)
+          obs.write_text(s,encoding='utf-8')
+
+          dispatch="""\tpublic function dispatch_outbox() {\n\t\tglobal $wpdb;\n\t\tif ( ! SPD_DB::tables_exist() ) { return; }\n\t\t$table = SPD_DB::table( 'events' );\n\t\t$wpdb->last_error = '';\n\t\t$reset = $wpdb->query( \"UPDATE {$table} SET status='retry',lease_token='',lease_expires=NULL,available_at=UTC_TIMESTAMP(),last_error_code='lease_expired' WHERE status='processing' AND lease_expires<UTC_TIMESTAMP()\" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared\n\t\tif ( false === $reset || $wpdb->last_error ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_lease_reset_failed' ); return; }\n\t\t$wpdb->last_error = '';\n\t\t$ids = $wpdb->get_col( \"SELECT id FROM {$table} WHERE status IN ('pending','retry') AND available_at<=UTC_TIMESTAMP() ORDER BY id ASC LIMIT 50\" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared\n\t\tif ( $wpdb->last_error || ! is_array( $ids ) ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_queue_read_failed' ); return; }\n\t\tforeach ( $ids as $id ) {\n\t\t\t$token = hash( 'sha256', SPD_Helpers::trace_id() . ':' . absint( $id ) );\n\t\t\t$lease = gmdate( 'Y-m-d H:i:s', time() + 300 );\n\t\t\t$wpdb->last_error = '';\n\t\t\t$claimed = $wpdb->query( $wpdb->prepare( \"UPDATE {$table} SET status='processing',lease_token=%s,lease_expires=%s WHERE id=%d AND status IN ('pending','retry') AND available_at<=UTC_TIMESTAMP()\", $token, $lease, absint( $id ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared\n\t\t\tif ( false === $claimed || $wpdb->last_error ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_claim_failed' ); return; }\n\t\t\tif ( 1 !== $claimed ) { continue; }\n\t\t\t$wpdb->last_error = '';\n\t\t\t$row = $wpdb->get_row( $wpdb->prepare( \"SELECT * FROM {$table} WHERE id=%d AND lease_token=%s LIMIT 1\", absint( $id ), $token ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared\n\t\t\tif ( $wpdb->last_error ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_claim_read_failed' ); return; }\n\t\t\tif ( ! $row ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_claim_missing' ); continue; }\n\t\t\t$payload = json_decode( $row['payload'], true );\n\t\t\t$attempts = absint( $row['attempts'] ) + 1;\n\t\t\tif ( ! is_array( $payload ) ) { $this->fail_outbox_claim( $row, $token, $attempts, 'invalid_payload' ); continue; }\n\t\t\ttry {\n\t\t\t\tdo_action( 'spd_outbox_event_v1', $row['event_name'], $payload, $row );\n\t\t\t\tdo_action( 'sabri_platform_event', $row['event_name'], $payload, array( 'owner' => 'file03', 'event_uuid' => $row['event_uuid'] ) );\n\t\t\t\t$wpdb->last_error = '';\n\t\t\t\t$saved = $wpdb->update( $table, array( 'status' => 'delivered', 'attempts' => $attempts, 'delivered_at' => SPD_Helpers::now(), 'lease_token' => '', 'lease_expires' => null, 'last_error_code' => '' ), array( 'id' => absint( $id ), 'lease_token' => $token ) );\n\t\t\t\tif ( 1 !== $saved || $wpdb->last_error ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_delivery_persist_failed' ); return; }\n\t\t\t} catch ( Throwable $exception ) { if ( ! $this->fail_outbox_claim( $row, $token, $attempts, sanitize_key( get_class( $exception ) ) ) ) { return; } }\n\t\t}\n\t\tdelete_option( 'spd_last_outbox_error' );\n\t\tupdate_option( 'spd_last_outbox_run', SPD_Helpers::now(), false );\n\t}\n\n\tprivate function fail_outbox_claim( array $row, $token, $attempts, $error_code ) {\n\t\tglobal $wpdb;\n\t\t$status = $attempts >= self::OUTBOX_MAX_ATTEMPTS ? 'dead' : 'retry';\n\t\t$delay = min( HOUR_IN_SECONDS, 30 * ( 2 ** min( $attempts, 6 ) ) );\n\t\t$wpdb->last_error = '';\n\t\t$saved = $wpdb->update( SPD_DB::table( 'events' ), array( 'status' => $status, 'attempts' => $attempts, 'available_at' => gmdate( 'Y-m-d H:i:s', time() + $delay ), 'lease_token' => '', 'lease_expires' => null, 'last_error_code' => sanitize_key( $error_code ) ), array( 'id' => absint( $row['id'] ), 'lease_token' => $token ) );\n\t\tif ( 1 !== $saved || $wpdb->last_error ) { self::record_operational_error( 'spd_last_outbox_error', 'outbox_failure_persist_failed' ); return false; }\n\t\treturn true;\n\t}\n\n\tpublic static function requeue_outbox"""
+          sub1('includes/class-spd-observability.php', r"\tpublic function dispatch_outbox\(\) \{.*?\n\tpublic static function requeue_outbox", dispatch, re.S)
+
+          requeue_outbox="""\tpublic static function requeue_outbox( $event_uuid, $actor_id, $reason ) {\n\t\tglobal $wpdb;\n\t\t$actor_id = absint( $actor_id );\n\t\t$reason = SPD_Helpers::sanitize_multiline( $reason, 500 );\n\t\tif ( ! SPD_Membership_Adapter::can_operate_profiles( $actor_id ) || ! $reason ) { return false; }\n\t\t$table = SPD_DB::table( 'events' );\n\t\t$event_uuid = sanitize_text_field( $event_uuid );\n\t\t$wpdb->last_error = '';\n\t\t$updated = $wpdb->query( $wpdb->prepare( \"UPDATE {$table} SET status='retry',attempts=0,available_at=UTC_TIMESTAMP(),lease_token='',lease_expires=NULL,last_error_code='manual_requeue' WHERE event_uuid=%s AND status='dead'\", $event_uuid ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared\n\t\tif ( false === $updated || $wpdb->last_error ) { return new WP_Error( 'spd_outbox_store_unavailable', __( 'The outbox store is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }\n\t\tif ( 1 === $updated ) {\n\t\t\tdo_action( 'spd_operational_recovery', array( 'queue' => 'outbox', 'reference' => $event_uuid, 'actor_id' => $actor_id, 'reason' => $reason, 'at' => SPD_Helpers::now() ) );\n\t\t\treturn true;\n\t\t}\n\t\treturn false;\n\t}\n\n\tpublic function migrate_profiles_batch"""
+          sub1('includes/class-spd-observability.php', r"\tpublic static function requeue_outbox\(.*?\n\tpublic function migrate_profiles_batch", requeue_outbox, re.S)
+
+          requeue_migration="""\tpublic static function requeue_migration_user( $user_id, $actor_id, $reason ) {\n\t\tglobal $wpdb;\n\t\t$user_id = absint( $user_id ); $actor_id = absint( $actor_id ); $reason = SPD_Helpers::sanitize_multiline( $reason, 500 );\n\t\tif ( ! $user_id || ! $reason || ! SPD_Membership_Adapter::can_operate_profiles( $actor_id ) ) { return false; }\n\t\t$table = SPD_DB::table( 'migration_failures' );\n\t\t$wpdb->last_error = '';\n\t\t$updated = $wpdb->query( $wpdb->prepare( \"UPDATE {$table} SET status='retry',attempts=0,next_attempt_at=UTC_TIMESTAMP(),last_attempt_at=UTC_TIMESTAMP() WHERE user_id=%d AND status='dead'\", $user_id ) );\n\t\tif ( false === $updated || $wpdb->last_error ) { return new WP_Error( 'spd_migration_store_unavailable', __( 'Migration recovery state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }\n\t\tif ( 1 !== $updated ) { return false; }\n\t\t$current = absint( get_option( 'spd_migration_cursor', 0 ) );\n\t\tif ( $current >= $user_id ) { update_option( 'spd_migration_cursor', max( 0, $user_id - 1 ), false ); }\n\t\tdelete_option( 'spd_migration_completed_at' ); delete_option( 'spd_migration_traversal_completed_at' );\n\t\tif ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) { wp_schedule_event( time() + 60, 'spd_five_minutes', 'spd_migrate_profiles_batch' ); }\n\t\tdo_action( 'spd_operational_recovery', array( 'queue' => 'migration', 'reference' => $user_id, 'actor_id' => $actor_id, 'reason' => $reason, 'at' => SPD_Helpers::now() ) );\n\t\treturn true;\n\t}\n\n\tprivate function migrate_legacy_projection"""
+          sub1('includes/class-spd-observability.php', r"\tpublic static function requeue_migration_user\(.*?\n\tprivate function migrate_legacy_projection", requeue_migration, re.S)
+
+          retention="""\tpublic function retention_cleanup() {\n\t\tglobal $wpdb;\n\t\tif ( ! SPD_DB::tables_exist() ) { return; }\n\t\t$events = SPD_DB::table( 'events' ); $idempotency = SPD_DB::table( 'idempotency' ); $reports = SPD_DB::table( 'reports' );\n\t\t$queries = array(\n\t\t\tarray( \"DELETE FROM {$idempotency} WHERE expires_at<UTC_TIMESTAMP()\", 'retention_idempotency_delete_failed' ),\n\t\t\tarray( \"UPDATE {$reports} SET reporter_user_id=0,details='',decision_note='',dedupe_hash=SHA2(CONCAT(report_uuid,':retained'),256) WHERE reporter_user_id<>0 AND status IN ('closed','rejected') AND updated_at<(UTC_TIMESTAMP()-INTERVAL 365 DAY)\", 'retention_report_anonymize_failed' ),\n\t\t\tarray( \"DELETE FROM {$events} WHERE status='delivered' AND created_at<(UTC_TIMESTAMP()-INTERVAL 730 DAY) AND event_name NOT IN ('ProfileTombstoned.v1','ProfileReported.v1','ProfileReportReviewed.v1')\", 'retention_event_delete_failed' ),\n\t\t);\n\t\tforeach ( $queries as $entry ) {\n\t\t\t$wpdb->last_error = '';\n\t\t\t$result = $wpdb->query( $entry[0] ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared\n\t\t\tif ( false === $result || $wpdb->last_error ) { self::record_operational_error( 'spd_last_retention_error', $entry[1] ); return; }\n\t\t}\n\t\tdelete_option( 'spd_last_retention_error' );\n\t\tupdate_option( 'spd_last_retention_run', SPD_Helpers::now(), false );\n\t}\n\n\tpublic static function repair"""
+          sub1('includes/class-spd-observability.php', r"\tpublic function retention_cleanup\(\) \{.*?\n\tpublic static function repair", retention, re.S)
+
+          media="""\tpublic static function requeue_deletion( $deletion_uuid, $actor_id, $reason ) {\n\t\tglobal $wpdb;\n\t\t$actor_id = absint( $actor_id );\n\t\t$reason = SPD_Helpers::sanitize_multiline( $reason, 500 );\n\t\tif ( ! $reason || ! SPD_Membership_Adapter::can_operate_profiles( $actor_id ) ) { return false; }\n\t\t$table = SPD_DB::table( 'deletions' );\n\t\t$deletion_uuid = sanitize_text_field( $deletion_uuid );\n\t\t$wpdb->last_error = '';\n\t\t$updated = $wpdb->query( $wpdb->prepare( \"UPDATE {$table} SET status='retry',attempts=0,available_at=UTC_TIMESTAMP(),lease_token='',lease_expires=NULL,last_error_code='manual_requeue' WHERE deletion_uuid=%s AND status='dead'\", $deletion_uuid ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared\n\t\tif ( false === $updated || $wpdb->last_error ) { return new WP_Error( 'spd_media_queue_store_unavailable', __( 'The media deletion queue is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }\n\t\tif ( 1 === $updated ) {\n\t\t\tdo_action( 'spd_operational_recovery', array( 'queue' => 'media_deletion', 'reference' => $deletion_uuid, 'actor_id' => $actor_id, 'reason' => $reason, 'at' => SPD_Helpers::now() ) );\n\t\t\treturn true;\n\t\t}\n\t\treturn false;\n\t}\n\n\tpublic static function delete_owned"""
+          sub1('includes/class-spd-media.php', r"\tpublic static function requeue_deletion\(.*?\n\tpublic static function delete_owned", media, re.S)
+
+          admin=Path('includes/class-spd-admin.php'); a=admin.read_text(encoding='utf-8')
+          old="SELECT attachment_id,owner_user_id,purpose,attempts,last_error_code,updated_at FROM "
+          if old not in a: raise SystemExit('admin media select anchor missing')
+          a=a.replace(old,"SELECT deletion_uuid,attachment_id,owner_user_id,purpose,attempts,last_error_code,updated_at FROM ",1)
+          oldref="'media'===$kind?$row['attachment_id']:$row['user_id']"
+          if oldref not in a: raise SystemExit('admin media reference anchor missing')
+          a=a.replace(oldref,"'media'===$kind?$row['deletion_uuid']:$row['user_id']",1)
+          oldcall="elseif('media'===$kind){$ok=SPD_Media::requeue_deletion(absint($reference),get_current_user_id(),$reason);}"
+          if oldcall not in a: raise SystemExit('admin media call anchor missing')
+          a=a.replace(oldcall,"elseif('media'===$kind){$ok=SPD_Media::requeue_deletion($reference,get_current_user_id(),$reason);}",1)
+          oldtail="if(!$ok)wp_die(esc_html__('The selected dead-letter item could not be requeued.','sabri-profiles-doctors'),'',array('response'=>409,'back_link'=>true));"
+          if oldtail not in a: raise SystemExit('admin requeue result anchor missing')
+          a=a.replace(oldtail,"if(is_wp_error($ok))wp_die(esc_html($ok->get_error_message()),'',array('response'=>503,'back_link'=>true));if(!$ok)wp_die(esc_html__('The selected dead-letter item could not be requeued.','sabri-profiles-doctors'),'',array('response'=>409,'back_link'=>true));",1)
+          admin.write_text(a,encoding='utf-8')
+
+          test=Path('tests/eighth-twenty-round-sequential.py'); ts=test.read_text(encoding='utf-8')
+          marker="print('File 03 eighth twenty-round sequential invariants through R01: PASS')"
+          if marker not in ts: raise SystemExit('R01 test tail missing')
+          r02="""# R02 — DB certainty, operational queues and recovery identifiers.\nobs = text('includes/class-spd-observability.php')\nmedia = text('includes/class-spd-media.php')\nadmin = text('includes/class-spd-admin.php')\nfor marker in ('outbox_lease_reset_failed','outbox_queue_read_failed','outbox_claim_failed','outbox_claim_read_failed','outbox_delivery_persist_failed','outbox_failure_persist_failed'):\n    require(marker in obs, f'R02 outbox DB-certainty marker missing: {marker}')\nfor marker in ('retention_idempotency_delete_failed','retention_report_anonymize_failed','retention_event_delete_failed','spd_last_retention_error'):\n    require(marker in obs, f'R02 retention certainty marker missing: {marker}')\nrequire('spd_outbox_store_unavailable' in obs and 'spd_migration_store_unavailable' in obs, 'R02 operational requeue DB failures are not explicit')\nrequire('spd_media_queue_store_unavailable' in media, 'R02 media requeue DB failure is not explicit')\nrequire('SELECT deletion_uuid,attachment_id' in admin and "$row['deletion_uuid']" in admin and 'requeue_deletion($reference' in admin, 'R02 media dead-letter recovery is not UUID-correct')\nrequire('is_wp_error($ok)' in admin, 'R02 admin recovery does not preserve 503 DB uncertainty')\n\nprint('File 03 eighth twenty-round sequential invariants through R02: PASS')"""
+          ts=ts.replace(marker,r02,1); test.write_text(ts,encoding='utf-8')
+          PY
+          php -l includes/class-spd-observability.php
+          php -l includes/class-spd-media.php
+          php -l includes/class-spd-admin.php
+          python3 tests/eighth-twenty-round-sequential.py
+          rm .github/workflows/eighth-r02-apply.yml
+      - name: Commit corrective batch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'sabri-review-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add includes/class-spd-observability.php includes/class-spd-media.php includes/class-spd-admin.php tests/eighth-twenty-round-sequential.py .github/workflows/eighth-r02-apply.yml
+          git commit -m 'File 03 eighth cycle R02: fail closed on operational DB uncertainty'
+          git push origin HEAD:audit/file-03-eighth-twenty-round-20260829
