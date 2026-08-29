@@ -7,6 +7,7 @@ dto = (ROOT / 'includes/trait-spd-profile-public-dto.php').read_text(encoding='u
 membership = (ROOT / 'includes/class-spd-membership-adapter.php').read_text(encoding='utf-8')
 future = (ROOT / 'includes/class-spd-future-profile.php').read_text(encoding='utf-8')
 central = (ROOT / 'includes/trait-spd-profile-central.php').read_text(encoding='utf-8')
+provider_guards = (ROOT / 'includes/class-spd-provider-guards.php').read_text(encoding='utf-8')
 
 def require(ok, message):
     if not ok:
@@ -66,4 +67,18 @@ require('delegated_access_result' in edit and 'is_wp_error( $delegated )' in edi
 require('delegated_access_result' in update and 'is_wp_error( $delegated )' in update, 'R06 central mutation does not propagate delegated uncertainty')
 require("'spd_safe_mode'" in edit and "'status' => 503" in edit, 'R06 delegated edit safe mode is not service-unavailable')
 
-print('File 03 seventh-cycle sequential invariants through R06: PASS')
+# R07 — dependency uncertainty and idempotency-store failure semantics must be
+# preserved on strict report/appeal surfaces. A File 00 provider failure is a
+# service dependency failure (503), never an invented authorization denial; an
+# idempotency-store write failure is likewise a server/store failure (503).
+require("private static $file00_membership_uncertain = false;" in provider_guards, 'R07 File00 uncertainty state missing')
+require("add_action( 'sabri_file24_profile_provider_failure', array( __CLASS__, 'remember_file00_membership_failure' )" in provider_guards, 'R07 File00 dependency evidence hook missing')
+require("'file00_membership' !== sanitize_key" in provider_guards, 'R07 File00 evidence is not provider-scoped')
+require("'spd_idempotency_store_failed' === $code" in provider_guards and "$current['status'] = 503;" in provider_guards, 'R07 idempotency store failure is not normalized to 503')
+require("self::$file00_membership_uncertain && 'spd_account_ineligible' === $code" in provider_guards, 'R07 dependency uncertainty does not intercept false 403 semantics')
+require("$current['dependency'] = 'file00_membership';" in provider_guards, 'R07 dependency source is not preserved in error evidence')
+strict_response = section(provider_guards, 'public static function normalize_strict_report_response', None)
+for token in ("is_strict_report_route", "'spd_account_ineligible'", "'spd_membership_claim_unavailable'", 'set_status( 503 )'):
+    require(token in strict_response, f'R07 strict report/appeal response normalization missing: {token}')
+
+print('File 03 seventh-cycle sequential invariants through R07: PASS')
