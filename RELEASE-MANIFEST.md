@@ -2,16 +2,16 @@
 
 ## Current candidate identity
 
-- Software: `1.2.0-rc15`
+- Software: `1.2.0-rc16`
 - DB schema: `1.2.0`
 - Public contract: `1.4.0`
-- Plan marker includes `FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`
-- Fifth-cycle branch: `audit/file-03-fifth-twenty-round-20260813-clean`
-- Fifth-cycle frozen baseline: `157cfca2ed985ac8025b71a9373e974fca72f1a4`
-- Fifth-cycle final source before sixth review: `181c4fb33aa0c0637c858b3abf33b74da0ac1609`
-- Fifth sequential review: **20/20 completed**
-- Defect-bearing rounds: `01, 05, 06, 11, 13, 14, 15, 16, 17, 18, 19, 20`
-- Clean rounds: `02, 03, 04, 07, 08, 09, 10, 12`
+- Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`
+- Seventh-cycle branch: `audit/file-03-seventh-twenty-round-20260813`
+- R20 pre-correction exact HEAD: `95c90da025d2157b578126d69559fc6bac733918`
+- Seventh sequential review: **20/20 completed**
+- Defect-bearing rounds: `03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20`
+- Clean rounds: `01, 02, 09, 10, 12, 13, 16, 18`
+- Final human-readable ledger: `SEVENTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-29.md`
 
 The exact candidate SHA for any present CI/package assertion is the `github.sha` of the corresponding successful exact-head workflow run. Repository source SHA and deployed package truth remain separate.
 
@@ -19,7 +19,7 @@ The exact candidate SHA for any present CI/package assertion is the `github.sha`
 
 The `File 03 Fresh Eighty-Round Review` workflow must, on the same reviewed HEAD:
 
-1. pass all retained historical/fresh/sequential regression tests plus the fifth-cycle R18/R19/R20 closure gates;
+1. pass all retained historical/fresh/sequential regression tests plus the seventh-cycle and R20 closure gates;
 2. run `build-package.sh` twice using the explicit reproducible-build epoch;
 3. prove the two ZIPs are byte-identical;
 4. verify ZIP SHA-256 files;
@@ -40,22 +40,14 @@ The expected top-level package directory remains `03-sabri-profiles-and-doctors`
 
 ## Historical release evidence
 
-The following repository files are **historical provenance/evidence only** and must not be interpreted as current rc15 exact-head package truth:
+`RELEASE-INVENTORY.tsv`, `SOURCE-INVENTORY.tsv`, `CHECKSUMS.sha256`, `RELEASE-CHECKSUMS.sha256` and historical fields inside `RELEASE-LOCK.json` are **historical provenance/evidence only**. They must not be interpreted as current rc16 exact-head package truth. Current rc16 package truth comes only from the exact-head workflow artifact and its generated checksum/SBOM for that SHA.
 
-- `RELEASE-LOCK.json`
-- `RELEASE-INVENTORY.tsv`
-- `SOURCE-INVENTORY.tsv`
-- `CHECKSUMS.sha256`
-- `RELEASE-CHECKSUMS.sha256`
+## Seventh-cycle correction boundary — final 20/20
 
-Their recorded version/SHA/checksum values describe older historical source/archive boundaries. Current rc15 package truth comes only from the exact-head workflow artifact and its generated checksum/SBOM for that SHA.
+The completed seventh cycle corrected cross-file provider exception containment; File00 membership-provider uncertainty; delegated/mutation authorization uncertainty; fail-closed legacy age/contact migration; current-viewer timeline audience enforcement; immutable Founder refresh semantics; Founder/legal-hold erasure safety; and explicit retention-schema operational failure evidence. R20 then reconciled repository/release identity: materially changed source now uses `1.2.0-rc16`, DB remains `1.2.0`, public contract remains `1.4.0`, plan lineage records the sixth and seventh cycles, current repository documents are synchronized, and a permanent R20 closure regression gate is required.
 
-## Fifth-cycle correction boundary — final 20/20
-
-The completed fifth cycle corrected REST transport/shape handling; migration ledger certainty; required-route publication repair; strict report/appeal review and reopen workflow; multilingual clinical-intent refusal; provider/timeline exception containment; atomic event encoding; lifecycle-safe browser projections; delegation idempotency; legacy URL canonicalization; operational health certainty; exact deterministic package evidence; fail-closed published PHP contract boundaries; appeal manifest discoverability; and final closure traceability/regression evidence.
-
-Defect-bearing rounds: `01, 05, 06, 11, 13, 14, 15, 16, 17, 18, 19, 20`.  
-Clean rounds: `02, 03, 04, 07, 08, 09, 10, 12`.  
+Defect-bearing rounds: `03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20`.  
+Clean rounds: `01, 02, 09, 10, 12, 13, 16, 18`.  
 Total: `20/20` reviewed; `12/20` defect-bearing; `8/20` clean.
 
 ## Promotion boundary
