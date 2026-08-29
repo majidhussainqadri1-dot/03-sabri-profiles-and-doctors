@@ -1,0 +1,83 @@
+name: File 03 Eighth Twenty-Round Review
+
+on:
+  push:
+    branches:
+      - audit/file-03-eighth-twenty-round-20260829
+      - main
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eighth-cycle:
+    name: Eighth twenty-round exact-head gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: none
+      - name: PHP syntax
+        run: find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - name: JavaScript syntax
+        run: find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Eighth-cycle sequential invariants
+        run: python3 tests/eighth-twenty-round-sequential.py
+      - name: Future Superset 18 coverage
+        run: python3 tests/future-superset-coverage.py
+      - name: Latest governing-plan coverage
+        run: python3 tests/latest-plan-coverage.py
+      - name: Architecture and fresh governing review gates
+        run: |
+          python3 tests/architecture-check.py
+          python3 tests/future-two-review-gates.py
+          python3 tests/latest-plan-review-1.py
+          python3 tests/latest-plan-review-2.py
+      - name: Existing forty-round regression
+        run: python3 tests/forty-round-review.py
+      - name: Runtime composition and security smoke
+        run: |
+          php tests/bootstrap-load.php
+          php tests/authorization-runtime.php
+          php tests/security-unit.php
+          php tests/state-runtime.php
+          php tests/verification-runtime.php
+          php tests/timeline-runtime.php
+          php tests/forty-round-runtime.php
+
+  package-parity:
+    name: Eighth-cycle deterministic package and parity
+    runs-on: ubuntu-latest
+    needs: eighth-cycle
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Build and verify exact package twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x build-package.sh
+          VERSION="$(sed -n 's/^ \* Version: \(.*\)$/\1/p' sabri-profiles-doctors.php | head -1)"
+          TOP='03-sabri-profiles-and-doctors'
+          NAME="$TOP-$VERSION.zip"
+          ./build-package.sh "$RUNNER_TEMP/a"
+          ./build-package.sh "$RUNNER_TEMP/b"
+          cmp "$RUNNER_TEMP/a/$NAME" "$RUNNER_TEMP/b/$NAME"
+          cmp "$RUNNER_TEMP/a/$NAME.sha256" "$RUNNER_TEMP/b/$NAME.sha256"
+          cmp "$RUNNER_TEMP/a/SBOM.json" "$RUNNER_TEMP/b/SBOM.json"
+          (cd "$RUNNER_TEMP/a" && sha256sum -c "$NAME.sha256")
+          unzip -q "$RUNNER_TEMP/a/$NAME" -d "$RUNNER_TEMP/extract"
+          diff -u sabri-profiles-doctors.php "$RUNNER_TEMP/extract/$TOP/sabri-profiles-doctors.php"
+          diff -u uninstall.php "$RUNNER_TEMP/extract/$TOP/uninstall.php"
+          diff -u readme.txt "$RUNNER_TEMP/extract/$TOP/readme.txt"
+          diff -ru includes "$RUNNER_TEMP/extract/$TOP/includes"
+          diff -ru assets "$RUNNER_TEMP/extract/$TOP/assets"
