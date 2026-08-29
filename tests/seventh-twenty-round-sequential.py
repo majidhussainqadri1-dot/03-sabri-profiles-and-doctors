@@ -8,6 +8,9 @@ membership = (ROOT / 'includes/class-spd-membership-adapter.php').read_text(enco
 future = (ROOT / 'includes/class-spd-future-profile.php').read_text(encoding='utf-8')
 central = (ROOT / 'includes/trait-spd-profile-central.php').read_text(encoding='utf-8')
 provider_guards = (ROOT / 'includes/class-spd-provider-guards.php').read_text(encoding='utf-8')
+cache = (ROOT / 'includes/trait-spd-profile-cache.php').read_text(encoding='utf-8')
+contracts = (ROOT / 'includes/class-spd-contracts.php').read_text(encoding='utf-8')
+observability = (ROOT / 'includes/class-spd-observability.php').read_text(encoding='utf-8')
 
 def require(ok, message):
     if not ok:
@@ -92,4 +95,26 @@ require('SPD_Provider_Guards::file00_dependency_uncertain()' in mutation, 'R08 m
 require("'spd_membership_dependency_unavailable'" in mutation, 'R08 mutation provider failure does not surface 503 dependency error')
 require("'spd_forbidden'" in mutation, 'R08 genuine authorization denial path was lost')
 
-print('File 03 seventh-cycle sequential invariants through R08: PASS')
+# R09 — public/private DTO and revocation cache audit was clean. Lock the
+# privacy-sensitive facts that justified moving to the next round without a patch.
+require('return false;' in section(cache, 'private function get_anonymous_public_dto_cache', 'private function set_anonymous_public_dto_cache'), 'R09 anonymous DTO cache unexpectedly enabled')
+require("foreach ( array( 'phone', 'email', 'whatsapp' ) as $key )" in dto and 'if ( $is_minor ) { continue; }' in dto, 'R09 direct-contact minor guard regressed')
+require('SPD_Membership_Adapter::contact( $user_id, $key )' in dto, 'R09 public contact stopped using owner-sourced File00 projection')
+
+# R10 — cross-file ownership audit was clean. File 03 may publish projections,
+# but verification, clinic, messaging, search/ranking and visual-shell truth stay external.
+for token in ("'file09' => array", "'file08' => array", "'file17' => array", "'file26' => array", "'file20' => array", "'file25' => array"):
+    require(token in contracts, f'R10 dependency/ownership manifest missing: {token}')
+require("'ownership' => 'Verification/appointments/reviews/directory ranking/search ranking/AI/contact relay/learning/federation transport remain external canonical facts.'" in contracts, 'R10 canonical ownership boundary regressed')
+
+# R11 — unknown/invalid File00 age state must never be interpreted as adulthood.
+# Legacy contact migration still consults is_minor(); therefore its fail-closed
+# semantics are a migration safety invariant, not merely a UI preference.
+is_minor = section(membership, 'public static function is_minor', 'public static function age_known')
+require('return ! $claims || ! empty( $claims[\'is_minor\'] );' in is_minor, 'R11 unknown membership/age is not minor-safe')
+migration = section(observability, 'private function migrate_legacy_projection', 'public function process_media_deletions')
+require("get_user_meta( $user_id, '_spd_public_contact', true )" in migration, 'R11 legacy contact migration path disappeared unexpectedly')
+require('! SPD_Membership_Adapter::is_minor( $user_id )' in migration, 'R11 legacy contact migration no longer consumes fail-closed minor guard')
+require("foreach ( array( 'phone', 'whatsapp' ) as $key )" in migration, 'R11 legacy direct-contact scope changed without review')
+
+print('File 03 seventh-cycle sequential invariants through R11: PASS')
