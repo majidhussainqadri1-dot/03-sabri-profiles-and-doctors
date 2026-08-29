@@ -48,4 +48,5 @@ require('spd_media_queue_store_unavailable' in media, 'R02 media requeue DB fail
 require('SELECT deletion_uuid,attachment_id' in admin and "$row['deletion_uuid']" in admin and 'requeue_deletion($reference' in admin, 'R02 media dead-letter recovery is not UUID-correct')
 require('is_wp_error($ok)' in admin, 'R02 admin recovery does not preserve 503 DB uncertainty')
 
+# R02 correction is not closed until this permanent suite passes on the exact corrected branch HEAD.
 print('File 03 eighth twenty-round sequential invariants through R02: PASS')
