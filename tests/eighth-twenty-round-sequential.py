@@ -48,5 +48,22 @@ require('spd_media_queue_store_unavailable' in media, 'R02 media requeue DB fail
 require('SELECT deletion_uuid,attachment_id' in admin and "$row['deletion_uuid']" in admin and 'requeue_deletion($reference' in admin, 'R02 media dead-letter recovery is not UUID-correct')
 require('is_wp_error($ok)' in admin, 'R02 admin recovery does not preserve 503 DB uncertainty')
 
-# R02 correction is not closed until this permanent suite passes on the exact corrected branch HEAD.
-print('File 03 eighth twenty-round sequential invariants through R02: PASS')
+# R05 — manual migration recovery must never report success before cursor/schedule recovery is certain.
+for marker in (
+    'SELECT status FROM {$table} WHERE user_id=%d LIMIT 1',
+    'spd_migration_cursor_rewind_failed',
+    'spd_migration_schedule_failed',
+    "$scheduled = wp_schedule_event( time() + 60, 'spd_five_minutes', 'spd_migrate_profiles_batch' )",
+):
+    require(marker in obs, f'R05 migration recovery fail-closed marker missing: {marker}')
+requeue = obs.index('public static function requeue_migration_user')
+legacy = obs.index('private function migrate_legacy_projection', requeue)
+block = obs[requeue:legacy]
+status_read = block.index('SELECT status FROM {$table}')
+rewind = block.index('spd_migration_cursor_rewind_failed')
+schedule = block.index('spd_migration_schedule_failed')
+state_flip = block.index("UPDATE {$table} SET status='retry'")
+require(status_read < rewind < schedule < state_flip,
+        'R05 migration recovery changes dead state before cursor/schedule certainty')
+
+print('File 03 eighth twenty-round sequential invariants through R05: PASS')
