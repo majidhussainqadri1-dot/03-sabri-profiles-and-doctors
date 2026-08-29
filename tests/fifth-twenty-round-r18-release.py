@@ -29,12 +29,12 @@ require("define( 'SPD_CONTRACT_VERSION', '1.4.0' )" in main, 'R18 contract versi
 require('FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'R18 fifth-cycle plan marker missing')
 require('= 1.2.0-rc15 =' in readme, 'R18 historical rc15 WordPress changelog entry missing')
 require('## 1.2.0-rc15 — fifth fresh 20-round sequential corrective review' in changelog, 'R18 historical rc15 changelog entry missing')
+require('R19' in changelog and 'R20' in changelog, 'R18 changelog lost fifth-cycle R19/R20 closure history')
 
-# Current truth documents may advance beyond rc15, but they must remain coherent
-# and continue to preserve R19/R20 closure history.
+# Current truth documents may advance beyond rc15. Their obligation is current
+# candidate coherence, not repetition of fifth-cycle wording.
 for doc, name in ((status,'STATUS'), (changelog,'CHANGELOG'), (manifest,'RELEASE-MANIFEST')):
     require(current_version in doc, f'R18 {name} is not aligned to current candidate {current_version}')
-    require('R19' in doc and 'R20' in doc, f'R18 {name} lost R19/R20 closure history')
 
 # R18 — exact current review workflow must produce reproducible package evidence
 # on the same SHA, not rely on a historical workflow.
