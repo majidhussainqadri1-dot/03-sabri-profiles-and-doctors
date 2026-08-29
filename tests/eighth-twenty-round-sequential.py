@@ -76,4 +76,14 @@ for marker in (
 ):
     require(marker in repair_block, f'R06 repair migration-schedule marker missing: {marker}')
 
-print('File 03 eighth twenty-round sequential invariants through R06: PASS')
+# R08 — invalid media must not burn quota; privacy progress and deletion success must be certain.
+rate = media.index("consume_rate_limit( 'media_upload_")
+dimensions = media.index("spd_upload_small")
+require(dimensions < rate, 'R08 media quota is consumed before bounded structural validation')
+for marker in ('persist_privacy_option', 'media_privacy_progress_persist_failed', 'attachment_delete_verify_failed', '$delete_verified'):
+    require(marker in media, f'R08 media certainty marker missing: {marker}')
+completion = media.index("spd_media_privacy_cycle_completed_at")
+require("persist_privacy_option( 'spd_media_privacy_cursor', 0 )" in media[:completion+500],
+        'R08 privacy cycle completion is not coupled to verified cursor reset')
+
+print('File 03 eighth twenty-round sequential invariants through R08: PASS')
