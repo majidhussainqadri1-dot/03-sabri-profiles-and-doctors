@@ -4,6 +4,11 @@
   const base = String(cfg.restUrl || '').replace(/\/?$/, '/');
   const nonce = String(cfg.nonce || '');
 
+  const editionVersions = new Map();
+  document.querySelectorAll('[data-spd-edition-locale]').forEach((node) => {
+    editionVersions.set(String(node.dataset.spdEditionLocale || '').toLowerCase(), Number(node.dataset.spdEditionVersion || 0));
+  });
+
   if (!cfg.canGovernLegacy) {
     document.querySelectorAll('[data-spd-future-state] option[value="legacy"]').forEach((option) => option.remove());
   }
@@ -104,18 +109,24 @@
       if (form.matches('[data-spd-translation]')) {
         event.preventDefault();
         const fd = new FormData(form);
-        const body = { locale: fd.get('locale'), headline: fd.get('headline'), bio: fd.get('bio'), source: fd.get('source') };
-        await request('me/translations', 'POST', body, { idempotencyKey: formMutationKey(form, body) });
+        const locale = String(fd.get('locale') || '');
+        const localeKey = locale.toLowerCase();
+        const body = { locale, headline: fd.get('headline'), bio: fd.get('bio'), source: fd.get('source'), version: Number(editionVersions.get(localeKey) || 0) };
+        const data = await request('me/translations', 'POST', body, { idempotencyKey: formMutationKey(form, body) });
         clearMutationKey(form);
+        if (data.version) editionVersions.set(localeKey, Number(data.version));
         resultBox(form, '[data-spd-translation-result]', 'Approved language edition saved.');
         return;
       }
       if (form.matches('[data-spd-reconfirm]')) {
         event.preventDefault();
         const fd = new FormData(form);
-        const body = { field_key: fd.get('field_key'), days: Number(fd.get('days') || 365) };
+        const field = form.querySelector('[name="field_key"]');
+        const selected = field && field.options ? field.options[field.selectedIndex] : null;
+        const body = { field_key: fd.get('field_key'), days: Number(fd.get('days') || 365), version: Number(selected && selected.dataset.version || 0) };
         const data = await request('me/reconfirm', 'POST', body, { idempotencyKey: formMutationKey(form, body) });
         clearMutationKey(form);
+        if (data.version && selected) selected.dataset.version = String(data.version);
         resultBox(form, '[data-spd-reconfirm-result]', `Reconfirmed until ${data.expires_at || ''}.`);
         return;
       }
@@ -123,9 +134,10 @@
         event.preventDefault();
         const fd = new FormData(form);
         const id = form.dataset.publicId;
-        const body = { professional_lifecycle: fd.get('professional_lifecycle'), lifecycle_reason: fd.get('lifecycle_reason'), federation_opt_in: fd.get('federation_opt_in') === '1' };
+        const body = { professional_lifecycle: fd.get('professional_lifecycle'), lifecycle_reason: fd.get('lifecycle_reason'), federation_opt_in: fd.get('federation_opt_in') === '1', version: Number(form.dataset.version || 0) };
         const data = await request(`profiles/${encodeURIComponent(id)}/future-state`, 'PUT', body, { idempotencyKey: formMutationKey(form, body) });
         clearMutationKey(form);
+        if (data.version) form.dataset.version = String(data.version);
         resultBox(form, '[data-spd-future-state-result]', `Saved: ${data.professional_lifecycle}.`);
       }
     } catch (error) {
