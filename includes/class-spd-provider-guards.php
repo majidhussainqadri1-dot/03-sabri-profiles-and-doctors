@@ -52,6 +52,11 @@ final class SPD_Provider_Guards {
 		}
 	}
 
+	/** R08 request-local signal used to preserve 503 dependency semantics after fail-closed provider callbacks. */
+	public static function file00_dependency_uncertain() {
+		return self::$file00_membership_uncertain;
+	}
+
 	public static function normalize_service_error( $code, $message, $data, $error ) {
 		unset( $message );
 		if ( ! $error instanceof WP_Error ) { return; }
