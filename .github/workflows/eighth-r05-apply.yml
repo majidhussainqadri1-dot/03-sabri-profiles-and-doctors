@@ -1,0 +1,80 @@
+name: File 03 Eighth R05 Apply
+
+on:
+  push:
+    branches:
+      - audit/file-03-eighth-twenty-round-20260829
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: contains(github.event.head_commit.message, 'queue frozen migration recovery fix')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/file-03-eighth-twenty-round-20260829
+          fetch-depth: 0
+      - name: Apply frozen R05 corrective batch
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('includes/class-spd-observability.php')
+          s = p.read_text()
+          old = """\t\t$table = SPD_DB::table( 'migration_failures' );
+\t\t$wpdb->last_error = '';
+\t\t$updated = $wpdb->query( $wpdb->prepare( \"UPDATE {$table} SET status='retry',attempts=0,next_attempt_at=UTC_TIMESTAMP(),last_attempt_at=UTC_TIMESTAMP() WHERE user_id=%d AND status='dead'\", $user_id ) );
+\t\tif ( false === $updated || $wpdb->last_error ) { return new WP_Error( 'spd_migration_store_unavailable', __( 'Migration recovery state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+\t\tif ( 1 !== $updated ) { return false; }
+\t\t$current = absint( get_option( 'spd_migration_cursor', 0 ) );
+\t\tif ( $current >= $user_id ) { update_option( 'spd_migration_cursor', max( 0, $user_id - 1 ), false ); }
+\t\tdelete_option( 'spd_migration_completed_at' ); delete_option( 'spd_migration_traversal_completed_at' );
+\t\tif ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) { wp_schedule_event( time() + 60, 'spd_five_minutes', 'spd_migrate_profiles_batch' ); }
+\t\tdo_action( 'spd_operational_recovery', array( 'queue' => 'migration', 'reference' => $user_id, 'actor_id' => $actor_id, 'reason' => $reason, 'at' => SPD_Helpers::now() ) );
+\t\treturn true;"""
+          new = """\t\t$table = SPD_DB::table( 'migration_failures' );
+\t\t$wpdb->last_error = '';
+\t\t$status = $wpdb->get_var( $wpdb->prepare( \"SELECT status FROM {$table} WHERE user_id=%d LIMIT 1\", $user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+\t\tif ( $wpdb->last_error ) { return new WP_Error( 'spd_migration_store_unavailable', __( 'Migration recovery state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+\t\tif ( 'dead' !== (string) $status ) { return false; }
+
+\t\t$current = absint( get_option( 'spd_migration_cursor', 0 ) );
+\t\tif ( $current >= $user_id ) {
+\t\t\t$rewind = max( 0, $user_id - 1 );
+\t\t\t$persisted = update_option( 'spd_migration_cursor', $rewind, false );
+\t\t\tif ( false === $persisted && $rewind !== absint( get_option( 'spd_migration_cursor', 0 ) ) ) {
+\t\t\t\treturn new WP_Error( 'spd_migration_cursor_rewind_failed', __( 'The migration cursor could not be rewound safely for recovery.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+\t\t\t}
+\t\t\tif ( $rewind !== absint( get_option( 'spd_migration_cursor', 0 ) ) ) {
+\t\t\t\treturn new WP_Error( 'spd_migration_cursor_rewind_failed', __( 'The migration cursor could not be verified after recovery rewind.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+\t\t\t}
+\t\t}
+\t\tif ( ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) {
+\t\t\t$scheduled = wp_schedule_event( time() + 60, 'spd_five_minutes', 'spd_migrate_profiles_batch' );
+\t\t\tif ( ! $scheduled || ! wp_next_scheduled( 'spd_migrate_profiles_batch' ) ) {
+\t\t\t\treturn new WP_Error( 'spd_migration_schedule_failed', __( 'The migration recovery schedule could not be created safely.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+\t\t\t}
+\t\t}
+
+\t\t$wpdb->last_error = '';
+\t\t$updated = $wpdb->query( $wpdb->prepare( \"UPDATE {$table} SET status='retry',attempts=0,next_attempt_at=UTC_TIMESTAMP(),last_attempt_at=UTC_TIMESTAMP() WHERE user_id=%d AND status='dead'\", $user_id ) );
+\t\tif ( false === $updated || $wpdb->last_error ) { return new WP_Error( 'spd_migration_store_unavailable', __( 'Migration recovery state is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+\t\tif ( 1 !== $updated ) { return false; }
+\t\tdelete_option( 'spd_migration_completed_at' ); delete_option( 'spd_migration_traversal_completed_at' );
+\t\tdo_action( 'spd_operational_recovery', array( 'queue' => 'migration', 'reference' => $user_id, 'actor_id' => $actor_id, 'reason' => $reason, 'at' => SPD_Helpers::now() ) );
+\t\treturn true;"""
+          if old not in s:
+              raise SystemExit('R05 target block not found')
+          p.write_text(s.replace(old, new, 1))
+      - name: Syntax check
+        run: php -l includes/class-spd-observability.php
+      - name: Commit corrective batch and self-delete workflow
+        run: |
+          git config user.name sabri-review-bot
+          git config user.email actions@users.noreply.github.com
+          git add includes/class-spd-observability.php
+          git rm .github/workflows/eighth-r05-apply.yml
+          git commit -m "File 03 eighth cycle R05: make migration requeue fail closed"
+          git push origin HEAD:audit/file-03-eighth-twenty-round-20260829
