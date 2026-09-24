@@ -33,6 +33,9 @@ $spd_files = array(
 foreach ( $spd_files as $spd_file ) { require_once SPD_DIR . 'includes/' . $spd_file; }
 unset( $spd_files, $spd_file );
 
+// Register the File 26 canonical owner adapter before File 26 collects connector manifests on plugins_loaded.
+if ( function_exists( 'add_filter' ) ) { add_filter( 'sabri_file26_owner_connector_adapters', array( 'SPD_Contracts', 'file26_owner_connector_adapters' ), 5 ); }
+
 register_activation_hook( SPD_FILE, array( 'SPD_Activator', 'activate' ) );
 register_deactivation_hook( SPD_FILE, array( 'SPD_Activator', 'deactivate' ) );
 
@@ -197,6 +200,71 @@ function spd_get_federation_profile_projection( $identity ) {
 	);
 }
 
+/**
+ * Public-work context for File 16 grounded profile Q&A.
+ * File 03 composes only already-public profile/timeline projections; content truth remains with native owners.
+ */
+function spd_get_grounded_profile_work_context( $identity, $viewer_id = 0 ) {
+	return spd_file03_contract_call(
+		function () use ( $identity, $viewer_id ) {
+			$dto = spd_get_personal_site_profile_unchecked( $identity, absint( $viewer_id ) );
+			if ( is_wp_error( $dto ) || ! is_array( $dto ) || empty( $dto['public_id'] ) || empty( $dto['user_id'] ) ) { return $dto; }
+			$profile_url = (string) ( $dto['canonical_url'] ?? '' );
+			$sources = array();
+			$profile_text = trim( implode( "\n", array_filter( array(
+				(string) ( $dto['display_name'] ?? '' ),
+				(string) ( $dto['professional']['professional_title'] ?? '' ),
+				(string) ( $dto['professional']['qualification'] ?? '' ),
+				(string) ( $dto['professional']['specialty'] ?? '' ),
+				(string) ( $dto['fields']['bio'] ?? '' ),
+			) ) ) );
+			if ( $profile_url && SPD_Helpers::same_origin_url( $profile_url ) && '' !== $profile_text ) {
+				$sources[] = array(
+					'source_id' => 'file03-profile:' . sanitize_text_field( (string) $dto['public_id'] ),
+					'owner_file' => 'File 03',
+					'title' => sanitize_text_field( (string) ( $dto['display_name'] ?? 'Professional profile' ) ),
+					'version' => (string) max( 1, absint( $dto['version'] ?? 1 ) ),
+					'location' => 'canonical public profile',
+					'url' => esc_url_raw( $profile_url ),
+					'content' => SPD_Helpers::sanitize_multiline( $profile_text, 6000 ),
+					'license' => '',
+					'rights_reviewed_at' => gmdate( 'c' ),
+				);
+			}
+			$timeline = SPD_Timeline::query( $dto['public_id'], array( 'limit' => 12 ), 0 );
+			if ( ! is_wp_error( $timeline ) && is_array( $timeline ) ) {
+				foreach ( array_slice( (array) ( $timeline['items'] ?? array() ), 0, 12 ) as $item ) {
+					if ( ! is_array( $item ) || empty( $item['url'] ) || ! SPD_Helpers::same_origin_url( (string) $item['url'] ) ) { continue; }
+					$content = trim( (string) ( $item['title'] ?? '' ) . "\n" . (string) ( $item['excerpt'] ?? '' ) );
+					if ( '' === $content ) { continue; }
+					$sources[] = array(
+						'source_id' => sanitize_text_field( (string) ( $item['id'] ?? $item['canonical_id'] ?? '' ) ),
+						'owner_file' => sanitize_text_field( (string) ( $item['owner'] ?? 'File 21' ) ),
+						'title' => sanitize_text_field( (string) ( $item['title'] ?? 'Public professional work' ) ),
+						'version' => sanitize_text_field( (string) ( $item['owner_version'] ?? '1' ) ),
+						'location' => 'public professional timeline',
+						'url' => esc_url_raw( (string) $item['url'] ),
+						'content' => SPD_Helpers::sanitize_multiline( $content, 6000 ),
+						'license' => '',
+						'rights_reviewed_at' => gmdate( 'c' ),
+					);
+				}
+			}
+			$now = time();
+			return array(
+				'contract_version' => SPD_CONTRACT_VERSION,
+				'generated_at' => gmdate( 'c', $now ),
+				'valid_until' => gmdate( 'c', $now + 120 ),
+				'user_id' => absint( $dto['user_id'] ),
+				'public_id' => sanitize_text_field( (string) $dto['public_id'] ),
+				'scope' => 'public_professional_work',
+				'sources' => array_values( array_slice( $sources, 0, 12 ) ),
+			);
+		},
+		'grounded_profile_work_context'
+	);
+}
+
 /** Public, versioned timeline query contract. */
 function spd_get_profile_timeline( $identity, array $args = array(), $viewer_id = 0 ) {
 	return spd_file03_contract_call(
@@ -223,6 +291,7 @@ function spd_get_profile_contract_manifest() {
 					'ProfileReportReopenedByAppeal.v1',
 				),
 			);
+			$manifest['rc16_current'] = array( 'candidate' => SPD_VERSION, 'supersedes_release_identity' => '1.2.0-rc15', 'historical_extension_key_preserved' => 'rc15_extensions' );
 			return $manifest;
 		},
 		'contract_manifest'
