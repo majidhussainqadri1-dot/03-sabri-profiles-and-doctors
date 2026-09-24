@@ -58,7 +58,7 @@ checks = [
 (44,'Moderation remains state/version workflow',lambda:exists('includes/trait-spd-profile-moderation.php') and 'version' in read('includes/trait-spd-profile-moderation.php')),
 (45,'Timeline remains provider projection',lambda:has('includes/class-spd-timeline.php','providers')),
 (46,'Timeline cursor remains bounded',lambda:has('includes/class-spd-rest.php',"strlen( (string) $value ) <= 512")),
-(47,'Search stays File 26 projection boundary',lambda:has('includes/class-spd-contracts.php','sabri_file26_profile_search_projection_v1')),
+(47,'Search stays File 26 projection boundary',lambda:has('includes/class-spd-contracts.php','sabri_file26_register_connector') and has('includes/class-spd-contracts.php',"'status'             => 'proposed'") and has('includes/class-spd-contracts.php','no local search-ranking fallback')),
 (48,'Canonical public-id route remains internally consistent',lambda:has('includes/class-spd-contracts.php',"'/profile/{public_id}/'") and has('includes/class-spd-plugin.php',"'^/profile/'")),
 (49,'Disclosure token is signed and revocable',lambda:has('includes/class-spd-future-profile.php','hash_hmac') and has('includes/class-spd-future-profile.php','share_epoch')),
 (50,'Disclosure restores credential/expertise/achievement scopes',lambda:has('includes/class-spd-future-rest.php',"case 'credentials'") and has('includes/class-spd-future-rest.php',"case 'expertise'") and has('includes/class-spd-future-rest.php',"case 'achievements'")),
