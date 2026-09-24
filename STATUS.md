@@ -10,7 +10,7 @@
 | Seventh-cycle clean | `01, 02, 09, 10, 12, 13, 16, 18` |
 | Seventh-cycle totals | `12/20` defect-bearing · `8/20` clean |
 | R20 pre-correction exact HEAD | `95c90da025d2157b578126d69559fc6bac733918` |
-| Current seventh-review branch | `audit/file-03-seventh-twenty-round-20260813` |
+| Current correction branch | `audit/file03-cross-file-contract-completion-20260924` |
 | Permanent cycle ledger | `SEVENTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-29.md` |
 | Automated review gate | `.github/workflows/fresh-eighty-round-review.yml` runs retained historical/fresh/sequential gates plus seventh-cycle and R20 closure assertions |
 | Exact package gate | Same exact-HEAD workflow builds twice, verifies deterministic ZIP/checksum/SBOM and source/package runtime parity, then uploads the exact artifact |
