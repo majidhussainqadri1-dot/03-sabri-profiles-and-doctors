@@ -19,17 +19,19 @@ def require(ok, message):
         raise SystemExit(message)
 
 
-# R20-1 — a materially different repository candidate must have a distinct runtime/package identity.
-require('Version: 1.2.0-rc16' in main, 'R20 runtime header is not rc16')
-require("define( 'SPD_VERSION', '1.2.0-rc16' );" in main, 'R20 runtime version constant is not rc16')
-require('Stable tag: 1.2.0-rc16' in readme_txt, 'R20 WordPress stable tag is not rc16')
-require(release_lock.get('current_repository_candidate') == '1.2.0-rc16', 'R20 release lock is not bound to rc16')
+# R20-1 — the historical rc16 identity remains recorded, while any later materially different candidate must advance identity.
+require('1.2.0-rc16' in ledger, 'R20 historical rc16 identity is missing from the seventh-cycle ledger')
+require('Version: 1.2.0-rc17' in main, 'Current successor runtime header is not rc17')
+require("define( 'SPD_VERSION', '1.2.0-rc17' );" in main, 'Current successor runtime version constant is not rc17')
+require('Stable tag: 1.2.0-rc17' in readme_txt, 'Current WordPress stable tag is not rc17')
+require(release_lock.get('current_repository_candidate') == '1.2.0-rc17', 'Release lock is not bound to the current rc17 successor candidate')
 
 # R20-2 — source identity advance must not silently become a DB/public-contract migration.
 require("define( 'SPD_DB_VERSION', '1.2.0' );" in main, 'R20 DB schema version drifted')
 require("define( 'SPD_CONTRACT_VERSION', '1.4.0' );" in main, 'R20 public contract version drifted')
-for document in (repository_readme, status, release_manifest, changelog, ledger):
-    require('1.2.0-rc16' in document, 'R20 repository truth document lacks rc16 candidate identity')
+for document in (repository_readme, status, release_manifest, changelog):
+    require('1.2.0-rc17' in document, 'Current repository truth document lacks rc17 candidate identity')
+require('1.2.0-rc16' in ledger, 'Historical seventh-cycle ledger lost its rc16 closure identity')
 
 # R20-3 — plan lineage records both newer twenty-round cycles.
 require('SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'R20 sixth twenty-round plan marker missing')
