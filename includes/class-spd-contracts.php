@@ -131,6 +131,121 @@ final class SPD_Contracts {
 		if ( ! $profile || 'active' !== ( $profile['state'] ?? '' ) || 'public' !== ( $profile['profile_visibility'] ?? 'private' ) ) { return false; }
 		return 'founder' === ( $profile['profile_type'] ?? '' ) || SPD_Membership_Adapter::public_profile_age_eligible( $user_id );
 	}
+	/**
+	 * Publish the canonical File 03 owner adapter expected by File 26.
+	 *
+	 * File 26 remains the index/ranking owner. File 03 only supplies public-safe,
+	 * versioned profile projections and click-time visibility revalidation.
+	 */
+	public static function file26_owner_connector_adapters( $adapters ) {
+		$adapters = is_array( $adapters ) ? $adapters : array();
+		$adapters['file03'] = array(
+			'slug' => 'file03-profiles',
+			'contract_version' => SPD_CONTRACT_VERSION,
+			'entity_types' => array( 'founder', 'doctor', 'member_profile' ),
+			'privacy_classes' => array( 'public' ),
+			'visibility_fields' => array( 'state', 'visibility' ),
+			'deletion_semantics' => 'versioned_tombstone',
+			'status' => 'proposed',
+			'list_batch' => array( __CLASS__, 'file26_list_batch' ),
+			'can_view' => array( __CLASS__, 'file26_can_view' ),
+			'health' => array( __CLASS__, 'file26_health' ),
+			'fetch_object' => array( __CLASS__, 'file26_fetch_object' ),
+			'event_contract' => 'PublicProfileUpdated.v1|ProfileVisibilityChanged.v1|ProfileTombstoned.v1',
+			'index_schema' => 'sabri.file26.document.v1.1',
+		);
+		return $adapters;
+	}
+
+	public static function file26_list_batch( $cursor, $limit, $scope = array() ) {
+		global $wpdb;
+		unset( $scope );
+		if ( ! SPD_DB::tables_exist() ) {
+			return array( 'items' => array(), 'next_cursor' => '', 'done' => true, 'degraded' => true );
+		}
+		$limit = max( 1, min( 100, absint( $limit ) ) );
+		$after = absint( $cursor );
+		$table = SPD_DB::table( 'profiles' );
+		$wpdb->last_error = '';
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id,user_id,public_id,profile_type,version,updated_at FROM {$table} WHERE id>%d AND state='active' AND profile_visibility='public' ORDER BY id ASC LIMIT %d",
+				$after,
+				$limit
+			),
+			ARRAY_A
+		);
+		if ( $wpdb->last_error || ! is_array( $rows ) ) {
+			return array( 'items' => array(), 'next_cursor' => (string) $after, 'done' => false, 'degraded' => true );
+		}
+		$items = array();
+		$last_id = $after;
+		foreach ( $rows as $row ) {
+			$last_id = max( $last_id, absint( $row['id'] ?? 0 ) );
+			$document = self::file26_fetch_object( (string) ( $row['public_id'] ?? '' ) );
+			if ( is_array( $document ) && ! empty( $document ) ) { $items[] = $document; }
+		}
+		return array(
+			'items' => $items,
+			'next_cursor' => count( $rows ) === $limit ? (string) $last_id : '',
+			'done' => count( $rows ) < $limit,
+		);
+	}
+
+	public static function file26_fetch_object( $identity ) {
+		$projection = spd_get_search_projection( $identity );
+		if ( is_wp_error( $projection ) || ! is_array( $projection ) || empty( $projection['canonical_id'] ) || empty( $projection['canonical_url'] ) ) { return array(); }
+		$type = sanitize_key( (string) ( $projection['profile_type'] ?? 'member' ) );
+		$entity_type = 'founder' === $type ? 'founder' : ( 'doctor' === $type ? 'doctor' : 'member_profile' );
+		$fields = (array) ( $projection['fields'] ?? array() );
+		$professional = (array) ( $projection['professional'] ?? array() );
+		$badge = (array) ( $projection['badge'] ?? array() );
+		return array(
+			'connector_slug' => 'file03-profiles',
+			'domain' => 'profiles',
+			'object_id' => sanitize_text_field( (string) $projection['canonical_id'] ),
+			'object_version' => max( 1, absint( $projection['version'] ?? 1 ) ),
+			'entity_type' => $entity_type,
+			'locale' => SPD_Helpers::normalize_locale( (string) ( $projection['locale'] ?? 'en-US' ) ),
+			'state' => 'active',
+			'visibility' => 'public',
+			'title' => sanitize_text_field( (string) ( $projection['display_name'] ?? '' ) ),
+			'excerpt' => SPD_Helpers::sanitize_multiline( (string) ( $fields['bio'] ?? '' ), 600 ),
+			'search_text' => trim( implode( ' ', array_filter( array(
+				(string) ( $projection['display_name'] ?? '' ),
+				(string) ( $professional['professional_title'] ?? '' ),
+				(string) ( $professional['specialty'] ?? '' ),
+				(string) ( $fields['country'] ?? '' ),
+				(string) ( $fields['city'] ?? '' ),
+			) ) ) ),
+			'canonical_url' => esc_url_raw( (string) $projection['canonical_url'] ),
+			'author_key' => 'profile:' . sanitize_text_field( (string) $projection['canonical_id'] ),
+			'country' => sanitize_text_field( (string) ( $fields['country'] ?? '' ) ),
+			'location' => sanitize_text_field( (string) ( $fields['city'] ?? '' ) ),
+			'freshness_at' => sanitize_text_field( (string) ( $projection['generated_at'] ?? gmdate( 'c' ) ) ),
+			'safety_class' => 'professional_profile',
+			'payload' => array( 'verified_doctor' => ! empty( $badge['verified'] ) ),
+		);
+	}
+
+	public static function file26_can_view( $document, $audience = array() ) {
+		unset( $audience );
+		if ( ! is_array( $document ) || empty( $document['object_id'] ) ) { return false; }
+		$current = spd_get_search_projection( (string) $document['object_id'] );
+		return is_array( $current )
+			&& ! is_wp_error( $current )
+			&& sanitize_text_field( (string) ( $current['canonical_id'] ?? '' ) ) === sanitize_text_field( (string) $document['object_id'] );
+	}
+
+	public static function file26_health() {
+		return array(
+			'state' => SPD_DB::tables_exist() ? 'healthy' : 'degraded',
+			'contract_version' => SPD_CONTRACT_VERSION,
+			'owner_file' => 'File 03',
+			'generated_at' => gmdate( 'c' ),
+		);
+	}
+
 	public static function public_provider( $identity, $viewer_id = 0 ) { return spd_get_personal_site_profile( $identity, $viewer_id ); }
 	public static function search_provider( $identity ) { return spd_get_search_projection( $identity ); }
 }
