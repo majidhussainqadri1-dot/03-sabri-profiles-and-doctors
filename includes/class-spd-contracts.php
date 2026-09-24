@@ -48,7 +48,7 @@ final class SPD_Contracts {
 				'file21' => array( 'required_for' => 'publication timeline and knowledge graph content sources', 'minimum_contract' => SPD_Timeline::PROVIDER_CONTRACT_MIN, 'failure' => 'provider unavailable state' ),
 				'file20' => array( 'required_for' => 'integrated shell placement and PWA/offline shell', 'failure' => 'semantic shortcode routes remain; no second shell is created' ),
 				'file25' => array( 'required_for' => 'global visual tokens/components', 'failure' => 'accessible native green fallback remains' ),
-				'file26' => array( 'required_for' => 'global search/discovery/ranking, knowledge coverage and privacy-minimized profile analytics', 'contract' => 'sabri_file26_profile_search_projection_v1', 'failure' => 'profile remains directly readable; no local search-ranking fallback' ),
+				'file26' => array( 'required_for' => 'global search/discovery/ranking, knowledge coverage and privacy-minimized profile analytics', 'contract' => 'File 26 owner connector v1.1 via sabri_file26_register_connector; legacy projection filter retained for compatibility', 'failure' => 'profile remains directly readable; no local search-ranking fallback' ),
 				'file17' => array( 'required_for' => 'privacy-safe contact relay and internal-message actions', 'contract' => 'sabri_file17_profile_contact_relay_v1', 'failure' => 'relay/contact action hidden' ),
 				'file08' => array( 'required_for' => 'clinic availability, appointments and reviews', 'failure' => 'clinic/review/appointment projection hidden; no duplicate truth created' ),
 				'file24' => array( 'required_for' => 'assurance/governance and incident evidence', 'failure' => 'native security remains; assurance state reported unavailable' ),
@@ -95,11 +95,201 @@ final class SPD_Contracts {
 		do_action( 'sabri_file24_register_assurance_manifest', 'file03', self::assurance_manifest() );
 		do_action( 'sabri_file25_register_component_provider', 'file03', self::component_manifest() );
 		do_action( 'sabri_file07_register_profile_provider', 'file03', array( __CLASS__, 'public_provider' ) );
+		// Legacy compatibility signal for older File 26 builds.
 		do_action( 'sabri_file26_register_profile_provider', 'file03', array( __CLASS__, 'search_provider' ) );
+		// Current File 26 canonical owner-connector API. Registration is explicit
+		// because File 26 boots before File 03 on plugins_loaded and therefore its
+		// initial filter-collection pass has already completed.
+		if ( function_exists( 'sabri_file26_register_connector' ) ) {
+			$result = sabri_file26_register_connector( self::file26_connector_manifest() );
+			if ( is_wp_error( $result ) ) {
+				do_action( 'sabri_file24_profile_provider_failure', array( 'owner' => 'file03', 'provider' => 'file26_owner_connector', 'surface' => 'connector_registration', 'code' => sanitize_key( $result->get_error_code() ), 'at' => SPD_Helpers::now() ) );
+			}
+		}
 		do_action( 'sabri_file08_register_profile_delegation_provider', 'file03', 'spd_delegate_can_manage_profile_scope' );
 		do_action( 'sabri_file16_register_grounded_profile_context_provider', 'file03', 'spd_get_future_profile_projection' );
 		do_action( 'sabri_interop_register_fhir_practitioner_provider', 'file03', 'spd_get_fhir_professional_projection' );
 		do_action( 'sabri_federation_register_profile_projection_provider', 'file03', 'spd_get_federation_profile_projection' );
+	}
+
+
+	/** Canonical File 26 connector manifest; File 26 retains activation governance. */
+	public static function file26_connector_manifest() {
+		return array(
+			'slug'               => 'file03-profiles',
+			'owner_file'         => 'File 03',
+			'contract_version'   => SPD_CONTRACT_VERSION,
+			'entity_types'       => array( 'founder', 'doctor', 'member_profile' ),
+			'privacy_classes'    => array( 'public' ),
+			'visibility_fields'  => array( 'state', 'visibility' ),
+			'deletion_semantics' => 'versioned_tombstone',
+			'status'             => 'proposed',
+			'list_batch'         => array( __CLASS__, 'file26_list_batch' ),
+			'can_view'           => array( __CLASS__, 'file26_can_view' ),
+			'health'             => array( __CLASS__, 'file26_health' ),
+			'fetch_object'       => array( __CLASS__, 'file26_fetch_object' ),
+			'event_contract'     => 'File03.PublicProfile.v1',
+			'index_schema'       => 'sabri.file26.document.v1.1',
+		);
+	}
+
+	/** Bounded rebuild batch from File 03-owned profile truth. */
+	public static function file26_list_batch( $cursor, $limit, $scope = array() ) {
+		global $wpdb;
+		unset( $scope );
+		if ( ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_Schema_Guard::base_ready() || ! SPD_Schema_Guard::future_ready() ) {
+			return new WP_Error( 'spd_file26_schema_unavailable', __( 'Profile search projection is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$cursor = absint( $cursor );
+		$limit  = max( 1, min( 100, absint( $limit ) ) );
+		$table  = SPD_DB::table( 'profiles' );
+		$wpdb->last_error = '';
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id,user_id,public_id,profile_type,state,locale,version,updated_at FROM {$table} WHERE id>%d ORDER BY id ASC LIMIT %d",
+				$cursor,
+				$limit
+			),
+			ARRAY_A
+		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $wpdb->last_error || ! is_array( $rows ) ) {
+			return new WP_Error( 'spd_file26_profile_read_failed', __( 'Profile search rebuild is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+
+		$items = array();
+		$next  = $cursor;
+		foreach ( $rows as $row ) {
+			$next = max( $next, absint( $row['id'] ?? 0 ) );
+			if ( 'active' !== sanitize_key( (string) ( $row['state'] ?? '' ) ) ) {
+				$items[] = self::file26_restricted_document( $row, 'restricted' );
+				continue;
+			}
+			$projection = spd_get_search_projection( (string) ( $row['public_id'] ?? '' ) );
+			if ( is_wp_error( $projection ) ) {
+				$data   = $projection->get_error_data();
+				$status = is_array( $data ) ? absint( $data['status'] ?? 0 ) : 0;
+				if ( $status >= 500 || 0 === $status ) { return $projection; }
+				$items[] = self::file26_restricted_document( $row, 'private' );
+				continue;
+			}
+			$document = self::file26_document_from_projection( $row, $projection );
+			if ( is_wp_error( $document ) ) { return $document; }
+			$items[] = $document;
+		}
+		return array(
+			'items'       => $items,
+			'next_cursor' => (string) $next,
+			'done'        => count( $rows ) < $limit,
+		);
+	}
+
+	/** Click/query-time owner revalidation for File 26. */
+	public static function file26_can_view( $document, $audience = array() ) {
+		unset( $audience );
+		if ( ! is_array( $document ) || empty( $document['object_id'] ) ) { return false; }
+		$projection = spd_get_search_projection( sanitize_text_field( (string) $document['object_id'] ) );
+		return is_array( $projection )
+			&& ! empty( $projection['canonical_id'] )
+			&& hash_equals( (string) $projection['canonical_id'], (string) $document['object_id'] );
+	}
+
+	/** Current File 03 health for File 26 connector monitoring. */
+	public static function file26_health() {
+		$membership = SPD_Membership_Adapter::health();
+		$ready = class_exists( 'SPD_Schema_Guard' )
+			&& SPD_Schema_Guard::base_ready()
+			&& SPD_Schema_Guard::future_ready()
+			&& 'available' === ( $membership['status'] ?? '' );
+		return array(
+			'state'            => $ready ? 'healthy' : 'degraded',
+			'contract_version' => SPD_CONTRACT_VERSION,
+			'owner'            => 'file03',
+			'generated_at'     => gmdate( 'c' ),
+		);
+	}
+
+	/** Fetch one current owner projection for File 26 reconciliation tools. */
+	public static function file26_fetch_object( $object_id, $scope = array() ) {
+		unset( $scope );
+		$public_id = sanitize_text_field( (string) $object_id );
+		if ( '' === $public_id ) { return new WP_Error( 'spd_file26_object_invalid', __( 'A valid profile identifier is required.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
+		$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( $public_id );
+		if ( is_wp_error( $profile ) ) { return $profile; }
+		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
+		$projection = spd_get_search_projection( $public_id );
+		if ( is_wp_error( $projection ) ) { return $projection; }
+		return self::file26_document_from_projection( $profile, $projection );
+	}
+
+	/** Convert a current File 03 public DTO into the File 26 document envelope. */
+	private static function file26_document_from_projection( array $profile, array $projection ) {
+		$public_id = sanitize_text_field( (string) ( $projection['canonical_id'] ?? '' ) );
+		$title     = sanitize_text_field( (string) ( $projection['display_name'] ?? '' ) );
+		$url       = esc_url_raw( (string) ( $projection['canonical_url'] ?? '' ) );
+		if ( '' === $public_id || '' === $title || '' === $url || ! SPD_Helpers::same_origin_url( $url ) ) {
+			return new WP_Error( 'spd_file26_projection_invalid', __( 'The current public profile projection is malformed.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$type = self::file26_entity_type( (string) ( $projection['profile_type'] ?? $profile['profile_type'] ?? '' ) );
+		$fields = is_array( $projection['fields'] ?? null ) ? $projection['fields'] : array();
+		$professional = is_array( $projection['professional'] ?? null ) ? $projection['professional'] : array();
+		$search_values = array( $title );
+		foreach ( array_merge( $fields, $professional ) as $value ) {
+			if ( is_scalar( $value ) && '' !== trim( (string) $value ) ) { $search_values[] = sanitize_text_field( (string) $value ); }
+			elseif ( is_array( $value ) ) {
+				foreach ( $value as $nested ) { if ( is_scalar( $nested ) && '' !== trim( (string) $nested ) ) { $search_values[] = sanitize_text_field( (string) $nested ); } }
+			}
+		}
+		$badge = is_array( $projection['badge'] ?? null ) ? $projection['badge'] : array();
+		$locale = sanitize_text_field( (string) ( $projection['locale'] ?? $profile['locale'] ?? 'en-US' ) );
+		return array(
+			'connector_slug'        => 'file03-profiles',
+			'domain'                => 'profile',
+			'object_id'             => $public_id,
+			'object_version'        => max( 1, absint( $projection['version'] ?? $profile['version'] ?? 1 ) ),
+			'entity_type'           => $type,
+			'locale'                => '' !== $locale ? $locale : 'en-US',
+			'state'                 => 'active',
+			'visibility'            => 'public',
+			'title'                 => $title,
+			'excerpt'               => sanitize_text_field( (string) ( $fields['bio'] ?? '' ) ),
+			'search_text'           => implode( ' ', array_values( array_unique( $search_values ) ) ),
+			'canonical_url'         => $url,
+			'author_key'            => 'profile:' . $public_id,
+			'country'               => sanitize_text_field( (string) ( $fields['country'] ?? '' ) ),
+			'location'              => sanitize_text_field( (string) ( $fields['city'] ?? '' ) ),
+			'quality_score'         => 0,
+			'authority_score'       => 0,
+			'popularity_score'      => 0,
+			'freshness_at'          => sanitize_text_field( (string) ( $profile['updated_at'] ?? $projection['generated_at'] ?? gmdate( 'c' ) ) ),
+			'safety_class'          => 'general',
+			'payload'               => array( 'verified_doctor' => ! empty( $badge['verified'] ), 'language' => '' !== $locale ? $locale : 'en-US' ),
+			'source_event_sequence' => max( 1, absint( $projection['version'] ?? $profile['version'] ?? 1 ) ),
+		);
+	}
+
+	/** Privacy-safe deletion/restriction envelope used only to tombstone stale File 26 documents. */
+	private static function file26_restricted_document( array $profile, $state ) {
+		$public_id = sanitize_text_field( (string) ( $profile['public_id'] ?? '' ) );
+		return array(
+			'connector_slug' => 'file03-profiles',
+			'domain'         => 'profile',
+			'object_id'      => $public_id,
+			'object_version' => max( 1, absint( $profile['version'] ?? 1 ) ),
+			'entity_type'    => self::file26_entity_type( (string) ( $profile['profile_type'] ?? '' ) ),
+			'locale'         => sanitize_text_field( (string) ( $profile['locale'] ?? 'en-US' ) ) ?: 'en-US',
+			'state'          => in_array( $state, array( 'private', 'restricted', 'deleted', 'suspended' ), true ) ? $state : 'restricted',
+			'visibility'     => 'restricted',
+			'title'          => 'Restricted profile',
+			'canonical_url'  => home_url( '/profile/' ),
+			'freshness_at'   => sanitize_text_field( (string) ( $profile['updated_at'] ?? gmdate( 'c' ) ) ),
+		);
+	}
+
+	private static function file26_entity_type( $profile_type ) {
+		$profile_type = sanitize_key( (string) $profile_type );
+		if ( 'founder' === $profile_type ) { return 'founder'; }
+		if ( 'doctor' === $profile_type ) { return 'doctor'; }
+		return 'member_profile';
 	}
 
 	public static function route_manifest() {
