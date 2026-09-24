@@ -213,7 +213,7 @@ function spd_get_profile_contract_manifest() {
 	return spd_file03_contract_call(
 		function () {
 			$manifest = SPD_Contracts::manifest();
-			$manifest['rc15_extensions'] = array(
+			$manifest['rc16_extensions'] = array(
 				'owner'  => 'file03',
 				'routes' => array(
 					'/sabri-profiles/v1/reports/{report_uuid}/appeal',
