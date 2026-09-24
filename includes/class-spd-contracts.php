@@ -107,7 +107,7 @@ final class SPD_Contracts {
 			}
 		}
 		do_action( 'sabri_file08_register_profile_delegation_provider', 'file03', 'spd_delegate_can_manage_profile_scope' );
-		do_action( 'sabri_file16_register_grounded_profile_context_provider', 'file03', 'spd_get_future_profile_projection' );
+		do_action( 'sabri_file16_register_grounded_profile_context_provider', 'file03', 'spd_get_grounded_profile_work_context' );
 		do_action( 'sabri_interop_register_fhir_practitioner_provider', 'file03', 'spd_get_fhir_professional_projection' );
 		do_action( 'sabri_federation_register_profile_projection_provider', 'file03', 'spd_get_federation_profile_projection' );
 	}
