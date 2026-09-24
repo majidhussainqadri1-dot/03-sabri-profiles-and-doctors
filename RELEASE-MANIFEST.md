@@ -2,7 +2,7 @@
 
 ## Current candidate identity
 
-- Software: `1.2.0-rc16`
+- Software: `1.2.0-rc17`
 - DB schema: `1.2.0`
 - Public contract: `1.4.0`
 - Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`
@@ -14,6 +14,13 @@
 - Final human-readable ledger: `SEVENTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-29.md`
 
 The exact candidate SHA for any present CI/package assertion is the `github.sha` of the corresponding successful exact-head workflow run. Repository source SHA and deployed package truth remain separate.
+
+## rc17 exact cross-file completion
+
+- File 21 timeline consumption is bound to the explicit `sabri_file21_profile_timeline_provider_health_v1` / `sabri_file21_profile_timeline_items_v1` contract, while File 21 remains the publication owner.
+- File 26 integration now registers the governed `file03-profiles` owner connector through `sabri_file26_register_connector()`, with bounded rebuild, click-time owner revalidation, health, and tombstone semantics.
+- File 26 activation state remains File 26-governed; File 03 cannot self-promote the connector.
+- DB schema remains `1.2.0`; public contract remains `1.4.0`.
 
 ## Current exact-head package evidence contract
 
@@ -40,7 +47,7 @@ The expected top-level package directory remains `03-sabri-profiles-and-doctors`
 
 ## Historical release evidence
 
-`RELEASE-INVENTORY.tsv`, `SOURCE-INVENTORY.tsv`, `CHECKSUMS.sha256`, `RELEASE-CHECKSUMS.sha256` and historical fields inside `RELEASE-LOCK.json` are **historical provenance/evidence only**. They must not be interpreted as current rc16 exact-head package truth. Current rc16 package truth comes only from the exact-head workflow artifact and its generated checksum/SBOM for that SHA.
+`RELEASE-INVENTORY.tsv`, `SOURCE-INVENTORY.tsv`, `CHECKSUMS.sha256`, `RELEASE-CHECKSUMS.sha256` and historical fields inside `RELEASE-LOCK.json` are **historical provenance/evidence only**. They must not be interpreted as current rc17 exact-head package truth. Current rc17 package truth comes only from the exact-head workflow artifact and its generated checksum/SBOM for that SHA.
 
 ## Seventh-cycle correction boundary — final 20/20
 

@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Profiles and Doctors
  * Plugin URI: https://www.sabrihomeopathy.com/
  * Description: Canonical, privacy-controlled Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
- * Version: 1.2.0-rc16
+ * Version: 1.2.0-rc17
  * Requires at least: 7.0
  * Requires PHP: 8.1
  * Author: Dr. Allamah Majid Hussain Sabri
@@ -13,10 +13,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SPD_VERSION', '1.2.0-rc16' );
+define( 'SPD_VERSION', '1.2.0-rc17' );
 define( 'SPD_DB_VERSION', '1.2.0' );
 define( 'SPD_CONTRACT_VERSION', '1.4.0' );
-define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW+FIFTH-TEN-ROUND-CORRECTIVE-REVIEW+SIXTH-TEN-ROUND-CORRECTIVE-REVIEW+SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW+EIGHTH-TEN-ROUND-CORRECTIVE-REVIEW+NINTH-TEN-ROUND-CORRECTIVE-REVIEW+TENTH-TEN-ROUND-CORRECTIVE-REVIEW+TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SECOND-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+THIRD-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' );
+define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW+FIFTH-TEN-ROUND-CORRECTIVE-REVIEW+SIXTH-TEN-ROUND-CORRECTIVE-REVIEW+SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW+EIGHTH-TEN-ROUND-CORRECTIVE-REVIEW+NINTH-TEN-ROUND-CORRECTIVE-REVIEW+TENTH-TEN-ROUND-CORRECTIVE-REVIEW+TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SECOND-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+THIRD-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+CROSS-FILE-EXACT-CONTRACT-COMPLETION-2026-09-24' );
 define( 'SPD_FILE', __FILE__ );
 define( 'SPD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SPD_URL', plugin_dir_url( __FILE__ ) );
@@ -175,6 +175,102 @@ function spd_get_future_profile_projection( $identity, $viewer_id = 0 ) {
 	);
 }
 
+
+/** Public-only, nonrecursive grounding context for File 16 profile-work AI. */
+function spd_get_grounded_profile_work_context( $identity, $viewer_id = 0 ) {
+	unset( $viewer_id );
+	return spd_file03_contract_call(
+		function () use ( $identity ) {
+			$dto = SPD_Profile_Repository::instance()->public_dto( $identity, 0 );
+			if ( is_wp_error( $dto ) ) { return $dto; }
+			$public_id = sanitize_text_field( (string) ( $dto['public_id'] ?? '' ) );
+			$profile = $public_id ? SPD_Profile_Repository::instance()->find_by_public_id_strict( $public_id ) : null;
+			if ( is_wp_error( $profile ) ) { return $profile; }
+			if ( ! $profile || ! absint( $profile['user_id'] ?? 0 ) ) {
+				return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) );
+			}
+			$user_id = absint( $profile['user_id'] );
+			$profile_lines = array(
+				'Name: ' . sanitize_text_field( (string) ( $dto['display_name'] ?? '' ) ),
+				'Profile type: ' . sanitize_key( (string) ( $dto['profile_type'] ?? 'member' ) ),
+			);
+			if ( ! empty( $dto['badge']['label'] ) ) { $profile_lines[] = 'Status: ' . sanitize_text_field( (string) $dto['badge']['label'] ); }
+			foreach ( (array) ( $dto['fields'] ?? array() ) as $key => $value ) {
+				$key = sanitize_key( (string) $key );
+				if ( ! in_array( $key, array( 'bio','country','city','languages','studied_books' ), true ) || ! is_scalar( $value ) ) { continue; }
+				$value = SPD_Helpers::sanitize_multiline( (string) $value, 4000 );
+				if ( '' !== trim( $value ) ) { $profile_lines[] = $key . ': ' . $value; }
+			}
+			foreach ( (array) ( $dto['founder'] ?? array() ) as $key => $value ) {
+				$key = sanitize_key( (string) $key );
+				if ( preg_match( '/(?:phone|email|whatsapp|address|token|secret|identity|document)/i', $key ) || ! is_scalar( $value ) ) { continue; }
+				$value = SPD_Helpers::sanitize_multiline( (string) $value, 4000 );
+				if ( '' !== trim( $value ) ) { $profile_lines[] = 'founder_' . $key . ': ' . $value; }
+			}
+			foreach ( (array) ( $dto['professional'] ?? array() ) as $key => $value ) {
+				$key = sanitize_key( (string) $key );
+				if ( preg_match( '/(?:phone|email|whatsapp|address|token|secret|identity|document|raw|private)/i', $key ) ) { continue; }
+				$values = is_array( $value ) ? $value : array( $value );
+				$clean = array();
+				foreach ( array_slice( $values, 0, 50 ) as $part ) {
+					if ( ! is_scalar( $part ) ) { continue; }
+					$part = sanitize_text_field( (string) $part );
+					if ( '' !== $part ) { $clean[] = $part; }
+				}
+				if ( $clean ) { $profile_lines[] = 'professional_' . $key . ': ' . implode( ', ', array_values( array_unique( $clean ) ) ); }
+			}
+			$sources = array();
+			$profile_content = trim( implode( "\n", array_filter( $profile_lines ) ) );
+			if ( '' !== $profile_content && ! empty( $dto['canonical_url'] ) && SPD_Helpers::same_origin_url( (string) $dto['canonical_url'] ) ) {
+				$sources[] = array(
+					'source_id' => 'file03-profile:' . $public_id,
+					'owner_file' => 'File 03',
+					'title' => sanitize_text_field( (string) ( $dto['display_name'] ?? __( 'Professional profile', 'sabri-profiles-doctors' ) ) ),
+					'version' => (string) max( 1, absint( $dto['version'] ?? 1 ) ),
+					'location' => 'canonical public profile',
+					'url' => esc_url_raw( (string) $dto['canonical_url'] ),
+					'content' => $profile_content,
+					'license' => 'platform-public-profile',
+					'approved_use' => 'public_professional_work',
+					'rights_reviewed_at' => gmdate( 'c' ),
+				);
+			}
+			$timeline = SPD_Timeline::query( $public_id, array( 'limit' => 12 ), 0 );
+			if ( is_array( $timeline ) ) {
+				foreach ( array_slice( (array) ( $timeline['items'] ?? array() ), 0, 12 ) as $item ) {
+					if ( ! is_array( $item ) || empty( $item['url'] ) || ! SPD_Helpers::same_origin_url( (string) $item['url'] ) ) { continue; }
+					$title = sanitize_text_field( (string) ( $item['title'] ?? '' ) );
+					$excerpt = SPD_Helpers::sanitize_multiline( wp_strip_all_tags( (string) ( $item['excerpt'] ?? '' ) ), 2000 );
+					if ( '' === $title && '' === $excerpt ) { continue; }
+					$sources[] = array(
+						'source_id' => sanitize_text_field( (string) ( $item['provider'] ?? 'content' ) . ':' . (string) ( $item['canonical_id'] ?? hash( 'sha256', (string) $item['url'] ) ) ),
+						'owner_file' => sanitize_text_field( (string) ( $item['provider'] ?? 'content-owner' ) ),
+						'title' => $title ?: __( 'Public professional work', 'sabri-profiles-doctors' ),
+						'version' => sanitize_text_field( (string) ( $item['owner_version'] ?? '1' ) ),
+						'location' => sanitize_text_field( (string) ( $item['published_at'] ?? 'public timeline' ) ),
+						'url' => esc_url_raw( (string) $item['url'] ),
+						'content' => trim( $title . "\n" . $excerpt ),
+						'license' => 'owner-published-public-content',
+						'approved_use' => 'public_professional_work',
+						'rights_reviewed_at' => gmdate( 'c' ),
+					);
+				}
+			}
+			if ( ! $sources ) { return new WP_Error( 'spd_grounding_unavailable', __( 'No public professional evidence is currently available for this profile.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+			return array(
+				'contract_version' => '1.0.0',
+				'generated_at' => gmdate( 'c' ),
+				'valid_until' => gmdate( 'c', time() + 120 ),
+				'user_id' => $user_id,
+				'public_id' => $public_id,
+				'scope' => 'public_professional_work',
+				'sources' => array_slice( $sources, 0, 12 ),
+			);
+		},
+		'grounded_profile_work_context'
+	);
+}
+
 /** Public-safe FHIR Practitioner/PractitionerRole projection. */
 function spd_get_fhir_professional_projection( $identity ) {
 	return spd_file03_contract_call(
@@ -222,6 +318,15 @@ function spd_get_profile_contract_manifest() {
 					'ProfileReportAppealReviewed.v1',
 					'ProfileReportReopenedByAppeal.v1',
 				),
+			);
+			$manifest['rc17_extensions'] = array(
+				'owner' => 'file03',
+				'cross_file_exact_contracts' => array(
+					'file21_timeline' => 'sabri_file21_profile_timeline_items_v1',
+					'file26_connector' => 'file03-profiles / sabri.file26.document.v1.1',
+				),
+				'repository_only' => true,
+				'staging_live_unverified' => true,
 			);
 			return $manifest;
 		},

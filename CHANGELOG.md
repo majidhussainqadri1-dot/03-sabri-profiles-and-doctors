@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0-rc17 — exact cross-file contract completion — 2026-09-24
+
+- Closed the verified File 03 ↔ File 21 timeline mismatch by binding File 03 to File 21's explicit versioned health/items provider contract; File 21 remains canonical publication truth and File 03 still reauthorizes viewer visibility.
+- Replaced the obsolete File 26 profile-provider registration assumption with the current canonical `sabri_file26_register_connector()` owner connector, including bounded rebuild, current-owner click revalidation, health reporting and versioned tombstones.
+- Preserved legacy integration signals only for backward compatibility; no duplicate search, ranking, timeline, verification, clinic, AI, messaging, or notification source of truth was created.
+- Synchronized current traceability/release identity to rc17 while preserving DB schema `1.2.0` and public contract `1.4.0`.
+- Repository/source correction only. Staging, deployed package, live DB/migration parity and operational status remain unverified.
+
+
 ## 1.2.0-rc16 — seventh fresh 20-round sequential corrective review
 
 The seventh cycle completed **20/20** rounds under the required sequence: complete review → consolidated defect list → correction → exact-state retest → next round.

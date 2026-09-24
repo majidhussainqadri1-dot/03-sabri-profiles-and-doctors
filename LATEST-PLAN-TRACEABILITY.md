@@ -1,12 +1,14 @@
 # File 03 — Latest Governing Plan Traceability
 
-Candidate: `1.2.0-rc15`  
-Plan: `SSH-F03-PLAN-2026-v1.0 + 2026-08-07 central addendum + FUTURE-SUPERSET-18 + fifth twenty-round corrective closure`  
+Candidate: `1.2.0-rc17`  
+Plan: `SSH-F03-PLAN-2026-v1.0 + 2026-08-07 central addendum + FUTURE-SUPERSET-18 + seventh twenty-round corrective closure + 2026-09-24 exact cross-file contract completion`  
 Contract: `1.4.0`  
 Base DB schema: `1.2.0`  
 Central extension schema: `1.0.0`
 
 ## Truth boundary
+
+Current repository correction adds exact File 21 timeline-provider interoperability and the canonical File 26 owner-connector contract. These source contracts do not prove companion deployment, staging acceptance, or live parity.
 
 This register proves repository-owned source coverage. It does **not** convert companion-owner facts, Hostinger staging, browser/device evidence, backup/restore rehearsal, Founder acceptance, live deployment or operational monitoring into source-code facts. File 03 fails closed or hides an external projection when its canonical owner is missing, stale or malformed.
 
