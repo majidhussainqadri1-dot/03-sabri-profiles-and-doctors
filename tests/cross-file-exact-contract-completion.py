@@ -53,6 +53,10 @@ for token in ("'quality_score'         => 0", "'authority_score'       => 0", "'
 require("'visibility'     => 'restricted'" in contracts, "restricted/private profiles lack tombstone envelope")
 require("hash_equals( (string) $projection['canonical_id'], (string) $document['object_id'] )" in contracts, "click-time owner revalidation missing")
 require('sabri_file26_register_profile_provider' in contracts, "legacy File 26 compatibility signal unexpectedly removed")
+require("spd_get_grounded_profile_work_context" in main, "File 16 grounding context is missing")
+require("sabri_file16_register_grounded_profile_context_provider', 'file03', 'spd_get_grounded_profile_work_context" in contracts, "File 16 registration still points at a recursive/full Future projection")
+require("SPD_Profile_Repository::instance()->public_dto( $identity, 0 )" in main, "Grounded profile context is not restricted to anonymous-public profile data")
+require("SPD_Timeline::query( $public_id, array( 'limit' => 12 ), 0 )" in main, "Grounded profile work is not restricted to anonymous-public timeline evidence")
 require('no local search-ranking fallback' in contracts, "canonical File 26 ranking ownership guard missing")
 
 require(lock.get('production_authorized') is False, "repository correction improperly authorizes production")
