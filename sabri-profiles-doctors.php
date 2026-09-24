@@ -278,7 +278,7 @@ function spd_get_profile_contract_manifest() {
 	return spd_file03_contract_call(
 		function () {
 			$manifest = SPD_Contracts::manifest();
-			$manifest['rc16_extensions'] = array(
+			$manifest['rc15_extensions'] = array(
 				'owner'  => 'file03',
 				'routes' => array(
 					'/sabri-profiles/v1/reports/{report_uuid}/appeal',
@@ -291,6 +291,7 @@ function spd_get_profile_contract_manifest() {
 					'ProfileReportReopenedByAppeal.v1',
 				),
 			);
+			$manifest['rc16_current'] = array( 'candidate' => SPD_VERSION, 'supersedes_release_identity' => '1.2.0-rc15', 'historical_extension_key_preserved' => 'rc15_extensions' );
 			return $manifest;
 		},
 		'contract_manifest'
