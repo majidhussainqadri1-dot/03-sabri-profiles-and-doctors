@@ -34,7 +34,7 @@ foreach ( $spd_files as $spd_file ) { require_once SPD_DIR . 'includes/' . $spd_
 unset( $spd_files, $spd_file );
 
 // Register the File 26 canonical owner adapter before File 26 collects connector manifests on plugins_loaded.
-add_filter( 'sabri_file26_owner_connector_adapters', array( 'SPD_Contracts', 'file26_owner_connector_adapters' ), 5 );
+if ( function_exists( 'add_filter' ) ) { add_filter( 'sabri_file26_owner_connector_adapters', array( 'SPD_Contracts', 'file26_owner_connector_adapters' ), 5 ); }
 
 register_activation_hook( SPD_FILE, array( 'SPD_Activator', 'activate' ) );
 register_deactivation_hook( SPD_FILE, array( 'SPD_Activator', 'deactivate' ) );
