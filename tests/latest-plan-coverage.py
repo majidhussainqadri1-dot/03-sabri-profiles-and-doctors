@@ -56,6 +56,13 @@ for name,tokens in checks.items():
         if token not in combined:
             missing.append(f'{name}:{token}')
 if missing: raise SystemExit('Latest-plan/future coverage gaps:\n'+'\n'.join(missing))
+# Current candidate/reconciliation truth must not regress to an older release header or legacy File 26 registration only.
+if 'Candidate: `1.2.0-rc16`' not in trace or 'sixth/seventh twenty-round corrective closure' not in trace:
+    raise SystemExit('Latest governing traceability is stale relative to the current rc16 candidate.')
+for token in ('sabri_file26_owner_connector_adapters','file26_owner_connector_adapters','file26_list_batch','file26_can_view','file26_health'):
+    if token not in combined:
+        raise SystemExit(f'Missing current File 26 owner-connector contract: {token}')
+
 if re.search(r'https://(?:chart\.googleapis|api\.qrserver|quickchart)', source, re.I):
     raise SystemExit('Third-party QR/tracking dependency detected')
 # Detect executable advantage flags/identifiers, not protective prose such as “no paid ranking”.
