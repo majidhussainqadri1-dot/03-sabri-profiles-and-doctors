@@ -79,9 +79,59 @@ function spd_file21_timeline_items_adapter( $items, $user_id, $args = array() ) 
 
 	$provider = '\\Sabri\\HomeNewsFeed\\ProfileTimeline';
 	if ( ! class_exists( $provider ) || ! is_callable( array( $provider, 'query' ) ) ) { return array(); }
-	$limit = min( 20, max( 1, absint( $args['limit'] ?? 20 ) ) );
+	$target = min( SPD_Timeline::MAX_PROVIDER_ITEMS, max( 1, absint( $args['limit'] ?? 20 ) ) );
+	$cursor = is_array( $args['cursor'] ?? null ) ? $args['cursor'] : array();
+	$page = 1;
+	$per_page = 20;
+	$max_pages = (int) ceil( SPD_Timeline::MAX_PROVIDER_ITEMS / $per_page );
+	$out = array();
+
 	try {
-		$result = call_user_func( array( $provider, 'query' ), $user_id, array( 'page' => 1, 'per_page' => $limit ) );
+		while ( $page <= $max_pages && count( $out ) < $target ) {
+			$result = call_user_func( array( $provider, 'query' ), $user_id, array( 'page' => $page, 'per_page' => $per_page ) );
+			if ( ! is_array( $result ) || 'ok' !== sanitize_key( (string) ( $result['status'] ?? '' ) ) ) { break; }
+
+			foreach ( (array) ( $result['items'] ?? array() ) as $item ) {
+				if ( ! is_array( $item ) ) { continue; }
+				$post_id = absint( $item['id'] ?? 0 );
+				$url = esc_url_raw( (string) ( $item['url'] ?? '' ) );
+				$date = sanitize_text_field( (string) ( $item['date_gmt'] ?? '' ) );
+				$timestamp = $date ? strtotime( $date ) : false;
+				if ( ! $post_id || ! $url || ! SPD_Helpers::same_origin_url( $url ) || false === $timestamp ) { continue; }
+
+				$published = gmdate( 'Y-m-d H:i:s', $timestamp );
+				$sort_id = 'file21:post:' . $post_id;
+				if ( $cursor && ! ( $published < (string) ( $cursor['t'] ?? '' ) || ( $published === (string) ( $cursor['t'] ?? '' ) && $sort_id < (string) ( $cursor['i'] ?? '' ) ) ) ) { continue; }
+
+				$visibility = 'public';
+				$metadata = '\\Sabri\\HomeNewsFeed\\PostMetadata';
+				if ( class_exists( $metadata ) && is_callable( array( $metadata, 'visibility' ) ) ) {
+					$owner_visibility = sanitize_key( (string) call_user_func( array( $metadata, 'visibility' ), $post_id ) );
+					if ( 'members' === $owner_visibility ) { $visibility = 'members'; }
+					elseif ( 'public' !== $owner_visibility ) { $visibility = 'private'; }
+				}
+
+				$modified = function_exists( 'get_post_modified_time' ) ? (string) get_post_modified_time( 'U', true, $post_id ) : '';
+				$out[] = array(
+					'contract_version' => SPD_Timeline::PROVIDER_CONTRACT_MIN,
+					'author_user_id' => $user_id,
+					'canonical_id' => 'post:' . $post_id,
+					'owner_version' => '' !== $modified ? $modified : (string) max( 1, $timestamp ),
+					'type' => 'post',
+					'title' => sanitize_text_field( (string) ( $item['title'] ?? '' ) ),
+					'excerpt' => wp_kses_post( (string) ( $item['excerpt'] ?? '' ) ),
+					'url' => $url,
+					'published_at' => $published,
+					'visibility' => $visibility,
+					'status' => 'published',
+					'thumbnail_url' => '',
+					'correction' => '',
+				);
+				if ( count( $out ) >= $target ) { break; }
+			}
+			if ( empty( $result['has_more'] ) ) { break; }
+			$page++;
+		}
 	} catch ( Throwable $exception ) {
 		do_action( 'sabri_file24_profile_provider_failure', array(
 			'owner' => 'file03',
@@ -91,41 +141,6 @@ function spd_file21_timeline_items_adapter( $items, $user_id, $args = array() ) 
 			'at' => SPD_Helpers::now(),
 		) );
 		return new WP_Error( 'spd_file21_timeline_adapter_failed', __( 'The publication timeline is temporarily unavailable.', 'sabri-profiles-doctors' ) );
-	}
-	if ( ! is_array( $result ) || 'ok' !== sanitize_key( (string) ( $result['status'] ?? '' ) ) ) { return array(); }
-
-	$out = array();
-	foreach ( array_slice( (array) ( $result['items'] ?? array() ), 0, $limit ) as $item ) {
-		if ( ! is_array( $item ) ) { continue; }
-		$post_id = absint( $item['id'] ?? 0 );
-		$url = esc_url_raw( (string) ( $item['url'] ?? '' ) );
-		$date = sanitize_text_field( (string) ( $item['date_gmt'] ?? '' ) );
-		if ( ! $post_id || ! $url || ! SPD_Helpers::same_origin_url( $url ) || ! $date || false === strtotime( $date ) ) { continue; }
-
-		$visibility = 'public';
-		$metadata = '\\Sabri\\HomeNewsFeed\\PostMetadata';
-		if ( class_exists( $metadata ) && is_callable( array( $metadata, 'visibility' ) ) ) {
-			$owner_visibility = sanitize_key( (string) call_user_func( array( $metadata, 'visibility' ), $post_id ) );
-			if ( 'members' === $owner_visibility ) { $visibility = 'members'; }
-			elseif ( 'public' !== $owner_visibility ) { $visibility = $viewer_id === $user_id ? 'private' : 'private'; }
-		}
-
-		$modified = function_exists( 'get_post_modified_time' ) ? (string) get_post_modified_time( 'U', true, $post_id ) : '';
-		$out[] = array(
-			'contract_version' => SPD_Timeline::PROVIDER_CONTRACT_MIN,
-			'author_user_id' => $user_id,
-			'canonical_id' => 'post:' . $post_id,
-			'owner_version' => '' !== $modified ? $modified : (string) max( 1, strtotime( $date ) ),
-			'type' => 'post',
-			'title' => sanitize_text_field( (string) ( $item['title'] ?? '' ) ),
-			'excerpt' => wp_kses_post( (string) ( $item['excerpt'] ?? '' ) ),
-			'url' => $url,
-			'published_at' => gmdate( 'Y-m-d H:i:s', strtotime( $date ) ),
-			'visibility' => $visibility,
-			'status' => 'published',
-			'thumbnail_url' => '',
-			'correction' => '',
-		);
 	}
 	return $out;
 }
