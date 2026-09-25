@@ -169,7 +169,7 @@ final class SPD_Contracts {
 		$wpdb->last_error = '';
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id,user_id,public_id,profile_type,version,updated_at FROM {$table} WHERE id>%d AND state='active' AND profile_visibility='public' ORDER BY id ASC LIMIT %d",
+				"SELECT id,user_id,public_id,profile_type,version,updated_at FROM {$table} WHERE id>%d AND state='active' ORDER BY id ASC LIMIT %d",
 				$after,
 				$limit
 			),
