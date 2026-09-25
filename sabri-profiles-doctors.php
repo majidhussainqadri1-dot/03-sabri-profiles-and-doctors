@@ -33,11 +33,117 @@ $spd_files = array(
 foreach ( $spd_files as $spd_file ) { require_once SPD_DIR . 'includes/' . $spd_file; }
 unset( $spd_files, $spd_file );
 
-// Register the File 26 canonical owner adapter before File 26 collects connector manifests on plugins_loaded.
-if ( function_exists( 'add_filter' ) ) { add_filter( 'sabri_file26_owner_connector_adapters', array( 'SPD_Contracts', 'file26_owner_connector_adapters' ), 5 ); }
+// Register canonical cross-file adapters before companion modules collect contracts on plugins_loaded/init.
+if ( function_exists( 'add_filter' ) ) {
+	add_filter( 'sabri_file26_owner_connector_adapters', array( 'SPD_Contracts', 'file26_owner_connector_adapters' ), 5 );
+	add_filter( 'spcrc/file03_contract_state', array( 'SPD_Contracts', 'file24_contract_state' ), 10, 2 );
+	add_filter( 'spcrc/module_manifests', array( 'SPD_Contracts', 'file24_module_manifests' ), 10, 1 );
+	add_filter( 'sabri_file21_profile_timeline_provider_health_v1', 'spd_file21_timeline_health_adapter', 50, 3 );
+	add_filter( 'sabri_file21_profile_timeline_items_v1', 'spd_file21_timeline_items_adapter', 50, 3 );
+}
 
 register_activation_hook( SPD_FILE, array( 'SPD_Activator', 'activate' ) );
 register_deactivation_hook( SPD_FILE, array( 'SPD_Activator', 'deactivate' ) );
+
+/**
+ * Compatibility health claim for the current File 21 profile-timeline owner contract.
+ * A future native File 21 provider may return a valid claim earlier; this adapter preserves it.
+ */
+function spd_file21_timeline_health_adapter( $claim, $user_id = 0, $consumer_contract = '' ) {
+	unset( $user_id, $consumer_contract );
+	if ( SPD_Helpers::current_contract_claim( $claim, SPD_Timeline::PROVIDER_CONTRACT_MIN, 300 ) ) { return $claim; }
+	$provider = '\\Sabri\\HomeNewsFeed\\ProfileTimeline';
+	if ( ! class_exists( $provider ) || ! is_callable( array( $provider, 'query' ) ) ) { return $claim; }
+	$now = time();
+	return array(
+		'contract_version' => SPD_Timeline::PROVIDER_CONTRACT_MIN,
+		'generated_at' => gmdate( 'c', $now ),
+		'valid_until' => gmdate( 'c', $now + 300 ),
+		'status' => 'available',
+		'owner' => 'file21',
+		'owner_version' => defined( 'SABRI_HNF_VERSION' ) ? (string) SABRI_HNF_VERSION : 'current',
+	);
+}
+
+/**
+ * Adapt File 21's current public-safe ProfileTimeline::query() result to File 03's
+ * versioned timeline item contract. No post truth is copied or mutated here.
+ */
+function spd_file21_timeline_items_adapter( $items, $user_id, $args = array() ) {
+	if ( is_array( $items ) && ! empty( $items ) ) { return $items; }
+	$user_id = absint( $user_id );
+	$args = is_array( $args ) ? $args : array();
+	$viewer_id = absint( $args['viewer_id'] ?? 0 );
+	$current_viewer = function_exists( 'get_current_user_id' ) ? absint( get_current_user_id() ) : 0;
+	if ( ! $user_id || $viewer_id !== $current_viewer ) { return array(); }
+
+	$provider = '\\Sabri\\HomeNewsFeed\\ProfileTimeline';
+	if ( ! class_exists( $provider ) || ! is_callable( array( $provider, 'query' ) ) ) { return array(); }
+	$target = min( SPD_Timeline::MAX_PROVIDER_ITEMS, max( 1, absint( $args['limit'] ?? 20 ) ) );
+	$cursor = is_array( $args['cursor'] ?? null ) ? $args['cursor'] : array();
+	$page = 1;
+	$per_page = 20;
+	$max_pages = (int) ceil( SPD_Timeline::MAX_PROVIDER_ITEMS / $per_page );
+	$out = array();
+
+	try {
+		while ( $page <= $max_pages && count( $out ) < $target ) {
+			$result = call_user_func( array( $provider, 'query' ), $user_id, array( 'page' => $page, 'per_page' => $per_page ) );
+			if ( ! is_array( $result ) || 'ok' !== sanitize_key( (string) ( $result['status'] ?? '' ) ) ) { break; }
+
+			foreach ( (array) ( $result['items'] ?? array() ) as $item ) {
+				if ( ! is_array( $item ) ) { continue; }
+				$post_id = absint( $item['id'] ?? 0 );
+				$url = esc_url_raw( (string) ( $item['url'] ?? '' ) );
+				$date = sanitize_text_field( (string) ( $item['date_gmt'] ?? '' ) );
+				$timestamp = $date ? strtotime( $date ) : false;
+				if ( ! $post_id || ! $url || ! SPD_Helpers::same_origin_url( $url ) || false === $timestamp ) { continue; }
+
+				$published = gmdate( 'Y-m-d H:i:s', $timestamp );
+				$sort_id = 'file21:post:' . $post_id;
+				if ( $cursor && ! ( $published < (string) ( $cursor['t'] ?? '' ) || ( $published === (string) ( $cursor['t'] ?? '' ) && $sort_id < (string) ( $cursor['i'] ?? '' ) ) ) ) { continue; }
+
+				$visibility = 'public';
+				$metadata = '\\Sabri\\HomeNewsFeed\\PostMetadata';
+				if ( class_exists( $metadata ) && is_callable( array( $metadata, 'visibility' ) ) ) {
+					$owner_visibility = sanitize_key( (string) call_user_func( array( $metadata, 'visibility' ), $post_id ) );
+					if ( 'members' === $owner_visibility ) { $visibility = 'members'; }
+					elseif ( 'public' !== $owner_visibility ) { $visibility = 'private'; }
+				}
+
+				$modified = function_exists( 'get_post_modified_time' ) ? (string) get_post_modified_time( 'U', true, $post_id ) : '';
+				$out[] = array(
+					'contract_version' => SPD_Timeline::PROVIDER_CONTRACT_MIN,
+					'author_user_id' => $user_id,
+					'canonical_id' => 'post:' . $post_id,
+					'owner_version' => '' !== $modified ? $modified : (string) max( 1, $timestamp ),
+					'type' => 'post',
+					'title' => sanitize_text_field( (string) ( $item['title'] ?? '' ) ),
+					'excerpt' => wp_kses_post( (string) ( $item['excerpt'] ?? '' ) ),
+					'url' => $url,
+					'published_at' => $published,
+					'visibility' => $visibility,
+					'status' => 'published',
+					'thumbnail_url' => '',
+					'correction' => '',
+				);
+				if ( count( $out ) >= $target ) { break; }
+			}
+			if ( empty( $result['has_more'] ) ) { break; }
+			$page++;
+		}
+	} catch ( Throwable $exception ) {
+		do_action( 'sabri_file24_profile_provider_failure', array(
+			'owner' => 'file03',
+			'provider' => 'file21',
+			'surface' => 'timeline_compatibility_adapter',
+			'exception_class' => sanitize_key( get_class( $exception ) ),
+			'at' => SPD_Helpers::now(),
+		) );
+		return new WP_Error( 'spd_file21_timeline_adapter_failed', __( 'The publication timeline is temporarily unavailable.', 'sabri-profiles-doctors' ) );
+	}
+	return $out;
+}
 
 /** Current File-03-owned future-state read with an explicit DB failure result. */
 function spd_read_future_profile_state( $profile_id ) {
