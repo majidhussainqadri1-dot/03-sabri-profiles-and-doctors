@@ -63,6 +63,26 @@ for token in ('sabri_file26_owner_connector_adapters','file26_owner_connector_ad
     if token not in combined:
         raise SystemExit(f'Missing current File 26 owner-connector contract: {token}')
 
+# Current cross-file contract reconciliation must remain wired to canonical consumers.
+for token in (
+    'spd_file21_timeline_health_adapter',
+    'spd_file21_timeline_items_adapter',
+    'sabri_file21_profile_timeline_provider_health_v1',
+    'sabri_file21_profile_timeline_items_v1',
+    'spcrc/file03_contract_state',
+    'spcrc/module_manifests',
+    'file24_contract_state',
+    'file24_module_manifests',
+    'sabri_shell_navigation_destinations',
+    'sabri_shell_route_contexts',
+):
+    if token not in combined:
+        raise SystemExit(f'Missing current cross-file reconciliation contract: {token}')
+
+# The File 26 batch reader may query only real File 03 columns; public visibility is revalidated through the DTO.
+if "profile_visibility='public'" in contracts:
+    raise SystemExit('File 26 owner adapter queries a non-existent profile_visibility column.')
+
 if re.search(r'https://(?:chart\.googleapis|api\.qrserver|quickchart)', source, re.I):
     raise SystemExit('Third-party QR/tracking dependency detected')
 # Detect executable advantage flags/identifiers, not protective prose such as “no paid ranking”.
