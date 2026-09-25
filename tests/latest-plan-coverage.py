@@ -75,6 +75,8 @@ for token in (
     'spcrc/module_manifests',
     'file24_contract_state',
     'file24_module_manifests',
+    'spd_get_grounded_profile_work_context',
+    "'spd_get_grounded_profile_work_context' );",
     'sabri_shell_navigation_destinations',
     'sabri_shell_route_contexts',
 ):
