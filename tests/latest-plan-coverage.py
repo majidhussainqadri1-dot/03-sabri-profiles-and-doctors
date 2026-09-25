@@ -69,6 +69,8 @@ for token in (
     'spd_file21_timeline_items_adapter',
     'sabri_file21_profile_timeline_provider_health_v1',
     'sabri_file21_profile_timeline_items_v1',
+    'while ( $page <= $max_pages && count( $out ) < $target )',
+    "'cursor' => $cursor",
     'spcrc/file03_contract_state',
     'spcrc/module_manifests',
     'file24_contract_state',
