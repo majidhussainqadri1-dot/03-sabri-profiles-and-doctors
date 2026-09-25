@@ -246,6 +246,48 @@ final class SPD_Contracts {
 		);
 	}
 
+	/** Current File 24 integration-matrix state for File 03 native controls. */
+	public static function file24_contract_state( $state = 'unassessed', $definition = array() ) {
+		unset( $state, $definition );
+		if ( ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_DB::tables_exist() ) { return 'degraded'; }
+		return SPD_Schema_Guard::base_ready() && SPD_Schema_Guard::central_ready() && SPD_Schema_Guard::future_ready()
+			? 'compatible'
+			: 'degraded';
+	}
+
+	/** Publish File 03 into File 24's canonical module registry without transferring native ownership. */
+	public static function file24_module_manifests( $manifests ) {
+		$manifests = is_array( $manifests ) ? $manifests : array();
+		$manifests[] = array(
+			'module_key' => 'file03',
+			'name' => 'Profiles and Doctors',
+			'version' => SPD_VERSION,
+			'owner' => 'File 03',
+			'posture' => 'foundation',
+			'data_classes' => array( 'public-profile', 'private-profile', 'professional-profile', 'profile-media-reference' ),
+			'public_routes' => array( '/founder/', '/profile/{public_id}/', '/profile/{public_id}/timeline/', '/p/{revocable-token}/' ),
+			'private_routes' => array( '/account/profile/', '/account/profile/personal-site/', '/account/profile/preview/' ),
+			'tables' => array( 'profiles', 'profile-fields', 'profile-events', 'profile-reports', 'profile-future-state' ),
+			'files' => array( 'profile-media' ),
+			'capabilities' => array( 'profile-read', 'profile-update', 'profile-moderation', 'profile-report-review', 'profile-repair' ),
+			'external_vendors' => array(),
+			'secret_classes' => array( 'wordpress-auth-salt-derived-signatures' ),
+			'privacy_operations' => array( 'export', 'erase', 'tombstone', 'retention', 'visibility-reconciliation' ),
+			'exporters' => array( 'wordpress-personal-data-exporter' ),
+			'erasers' => array( 'wordpress-personal-data-eraser' ),
+			'emergency_callbacks' => array( 'safe-mode', 'repair', 'outbox-requeue', 'media-delete-requeue' ),
+			'last_security_test' => '',
+			'verification_level' => 'asvs-l2',
+			'contract_version' => SPD_CONTRACT_VERSION,
+			'canonical_data_owner' => 'File 03 profile master fields and visibility',
+			'canonical_action_owner' => 'File 03 profile commands and lifecycle actions',
+			'evidence_source' => 'file03-system-check',
+			'degraded_behavior' => 'Profiles fail closed or hide stale external projections; native security controls remain active.',
+			'release_gate' => 'Repository QA plus staging, migration, rollback and live-parity evidence are required before operational status.',
+		);
+		return $manifests;
+	}
+
 	public static function public_provider( $identity, $viewer_id = 0 ) { return spd_get_personal_site_profile( $identity, $viewer_id ); }
 	public static function search_provider( $identity ) { return spd_get_search_projection( $identity ); }
 }
