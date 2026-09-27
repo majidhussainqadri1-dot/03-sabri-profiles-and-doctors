@@ -67,6 +67,10 @@ final class SPD_Outbox_Dispatcher {
 			try {
 				do_action( 'spd_outbox_event_v1', $row['event_name'], $payload, $row );
 				do_action( 'sabri_platform_event', $row['event_name'], $payload, array( 'owner' => 'file03', 'event_uuid' => $row['event_uuid'] ) );
+				$file19 = SPD_Cross_File_Events::deliver_file19_notification( $row['event_name'], $payload, $row );
+				if ( is_wp_error( $file19 ) ) {
+					throw new RuntimeException( 'file19:' . $file19->get_error_code() );
+				}
 				$wpdb->last_error = '';
 				$saved = $wpdb->update(
 					$table,

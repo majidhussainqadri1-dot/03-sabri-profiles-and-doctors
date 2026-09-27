@@ -34,8 +34,12 @@ final class SPD_Contracts {
 				'get_central_edit_model' => 'repository central_edit_model',
 			),
 			'events' => array(
-				'PublicProfileUpdated.v1','ProfileVisibilityChanged.v1','ProfileMediaChanged.v1','ProfileProfessionalDraftSaved.v1','ProfileProfessionalFieldsSubmitted.v1','ProfileReported.v1','ProfileModerated.v1','ProfileReportReviewed.v1','ProfileReportAppealed.v1','ProfileShareLinkRotated.v1','ProfileDelegationChanged.v1','ProfileTombstoned.v1','ProfileReporterErased.v1','ProfileProfessionalSubmissionsErased.v1','ProfileTranslationUpdated.v1','ProfileFieldReconfirmed.v1','ProfileFutureStateChanged.v1',
+				'PublicProfileUpdated.v1','ProfileVisibilityChanged.v1','ProfileMediaChanged.v1','ProfileProfessionalDraftSaved.v1','ProfileProfessionalFieldsSubmitted.v1','ProfileReported.v1','ProfileModerated.v1','ProfileReportReviewed.v1','ProfileReportAppealed.v1','ProfileReportAppealReviewed.v1','ProfileReportReopenedByAppeal.v1','ProfileShareLinkRotated.v1','ProfileDelegationChanged.v1','ProfileTombstoned.v1','ProfileReporterErased.v1','ProfileProfessionalSubmissionsErased.v1','ProfileTranslationUpdated.v1','ProfileFieldReconfirmed.v1','ProfileFutureStateChanged.v1',
 			),
+			'consumes_events' => array(
+				'DoctorVerified.v1','DoctorSuspended.v1','PublicationPublished.v1','ClinicProfileChanged.v1','DoctorVerification.Verified','DoctorVerification.Suspended','DoctorVerification.Revoked','DoctorVerification.Expired','DoctorVerification.Reinstated','Publication.Published','Publication.Corrected','Publication.Retracted','ClinicProfile.Changed','Clinic.AvailabilityChanged','Appointment.Changed',
+			),
+			'notification_contract' => array( 'consumer' => 'file19', 'version' => 'sun.event.v1', 'producer' => SPD_Cross_File_Events::FILE19_PRODUCER, 'canonical_owner' => SPD_Cross_File_Events::FILE19_OWNER, 'transport_owner' => 'file19' ),
 			'external_facts_revalidated' => array(
 				'membership_and_public_eligibility_on_each_access','verification_on_each_doctor_projection','clinic_and_appointment_on_each_personal_site_projection','review_eligibility_on_each_review_projection','organization_affiliations_on_each_projection','analytics_owner_projection_only','timeline_on_each_query','media_privacy_by_resumable_reconciler','file26_search_projection_rebuilt_from_current_public_dto','verifiable_credentials_from_file09_only','learning_achievements_from_learning_owner_only','knowledge_graph_and_coverage_from_content_or_search_owners_only','grounded_ai_answer_from_file16_only','contact_relay_from_file17_only','external_verified_links_from_verification_or_affiliation_owner_only','federation_transport_from_external_transport_owner_only',
 			),
@@ -50,6 +54,7 @@ final class SPD_Contracts {
 				'file25' => array( 'required_for' => 'global visual tokens/components', 'failure' => 'accessible native green fallback remains' ),
 				'file26' => array( 'required_for' => 'global search/discovery/ranking, knowledge coverage and privacy-minimized profile analytics', 'contract' => 'sabri_file26_profile_search_projection_v1', 'failure' => 'profile remains directly readable; no local search-ranking fallback' ),
 				'file17' => array( 'required_for' => 'privacy-safe contact relay and internal-message actions', 'contract' => 'sabri_file17_profile_contact_relay_v1', 'failure' => 'relay/contact action hidden' ),
+				'file19' => array( 'required_for' => 'unified user-facing notifications and alert delivery', 'contract' => 'sun.event.v1', 'failure' => 'domain mutation remains authoritative; notification delivery degrades and File 24 receives evidence; no duplicate transport is created' ),
 				'file08' => array( 'required_for' => 'clinic availability, appointments and reviews', 'failure' => 'clinic/review/appointment projection hidden; no duplicate truth created' ),
 				'file24' => array( 'required_for' => 'assurance/governance and incident evidence', 'failure' => 'native security remains; assurance state reported unavailable' ),
 				'federation_transport' => array( 'required_for' => 'actual federation inbox/outbox transport after explicit opt-in', 'contract' => 'sabri_federation_actor_transport_v1', 'failure' => 'federation projection remains transport-inactive' ),

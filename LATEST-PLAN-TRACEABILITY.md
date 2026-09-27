@@ -1,7 +1,7 @@
 # File 03 — Latest Governing Plan Traceability
 
-Candidate: `1.2.0-rc16`  
-Plan: `SSH-F03-PLAN-2026-v1.0 + 2026-08-07 central addendum + FUTURE-SUPERSET-18 + sixth/seventh twenty-round corrective closure`  
+Candidate: `1.2.0-rc17`  
+Plan: `SSH-F03-PLAN-2026-v1.0 + 2026-08-07 central addendum + FUTURE-SUPERSET-18 + sixth/seventh/eighth twenty-round corrective closure`  
 Contract: `1.4.0`  
 Base DB schema: `1.2.0`  
 Central extension schema: `1.0.0`
@@ -94,3 +94,12 @@ Hostinger fresh install/upgrade, real File 00/08/09/20/21/25/26 contracts, brows
 - File 21 timeline compatibility is accepted only through its current, versioned owner adapter; File 03 does not duplicate post truth.
 - File 26 discovery integration uses the canonical `sabri_file26_owner_connector_adapters` connector lifecycle with click-time File 03 visibility revalidation.
 - Companion-owner implementation and deployment remain separate evidence gates; repository compatibility does not assert staging/live parity.
+
+## 2026-09-27 eighth twenty-round cross-file completion
+
+- File 03 now consumes the plan-required verification/publication/clinic event families as **invalidation facts only**; external events never write companion truth into File 03.
+- File 19 integration is explicit: File 03 registers the `file03-profiles` producer and sends minimized user-facing profile/report/moderation facts through `sun.event.v1`; no parallel notification transport exists.
+- `ProfileReportAppealReviewed.v1` and `ProfileReportReopenedByAppeal.v1` are reconciled with the machine-readable event manifest.
+- System Check now reports File 19 notification dependency health and File 24 receives degradation/failure evidence.
+- Latest-plan CI uses the runtime version dynamically for artifacts and executes the permanent eighth 20-round gate.
+- Repository candidate advances to `1.2.0-rc17`; DB schema remains `1.2.0`, public contract remains `1.4.0`. Exact deployed code and live DB/migration state remain unverified.

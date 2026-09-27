@@ -2,11 +2,14 @@
 
 ## Current candidate identity
 
-- Software: `1.2.0-rc16`
+- Software: `1.2.0-rc17`
 - DB schema: `1.2.0`
 - Public contract: `1.4.0`
-- Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`
-- Seventh-cycle branch: `audit/file-03-seventh-twenty-round-20260813`
+- Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`, `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `EIGHTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`
+- Eighth-cycle branch: `audit/file03-eighth-twenty-round-20260927`
+- Eighth-cycle starting exact main freeze: `88da03fa4b92576384f4542ee7fc17312043bc0f`
+- Eighth-cycle ledger: `EIGHTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-27.md`
+- Seventh-cycle branch (historical): `audit/file-03-seventh-twenty-round-20260813`
 - R20 pre-correction exact HEAD: `95c90da025d2157b578126d69559fc6bac733918`
 - Seventh sequential review: **20/20 completed**
 - Defect-bearing rounds: `03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20`
@@ -15,11 +18,17 @@
 
 The exact candidate SHA for any present CI/package assertion is the `github.sha` of the corresponding successful exact-head workflow run. Repository source SHA and deployed package truth remain separate.
 
+## Eighth-cycle cross-file candidate boundary
+
+Starting exact main freeze: `88da03fa4b92576384f4542ee7fc17312043bc0f`. The rc17 source candidate adds plan-required external event invalidation, the canonical File 19 `sun.event.v1` producer/intake bridge, event-manifest parity for appeal review/reopen, File 19 System Check health evidence and dynamic latest-plan artifact naming. These changes do not alter DB schema `1.2.0` or public contract `1.4.0`.
+
+The eighth source review has 20 explicit repository gates. Exact-head CI/package evidence remains pending until the branch/PR workflows succeed; therefore no staging, deployed or operational claim is made here.
+
 ## Current exact-head package evidence contract
 
 The `File 03 Fresh Eighty-Round Review` workflow must, on the same reviewed HEAD:
 
-1. pass all retained historical/fresh/sequential regression tests plus the seventh-cycle and R20 closure gates;
+1. pass all retained historical/fresh/sequential regression tests plus the seventh-cycle, R20 and eighth-cycle closure gates;
 2. run `build-package.sh` twice using the explicit reproducible-build epoch;
 3. prove the two ZIPs are byte-identical;
 4. verify ZIP SHA-256 files;
@@ -40,7 +49,7 @@ The expected top-level package directory remains `03-sabri-profiles-and-doctors`
 
 ## Historical release evidence
 
-`RELEASE-INVENTORY.tsv`, `SOURCE-INVENTORY.tsv`, `CHECKSUMS.sha256`, `RELEASE-CHECKSUMS.sha256` and historical fields inside `RELEASE-LOCK.json` are **historical provenance/evidence only**. They must not be interpreted as current rc16 exact-head package truth. Current rc16 package truth comes only from the exact-head workflow artifact and its generated checksum/SBOM for that SHA.
+`RELEASE-INVENTORY.tsv`, `SOURCE-INVENTORY.tsv`, `CHECKSUMS.sha256`, `RELEASE-CHECKSUMS.sha256` and historical fields inside `RELEASE-LOCK.json` are **historical provenance/evidence only**. They must not be interpreted as current rc17 exact-head package truth. Current rc17 package truth comes only from the exact-head workflow artifact and its generated checksum/SBOM for that SHA.
 
 ## Seventh-cycle correction boundary — final 20/20
 

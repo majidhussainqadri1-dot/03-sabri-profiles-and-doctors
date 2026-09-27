@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,22 +20,28 @@ def require(ok, message):
         raise SystemExit(message)
 
 
-# R20-1 — a materially different repository candidate must have a distinct runtime/package identity.
-require('Version: 1.2.0-rc16' in main, 'R20 runtime header is not rc16')
-require("define( 'SPD_VERSION', '1.2.0-rc16' );" in main, 'R20 runtime version constant is not rc16')
-require('Stable tag: 1.2.0-rc16' in readme_txt, 'R20 WordPress stable tag is not rc16')
-require(release_lock.get('current_repository_candidate') == '1.2.0-rc16', 'R20 release lock is not bound to rc16')
+# R20-1 — the historical rc16 closure remains recorded while later candidates may advance.
+version_match = re.search(r"Version:\s+(1\.2\.0-rc(\d+))", main)
+require(version_match is not None, 'R20 current runtime candidate format is invalid')
+current_version = version_match.group(1)
+current_rc = int(version_match.group(2))
+require(current_rc >= 16, 'R20 current runtime regressed below the historical rc16 closure')
+require("define( 'SPD_VERSION', '" + current_version + "' );" in main, 'R20 runtime header/constant disagree')
+require('Stable tag: ' + current_version in readme_txt, 'R20 WordPress stable tag disagrees with current runtime')
+require(release_lock.get('current_repository_candidate') == current_version, 'R20 release lock disagrees with current runtime candidate')
+require('1.2.0-rc16' in ledger, 'R20 historical seventh-cycle rc16 identity disappeared from its ledger')
 
 # R20-2 — source identity advance must not silently become a DB/public-contract migration.
 require("define( 'SPD_DB_VERSION', '1.2.0' );" in main, 'R20 DB schema version drifted')
 require("define( 'SPD_CONTRACT_VERSION', '1.4.0' );" in main, 'R20 public contract version drifted')
-for document in (repository_readme, status, release_manifest, changelog, ledger):
-    require('1.2.0-rc16' in document, 'R20 repository truth document lacks rc16 candidate identity')
+for document in (repository_readme, status, release_manifest, changelog):
+    require(current_version in document, 'R20 current repository truth document lacks the active candidate identity')
+require('1.2.0-rc16' in ledger, 'R20 seventh-cycle ledger lacks its historical rc16 candidate identity')
 
 # R20-3 — plan lineage records both newer twenty-round cycles.
 require('SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'R20 sixth twenty-round plan marker missing')
 require('SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'R20 seventh twenty-round plan marker missing')
-require('Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`' in release_manifest, 'R20 release manifest plan lineage is stale')
+require('`SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`' in release_manifest and '`SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`' in release_manifest, 'R20 release manifest plan lineage is stale')
 
 # R20-4 — final review ledger is human-readable and classifications agree across current truth docs.
 defect_rounds = '03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20'

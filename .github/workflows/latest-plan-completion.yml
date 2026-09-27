@@ -35,7 +35,9 @@ jobs:
       - name: JavaScript syntax
         run: node --check assets/js/profiles.js
       - name: Latest governing plan coverage
-        run: python3 tests/latest-plan-coverage.py
+        run: |
+          python3 tests/latest-plan-coverage.py
+          python3 tests/eighth-twenty-round-sequential.py
       - name: Existing File 03 regression suites
         run: |
           set -euo pipefail
@@ -73,8 +75,12 @@ jobs:
         with:
           persist-credentials: false
       - name: Build twice
+        id: pkg
         run: |
           set -euo pipefail
+          VERSION="$(sed -n 's/^ \* Version: \(.*\)$/\1/p' sabri-profiles-doctors.php | head -1)"
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           ./build-package.sh "$RUNNER_TEMP/a"
           ./build-package.sh "$RUNNER_TEMP/b"
       - name: Verify determinism and packaged latest-plan files
@@ -95,7 +101,7 @@ jobs:
           diff -ru assets "$RUNNER_TEMP/extract/03-sabri-profiles-and-doctors/assets"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: file03-latest-plan-1.1.0-rc1
+          name: file03-latest-plan-${{ steps.pkg.outputs.version }}
           path: |
             ${{ runner.temp }}/a/*.zip
             ${{ runner.temp }}/a/*.sha256

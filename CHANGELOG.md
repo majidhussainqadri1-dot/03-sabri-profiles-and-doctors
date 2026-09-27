@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.0-rc17 — eighth cross-file twenty-round corrective review
+
+The eighth source audit checks File 03 against its amended master plan, the central governing plan and current companion-owner contracts. It starts from exact main SHA `88da03fa4b92576384f4542ee7fc17312043bc0f`.
+
+Corrections applied:
+- consume required File 09/File 21/File 08 event families as projection invalidation only, preserving canonical ownership;
+- register File 03 as the `file03-profiles` File 19 producer and use the canonical `sun.event.v1` intake path for eligible user-facing profile/report/moderation notifications;
+- preserve durable retry semantics when File 19 is present but does not acknowledge delivery, while avoiding a duplicate notification backend when File 19 is absent;
+- publish File 19 dependency/notification contract and System Check health evidence;
+- add emitted appeal-review/reopen events to the machine-readable contract manifest;
+- remove stale latest-plan rc1 artifact naming and add the permanent eighth 20-round exact-head gate; and
+- advance the materially changed source candidate to `1.2.0-rc17` while retaining DB `1.2.0` and public contract `1.4.0`.
+
+Exact deployed code, live DB/migration state and deployment parity remain unverified.
+
+
 ## 1.2.0-rc16 — seventh fresh 20-round sequential corrective review
 
 The seventh cycle completed **20/20** rounds under the required sequence: complete review → consolidated defect list → correction → exact-state retest → next round.
