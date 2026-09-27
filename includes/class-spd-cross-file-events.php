@@ -34,7 +34,18 @@ final class SPD_Cross_File_Events {
 
 	public static function register() {
 		add_action( 'sabri_platform_event', array( __CLASS__, 'consume_external_event' ), 15, 3 );
+		add_action( 'sun_event_processed', array( __CLASS__, 'consume_file19_event' ), 20, 3 );
 		add_action( 'init', array( __CLASS__, 'register_file19_producer' ), 40 );
+	}
+
+	/** Consume current companion facts after File 19 has validated their event envelope. */
+	public static function consume_file19_event( $event, $created = 0, $suppressed = 0 ) {
+		unset( $created, $suppressed );
+		if ( ! is_array( $event ) || empty( $event['event_type'] ) ) { return; }
+		$payload = array();
+		if ( isset( $event['subject'] ) && is_array( $event['subject'] ) ) { $payload['subject'] = $event['subject']; }
+		if ( isset( $event['recipients'][0]['user_id'] ) ) { $payload['user_id'] = absint( $event['recipients'][0]['user_id'] ); }
+		self::consume_external_event( (string) $event['event_type'], $payload, array( 'owner' => (string) ( $event['owner'] ?? '' ), 'producer' => (string) ( $event['producer'] ?? 'file19' ) ) );
 	}
 
 	public static function register_file19_producer() {
@@ -144,7 +155,7 @@ final class SPD_Cross_File_Events {
 					)
 				);
 			} catch ( Throwable $ignored ) {}
-			return true;
+			return new WP_Error( 'spd_file19_notification_unavailable', __( 'Unified notifications are temporarily unavailable; this event will be retried.', 'sabri-profiles-doctors' ) );
 		}
 
 		$event_id = sanitize_text_field( (string) ( $row['event_uuid'] ?? '' ) );
