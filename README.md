@@ -8,18 +8,24 @@ File 03 owns stable public profile identity, profile fields/audiences, Founder o
 
 ## Current repository candidate
 
-- Plugin: `1.2.0-rc16`
+- Plugin: `1.2.0-rc17`
 - Database schema: `1.2.0`
 - Public contract: `1.4.0`
 - PHP target matrix: `8.1`, `8.3`, `8.4`
 - WordPress baseline: `7.0+`
-- Current review branch: `audit/file-03-seventh-twenty-round-20260813`
+- Current review branch: `audit/file03-eighth-twenty-round-20260927`
 - R20 pre-correction exact HEAD: `95c90da025d2157b578126d69559fc6bac733918`
 - Seventh-cycle ledger: `SEVENTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-29.md`
 - Seventh-cycle review: **20/20 completed** under complete review → consolidated defect ledger → correction → exact-state retest → next round
 - Defect-bearing rounds: `03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20`
 - Clean rounds: `01, 02, 09, 10, 12, 13, 16, 18`
 - Totals: `12/20` defect-bearing · `8/20` clean
+
+## Eighth-cycle cross-file correction boundary
+
+The eighth review starts from exact main SHA `88da03fa4b92576384f4542ee7fc17312043bc0f`. It closes repository-owned integration gaps discovered by checking the amended File 03 plan, the central plan and current companion contracts: external File 09/File 21/File 08 facts now invalidate File 03 projections without becoming local truth; File 03 has an explicit File 19 `sun.event.v1` producer/intake path for user-facing profile/report/moderation notifications; appeal/reopen events are present in the public contract manifest; System Check exposes File 19 compatibility; and latest-plan CI no longer publishes a stale rc1 artifact identity.
+
+The candidate is `1.2.0-rc17`; DB schema remains `1.2.0` and public contract remains `1.4.0`. This is source/repository evidence only. Exact-head CI, staging, installed-package checksum parity, database/migration state, real provider journeys and live verification remain separate gates.
 
 ## Seventh-cycle correction boundary
 
