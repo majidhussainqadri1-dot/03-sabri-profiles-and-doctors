@@ -115,6 +115,7 @@ final class SPD_Observability {
 			'migration_retry' => $counts['migration_retry'],
 			'migration_dead' => $counts['migration_dead'],
 			'provider_health' => self::provider_health(),
+			'file19_notification' => SPD_Cross_File_Events::file19_health(),
 			'active_errors' => array_filter( array(
 				'outbox' => self::redacted_error_record( 'spd_last_outbox_error' ),
 				'media' => self::redacted_error_record( 'spd_last_media_queue_error' ),
