@@ -6,7 +6,10 @@
 - DB schema: `1.2.0`
 - Public contract: `1.4.0`
 - Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`, `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `EIGHTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`
-- Seventh-cycle branch: `audit/file-03-seventh-twenty-round-20260813`
+- Eighth-cycle branch: `audit/file03-eighth-twenty-round-20260927`
+- Eighth-cycle starting exact main freeze: `88da03fa4b92576384f4542ee7fc17312043bc0f`
+- Eighth-cycle ledger: `EIGHTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-27.md`
+- Seventh-cycle branch (historical): `audit/file-03-seventh-twenty-round-20260813`
 - R20 pre-correction exact HEAD: `95c90da025d2157b578126d69559fc6bac733918`
 - Seventh sequential review: **20/20 completed**
 - Defect-bearing rounds: `03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20`
@@ -25,7 +28,7 @@ The eighth source review has 20 explicit repository gates. Exact-head CI/package
 
 The `File 03 Fresh Eighty-Round Review` workflow must, on the same reviewed HEAD:
 
-1. pass all retained historical/fresh/sequential regression tests plus the seventh-cycle and R20 closure gates;
+1. pass all retained historical/fresh/sequential regression tests plus the seventh-cycle, R20 and eighth-cycle closure gates;
 2. run `build-package.sh` twice using the explicit reproducible-build epoch;
 3. prove the two ZIPs are byte-identical;
 4. verify ZIP SHA-256 files;
