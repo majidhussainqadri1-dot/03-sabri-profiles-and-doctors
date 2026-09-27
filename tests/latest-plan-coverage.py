@@ -57,8 +57,8 @@ for name,tokens in checks.items():
             missing.append(f'{name}:{token}')
 if missing: raise SystemExit('Latest-plan/future coverage gaps:\n'+'\n'.join(missing))
 # Current candidate/reconciliation truth must not regress to an older release header or legacy File 26 registration only.
-if 'Candidate: `1.2.0-rc16`' not in trace or 'sixth/seventh twenty-round corrective closure' not in trace:
-    raise SystemExit('Latest governing traceability is stale relative to the current rc16 candidate.')
+if 'Candidate: `1.2.0-rc17`' not in trace or 'sixth/seventh/eighth twenty-round corrective closure' not in trace:
+    raise SystemExit('Latest governing traceability is stale relative to the current rc17 candidate.')
 for token in ('sabri_file26_owner_connector_adapters','file26_owner_connector_adapters','file26_list_batch','file26_can_view','file26_health'):
     if token not in combined:
         raise SystemExit(f'Missing current File 26 owner-connector contract: {token}')
@@ -79,6 +79,14 @@ for token in (
     "'spd_get_grounded_profile_work_context' );",
     'sabri_shell_navigation_destinations',
     'sabri_shell_route_contexts',
+    'SPD_Cross_File_Events::register',
+    'DoctorVerified.v1',
+    'DoctorSuspended.v1',
+    'PublicationPublished.v1',
+    'ClinicProfileChanged.v1',
+    'sun_register_notification_producer',
+    'sun_ingest_domain_event',
+    "'file19' => array(",
 ):
     if token not in combined:
         raise SystemExit(f'Missing current cross-file reconciliation contract: {token}')
