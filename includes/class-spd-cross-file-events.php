@@ -42,10 +42,16 @@ final class SPD_Cross_File_Events {
 	public static function consume_file19_event( $event, $created = 0, $suppressed = 0 ) {
 		unset( $created, $suppressed );
 		if ( ! is_array( $event ) || empty( $event['event_type'] ) ) { return; }
-		$payload = array();
+		$payload = isset( $event['data'] ) && is_array( $event['data'] ) ? $event['data'] : array();
 		if ( isset( $event['subject'] ) && is_array( $event['subject'] ) ) { $payload['subject'] = $event['subject']; }
-		if ( isset( $event['recipients'][0]['user_id'] ) ) { $payload['user_id'] = absint( $event['recipients'][0]['user_id'] ); }
-		self::consume_external_event( (string) $event['event_type'], $payload, array( 'owner' => (string) ( $event['owner'] ?? '' ), 'producer' => (string) ( $event['producer'] ?? 'file19' ) ) );
+		$event_type = (string) $event['event_type'];
+		// File 09 verification notifications are addressed to the doctor whose
+		// verification truth changed. For publication/clinic events, recipients may
+		// be followers or patients, so never infer profile ownership from them.
+		if ( 0 === strpos( $event_type, 'DoctorVerification.' ) && empty( $payload['user_id'] ) && isset( $event['recipients'][0]['user_id'] ) ) {
+			$payload['user_id'] = absint( $event['recipients'][0]['user_id'] );
+		}
+		self::consume_external_event( $event_type, $payload, array( 'owner' => (string) ( $event['owner'] ?? '' ), 'producer' => (string) ( $event['producer'] ?? 'file19' ) ) );
 	}
 
 	public static function register_file19_producer() {
@@ -286,7 +292,7 @@ final class SPD_Cross_File_Events {
 	}
 
 	private static function payload_user_id( array $payload ) {
-		foreach ( array( 'user_id', 'doctor_user_id', 'profile_user_id', 'owner_user_id' ) as $key ) {
+		foreach ( array( 'user_id', 'doctor_user_id', 'profile_user_id', 'owner_user_id', 'author_user_id', 'practitioner_user_id', 'clinic_owner_user_id' ) as $key ) {
 			if ( ! empty( $payload[ $key ] ) ) {
 				return absint( $payload[ $key ] );
 			}
