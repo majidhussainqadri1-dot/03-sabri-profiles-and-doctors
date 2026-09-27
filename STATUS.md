@@ -1,10 +1,14 @@
-# File 03 Status — 1.2.0-rc16
+# File 03 Status — 1.2.0-rc17
 
 | Status | Evidence / decision |
 |---|---|
 | Specified | File 03 amended plan + central governing plan + `FUTURE-SUPERSET-18.md` |
-| Repository identity | Plugin `1.2.0-rc16` · DB schema `1.2.0` · public contract `1.4.0` |
-| Coded | Repository-owned File 03 scope plus Future Superset 18 and retained corrective hardening through the seventh twenty-round cycle |
+| Repository identity | Plugin `1.2.0-rc17` · DB schema `1.2.0` · public contract `1.4.0` |
+| Coded | Repository-owned File 03 scope plus Future Superset 18 and retained corrective hardening through the eighth cross-file twenty-round cycle |
+| Eighth 20-round source audit | **20/20 review gates defined and source corrections applied; exact-head CI confirmation pending** |
+| Eighth-cycle starting main freeze | `88da03fa4b92576384f4542ee7fc17312043bc0f` |
+| Eighth-cycle branch | `audit/file03-eighth-twenty-round-20260927` |
+| Eighth-cycle defect-bearing review areas | external event invalidation · File 19 producer/intake · event-manifest parity · File 19 health evidence · stale CI artifact identity · release identity synchronization |
 | Seventh 20-round review | **20/20 completed** using complete review → consolidated defect ledger → correction → retest → next round |
 | Seventh-cycle defect-bearing | `03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20` |
 | Seventh-cycle clean | `01, 02, 09, 10, 12, 13, 16, 18` |
@@ -16,7 +20,7 @@
 | Exact package gate | Same exact-HEAD workflow builds twice, verifies deterministic ZIP/checksum/SBOM and source/package runtime parity, then uploads the exact artifact |
 | PHP compatibility gate | Corrective Integrity covers PHP 8.1, 8.3 and 8.4 plus source-integrity/security checks |
 | Contract decision | DB remains `1.2.0`; public contract remains `1.4.0`; rc16 is a source/release-candidate identity advance, not a DB/public-contract version advance |
-| Historical release inventories/checksums | Historical provenance only; not current rc16 package truth |
+| Historical release inventories/checksums | Historical provenance only; not current rc17 package truth |
 | Staging-Accepted | **Pending / unverified** |
 | Live-Deployed | **Unverified** |
 | Live DB / migration | **Unverified** |
