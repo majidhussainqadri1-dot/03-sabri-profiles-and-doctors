@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials,
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.0-rc16
+Stable tag: 1.2.0-rc17
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -13,7 +13,7 @@ Canonical Founder, member and doctor profile domain for the Sabri Social Homeopa
 
 File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.2.0-rc16 is the repository candidate identity after the seventh fresh twenty-round sequential corrective review. That cycle completed **20/20** rounds under the required complete-review-first sequence: defect-bearing rounds **03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20** and clean rounds **01, 02, 09, 10, 12, 13, 16, 18**. The R20 reconciliation advances the source package identity from rc15 to rc16 so materially different source trees cannot share the same candidate package version, and synchronizes the sixth/seventh plan lineage, repository status documents and permanent closure evidence. DB schema remains 1.2.0 and public contract remains 1.4.0.
+1.2.0-rc17 is the repository candidate identity after the eighth cross-file twenty-round corrective review. The source audit found and corrected missing inbound companion-event invalidation, the explicit File 19 notification producer/intake contract, omitted appeal/reopen events in the machine-readable contract, File 19 health evidence in System Check, and a stale latest-plan artifact identity. File 03 still owns only profile truth; external owner facts are revalidated and event intake invalidates projections rather than copying companion truth. DB schema remains 1.2.0 and public contract remains 1.4.0.
 
 No paid/pro/premium or donor-advantage gate exists in File 03. No patient chart, raw identity evidence, automatic doctor verification, cure guarantee or AI diagnosis/prescription is introduced. Missing, stale, malformed or unavailable canonical providers fail closed or degrade only the affected feature.
 
@@ -29,6 +29,16 @@ This remains a repository candidate. Source and automated-QA evidence are separa
 6. Do not promote to live until Founder approval and exact package/deployment parity are recorded.
 
 == Changelog ==
+
+= 1.2.0-rc17 =
+* Eighth cross-file twenty-round corrective review of File 03 against its amended plan, the central plan and current companion contracts.
+* Adds fail-safe consumption of File 09/File 21/File 08 domain facts as projection invalidation only; no companion source-of-truth data is copied.
+* Registers File 03 as a File 19 producer and delivers eligible profile/report/moderation notifications through the canonical sun.event.v1 contract without a second notification backend.
+* Adds File 19 dependency health to System Check and File 24 degradation evidence when notification delivery is unavailable.
+* Reconciles ProfileReportAppealReviewed.v1 and ProfileReportReopenedByAppeal.v1 with the public contract manifest.
+* Refreshes latest-plan CI artifact identity and adds a permanent eighth 20-round exact-head gate.
+* Repository evidence only: staging/live/deployed code and live DB/migration parity remain unverified.
+
 
 = 1.2.0-rc16 =
 * Seventh fresh twenty-round sequential corrective review completed: 20/20 rounds.
