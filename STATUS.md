@@ -8,6 +8,7 @@
 | Eighth 20-round source audit | **20/20 review gates defined and source corrections applied; exact-head CI confirmation pending** |
 | Eighth-cycle starting main freeze | `88da03fa4b92576384f4542ee7fc17312043bc0f` |
 | Eighth-cycle branch | `audit/file03-eighth-twenty-round-20260927` |
+| Eighth-cycle ledger | `EIGHTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-27.md` |
 | Eighth-cycle defect-bearing review areas | external event invalidation · File 19 producer/intake · event-manifest parity · File 19 health evidence · stale CI artifact identity · release identity synchronization |
 | Seventh 20-round review | **20/20 completed** using complete review → consolidated defect ledger → correction → retest → next round |
 | Seventh-cycle defect-bearing | `03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20` |
@@ -16,10 +17,10 @@
 | R20 pre-correction exact HEAD | `95c90da025d2157b578126d69559fc6bac733918` |
 | Current seventh-review branch | `audit/file-03-seventh-twenty-round-20260813` |
 | Permanent cycle ledger | `SEVENTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-29.md` |
-| Automated review gate | `.github/workflows/fresh-eighty-round-review.yml` runs retained historical/fresh/sequential gates plus seventh-cycle and R20 closure assertions |
+| Automated review gate | `.github/workflows/fresh-eighty-round-review.yml` runs retained historical/fresh/sequential gates plus seventh-cycle, R20 and eighth-cycle closure assertions |
 | Exact package gate | Same exact-HEAD workflow builds twice, verifies deterministic ZIP/checksum/SBOM and source/package runtime parity, then uploads the exact artifact |
 | PHP compatibility gate | Corrective Integrity covers PHP 8.1, 8.3 and 8.4 plus source-integrity/security checks |
-| Contract decision | DB remains `1.2.0`; public contract remains `1.4.0`; rc16 is a source/release-candidate identity advance, not a DB/public-contract version advance |
+| Contract decision | DB remains `1.2.0`; public contract remains `1.4.0`; rc17 is a source/release-candidate identity advance for cross-file corrections, not a DB/public-contract version advance |
 | Historical release inventories/checksums | Historical provenance only; not current rc17 package truth |
 | Staging-Accepted | **Pending / unverified** |
 | Live-Deployed | **Unverified** |
@@ -29,7 +30,7 @@
 
 ## Repository closure boundary
 
-The seventh sequential review contains 20 completed rounds. Its final R20 review found the release/source identity and repository-evidence synchronization defects only after the full review was completed; those findings were frozen as one consolidated ledger before correction began. Repository closure still requires both exact-head CI workflows to succeed on the final corrected SHA. Any later merge SHA must be re-tested separately.
+The eighth source audit contains 20 completed review rounds recorded in `EIGHTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-27.md`; identified defects were corrected before advancing to the next round. Repository closure still requires both exact-head CI workflows to succeed on the final corrected SHA. The seventh-cycle ledger remains historical regression evidence. Any later merge SHA must be re-tested separately.
 
 Repository and CI evidence do not establish Hostinger staging or live state. External acceptance remains: staging reality freeze → exact installed package/version/checksum → DB/schema/migration verification → current companion contracts → representative browser/mobile/RTL/WCAG journeys → backup/restore/rollback → Founder acceptance → controlled deployment → live re-test → parity confirmation.
 
