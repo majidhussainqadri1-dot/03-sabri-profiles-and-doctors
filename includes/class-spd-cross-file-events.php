@@ -53,6 +53,13 @@ final class SPD_Cross_File_Events {
 		);
 	}
 
+	public static function file19_health() {
+		if ( ! function_exists( 'sun_register_notification_producer' ) || ! function_exists( 'sun_ingest_domain_event' ) ) {
+			return 'unavailable';
+		}
+		return self::register_file19_producer() ? 'compatible' : 'degraded';
+	}
+
 	/**
 	 * Consume only recognized external facts. The event causes invalidation, not
 	 * a local state mutation; canonical owner projections are re-read on demand.
