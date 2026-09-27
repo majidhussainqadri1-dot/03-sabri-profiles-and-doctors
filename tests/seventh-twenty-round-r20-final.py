@@ -41,7 +41,7 @@ require('1.2.0-rc16' in ledger, 'R20 seventh-cycle ledger lacks its historical r
 # R20-3 — plan lineage records both newer twenty-round cycles.
 require('SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'R20 sixth twenty-round plan marker missing')
 require('SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main, 'R20 seventh twenty-round plan marker missing')
-require('Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`' in release_manifest, 'R20 release manifest plan lineage is stale')
+require('`SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`' in release_manifest and '`SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`' in release_manifest, 'R20 release manifest plan lineage is stale')
 
 # R20-4 — final review ledger is human-readable and classifications agree across current truth docs.
 defect_rounds = '03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20'
