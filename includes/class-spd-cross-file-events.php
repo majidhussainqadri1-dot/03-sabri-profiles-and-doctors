@@ -140,6 +140,7 @@ final class SPD_Cross_File_Events {
 	 */
 	public static function deliver_file19_notification( $event_name, array $payload, array $row ) {
 		$spec = self::notification_spec( (string) $event_name, $payload, $row );
+		if ( is_wp_error( $spec ) ) { return $spec; }
 		if ( ! $spec ) {
 			return true;
 		}
@@ -210,7 +211,8 @@ final class SPD_Cross_File_Events {
 		$status = sanitize_key( (string) ( $payload['to'] ?? $payload['status'] ?? '' ) );
 
 		if ( 'ProfileReported.v1' === $event_name ) {
-			$profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) ( $payload['profile_public_id'] ?? '' ) );
+			$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( (string) ( $payload['profile_public_id'] ?? '' ) );
+			if ( is_wp_error( $profile ) ) { return $profile; }
 			$recipient = is_array( $profile ) ? absint( $profile['user_id'] ?? 0 ) : 0;
 			return $recipient ? array(
 				'event_type'=>'Profile.Reported','recipient_user_id'=>$recipient,'subject_type'=>'profile','subject_id'=>(string)($payload['profile_public_id']??''),
@@ -221,7 +223,8 @@ final class SPD_Cross_File_Events {
 		}
 
 		if ( 'ProfileModerated.v1' === $event_name ) {
-			$profile = SPD_Profile_Repository::instance()->find_by_public_id( $subject_id );
+			$profile = SPD_Profile_Repository::instance()->find_by_public_id_strict( $subject_id );
+			if ( is_wp_error( $profile ) ) { return $profile; }
 			$recipient = is_array( $profile ) ? absint( $profile['user_id'] ?? 0 ) : 0;
 			return $recipient ? array(
 				'event_type'=>'Profile.Moderated','recipient_user_id'=>$recipient,'subject_type'=>'profile','subject_id'=>$subject_id,
@@ -233,6 +236,7 @@ final class SPD_Cross_File_Events {
 
 		if ( in_array( $event_name, array( 'ProfileReportReviewed.v1', 'ProfileReportReopenedByAppeal.v1' ), true ) ) {
 			$report = self::report_row( $subject_id );
+			if ( is_wp_error( $report ) ) { return $report; }
 			$recipient = absint( $report['reporter_user_id'] ?? 0 );
 			return $recipient ? array(
 				'event_type'=>'Profile.ReportReviewed','recipient_user_id'=>$recipient,'subject_type'=>'profile_report','subject_id'=>$subject_id,
@@ -245,6 +249,7 @@ final class SPD_Cross_File_Events {
 		if ( 'ProfileReportAppealReviewed.v1' === $event_name ) {
 			$appeal_uuid = sanitize_text_field( (string) ( $payload['appeal_uuid'] ?? '' ) );
 			$recipient = self::appeal_requester( $appeal_uuid );
+			if ( is_wp_error( $recipient ) ) { return $recipient; }
 			return $recipient ? array(
 				'event_type'=>'Profile.ReportAppealReviewed','recipient_user_id'=>$recipient,'subject_type'=>'profile_report','subject_id'=>$subject_id,
 				'category'=>'administration','priority'=>'high','sensitivity'=>'restricted','title'=>'Profile report appeal reviewed',
@@ -264,7 +269,8 @@ final class SPD_Cross_File_Events {
 		$table = SPD_DB::table( 'reports' );
 		$wpdb->last_error = '';
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT reporter_user_id,profile_id,status FROM {$table} WHERE report_uuid=%s LIMIT 1", sanitize_text_field( $report_uuid ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		return $wpdb->last_error || ! is_array( $row ) ? array() : $row;
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_file19_report_read_failed', __( 'The report notification source is temporarily unavailable.', 'sabri-profiles-doctors' ) ); }
+		return is_array( $row ) ? $row : array();
 	}
 
 	private static function appeal_requester( $appeal_uuid ) {
@@ -275,7 +281,8 @@ final class SPD_Cross_File_Events {
 		$table = SPD_Central_Profile::appeals_table();
 		$wpdb->last_error = '';
 		$user_id = $wpdb->get_var( $wpdb->prepare( "SELECT requested_by FROM {$table} WHERE appeal_uuid=%s LIMIT 1", sanitize_text_field( $appeal_uuid ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		return $wpdb->last_error ? 0 : absint( $user_id );
+		if ( $wpdb->last_error ) { return new WP_Error( 'spd_file19_appeal_read_failed', __( 'The appeal notification source is temporarily unavailable.', 'sabri-profiles-doctors' ) ); }
+		return absint( $user_id );
 	}
 
 	private static function payload_user_id( array $payload ) {
