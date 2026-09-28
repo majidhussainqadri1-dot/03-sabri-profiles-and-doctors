@@ -30,7 +30,7 @@ def gate(name, ok):
     require(ok, 'Eighth 20-round review failed — ' + name)
     rounds.append(name)
 
-version_match = re.search(r"Version:\\s+(1\\.2\\.0-rc(\\d+))", main)
+version_match = re.search(r"Version:\s+(1\.2\.0-rc(\d+))", main)
 current_version = version_match.group(1) if version_match else ''
 gate('R01 historical rc17 closure retained', version_match is not None and int(version_match.group(2)) >= 17 and "'rc17_history'" in main)
 gate('R02 plan lineage', 'EIGHTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main)
