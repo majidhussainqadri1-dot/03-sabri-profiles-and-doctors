@@ -60,7 +60,9 @@
   "eighth_twenty_round_exact_head_ci_verified": true,
   "eighth_twenty_round_merged_main_sha": "695329cced81a1b2ee5c59e3b4a92c9809a2564b",
   "ninth_twenty_round_review_starting_repository_freeze": "695329cced81a1b2ee5c59e3b4a92c9809a2564b",
-  "ninth_twenty_round_source_audit_completed": false,
-  "ninth_twenty_round_exact_head_ci_verified": false,
-  "ninth_twenty_round_current_file08_head": "70541974ce0ffb16aebef557c3016eb7447662f4"
+  "ninth_twenty_round_source_audit_completed": true,
+  "ninth_twenty_round_exact_head_ci_verified": true,
+  "ninth_twenty_round_current_file08_head": "70541974ce0ffb16aebef557c3016eb7447662f4",
+  "ninth_twenty_round_final_review_parent_head": "117dbfac30fac35260947383abd86b11b5481461",
+  "ninth_twenty_round_final_candidate_head_unpinned": true
 }

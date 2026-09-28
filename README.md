@@ -14,6 +14,10 @@ File 03 owns stable public profile identity, profile fields/audiences, Founder o
 - PHP target matrix: `8.1`, `8.3`, `8.4`
 - WordPress baseline: `7.0+`
 - Current review branch: `audit/file03-ninth-twenty-round-20260928`
+- Ninth-cycle ledger: `NINTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-28.md`
+- Ninth-cycle review: **20/20 completed**
+- Ninth-cycle defect-bearing rounds: `04, 07, 20`
+- Ninth-cycle clean rounds: `01, 02, 03, 05, 06, 08–19`
 - R20 pre-correction exact HEAD: `95c90da025d2157b578126d69559fc6bac733918`
 - Seventh-cycle ledger: `SEVENTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-29.md`
 - Seventh-cycle review: **20/20 completed** under complete review → consolidated defect ledger → correction → exact-state retest → next round
@@ -25,7 +29,7 @@ File 03 owns stable public profile identity, profile fields/audiences, Founder o
 
 The ninth review starts from exact main SHA `695329cced81a1b2ee5c59e3b4a92c9809a2564b`. Fresh comparison with current File 08 exact HEAD `70541974ce0ffb16aebef557c3016eb7447662f4` proved a transport mismatch: File 08 emits clinic/appointment owner facts through `wca_outbox_event`, but rc17 did not subscribe to that exact surface. rc18 adds the versioned File 08 outbox consumer and actual current event names, and uses them only to invalidate File 03 cache/reconciliation state. No File 08 truth is copied or mutated.
 
-The candidate is `1.2.0-rc18`; DB schema remains `1.2.0` and public contract remains `1.4.0`. Current branch exact-head CI/package evidence is pending until workflows complete. Staging, deployed artifact parity, live DB/migration state and live verification remain unverified.
+The candidate is `1.2.0-rc18`; DB schema remains `1.2.0` and public contract remains `1.4.0`. The complete branch audit is recorded in the ninth-cycle ledger; closure is valid only after required exact-head CI/package workflows pass on the final branch SHA and again on the resulting main SHA. Staging, deployed artifact parity, live DB/migration state and live verification remain unverified.
 
 ## Eighth-cycle cross-file correction boundary
 

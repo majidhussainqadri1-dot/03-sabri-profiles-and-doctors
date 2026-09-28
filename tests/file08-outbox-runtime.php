@@ -36,6 +36,14 @@ SPD_Cross_File_Events::consume_file08_outbox_event( array(
 ) );
 test_assert( 7 === absint( get_option( 'spd_profile_cache_generation', 0 ) ), 'Incompatible File 08 contract versions must fail closed.' );
 
+$GLOBALS['options']['spd_profile_cache_generation'] = 9;
+SPD_Cross_File_Events::consume_file08_outbox_event( array(
+	'topic' => 'ClinicAvailabilityChanged.v1',
+	'contract' => '2.0.0',
+	'payload' => array( 'doctor_subject_uuid' => 'subject-opaque' ),
++) );
+test_assert( 9 === absint( get_option( 'spd_profile_cache_generation', 0 ) ), 'Unsupported future File 08 major contract versions must fail closed.' );
+
 $GLOBALS['options']['spd_profile_cache_generation'] = 11;
 SPD_Cross_File_Events::consume_file08_outbox_event( array(
 	'topic' => 'UnrelatedOwnerFact.v1',

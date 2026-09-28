@@ -8,6 +8,9 @@
 - Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`, `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`, `EIGHTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `NINTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`
 - Ninth-cycle branch: `audit/file03-ninth-twenty-round-20260928`
 - Ninth-cycle starting exact main freeze: `695329cced81a1b2ee5c59e3b4a92c9809a2564b`
+- Ninth-cycle reviewed parent HEAD: `117dbfac30fac35260947383abd86b11b5481461`
+- Ninth-cycle ledger: `NINTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-28.md`
+- Ninth-cycle review: **20/20 completed**; defect-bearing `04, 07, 20`; clean `01, 02, 03, 05, 06, 08–19`
 - Eighth-cycle branch (historical): `audit/file03-eighth-twenty-round-20260927`
 - Eighth-cycle starting exact main freeze: `88da03fa4b92576384f4542ee7fc17312043bc0f`
 - Eighth-cycle ledger: `EIGHTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-27.md`
@@ -24,7 +27,7 @@ The exact candidate SHA for any present CI/package assertion is the `github.sha`
 
 Starting exact main freeze: `695329cced81a1b2ee5c59e3b4a92c9809a2564b`. Fresh audit against current File 08 exact HEAD `70541974ce0ffb16aebef557c3016eb7447662f4` proved that File 08 emits canonical clinic/appointment owner facts on `wca_outbox_event`. rc17 did not subscribe to that exact transport, so an anonymous cached profile clinic/availability projection could remain stale until another invalidation. rc18 subscribes to the versioned current File 08 outbox, recognizes the actual clinic/appointment fact names, and performs invalidation/reconciliation only. File 08 remains the canonical data owner.
 
-The ninth cycle is not closed until all 20 review rounds and all required exact-head CI/package gates are green on one final SHA. No staging/deployed/live claim is made.
+The ninth cycle completed all 20 review rounds. The File 08 transport omission, future-major contract fail-closed gap, and missing closure ledger/evidence were corrected. Repository closure still requires all exact-head CI/package gates to pass on the final branch SHA and again on the resulting main SHA. No staging/deployed/live claim is made.
 
 ## Eighth-cycle cross-file candidate boundary
 
@@ -36,7 +39,7 @@ The eighth source review completed its explicit repository gates; PR #37 was mer
 
 The `File 03 Fresh Eighty-Round Review` workflow must, on the same reviewed HEAD:
 
-1. pass all retained historical/fresh/sequential regression tests plus the seventh-cycle, R20 and eighth-cycle closure gates;
+1. pass all retained historical/fresh/sequential regression tests plus the seventh-cycle, R20, eighth-cycle and ninth-cycle closure gates;
 2. run `build-package.sh` twice using the explicit reproducible-build epoch;
 3. prove the two ZIPs are byte-identical;
 4. verify ZIP SHA-256 files;

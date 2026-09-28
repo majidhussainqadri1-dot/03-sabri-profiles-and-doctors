@@ -13,6 +13,7 @@ final class SPD_Cross_File_Events {
 	const FILE19_OWNER    = 'File 03';
 	const FILE19_SCHEMA   = '1.0';
 	const FILE08_EVENT_CONTRACT_MIN = '1.0.0';
+	const FILE08_EVENT_CONTRACT_MAX_EXCLUSIVE = '2.0.0';
 
 	private static $file08_events = array(
 		'ClinicActivated.v1',
@@ -68,7 +69,7 @@ final class SPD_Cross_File_Events {
 		$topic = sanitize_text_field( (string) ( $envelope['topic'] ?? '' ) );
 		if ( ! in_array( $topic, self::$file08_events, true ) ) { return; }
 		$contract = sanitize_text_field( (string) ( $envelope['contract'] ?? '' ) );
-		if ( ! preg_match( '/^\\d+\\.\\d+\\.\\d+$/', $contract ) || version_compare( $contract, self::FILE08_EVENT_CONTRACT_MIN, '<' ) ) {
+		if ( ! preg_match( '/^\\d+\\.\\d+\\.\\d+$/', $contract ) || version_compare( $contract, self::FILE08_EVENT_CONTRACT_MIN, '<' ) || version_compare( $contract, self::FILE08_EVENT_CONTRACT_MAX_EXCLUSIVE, '>=' ) ) {
 			return;
 		}
 		$payload = isset( $envelope['payload'] ) && is_array( $envelope['payload'] ) ? $envelope['payload'] : array();

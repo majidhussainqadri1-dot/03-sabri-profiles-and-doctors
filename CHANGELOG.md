@@ -6,13 +6,13 @@ Fresh comparison against the amended File 03 plan, central plan and current comp
 
 Corrections applied in this cycle:
 - subscribe to File 08's exact current `wca_outbox_event` integration surface;
-- validate the versioned File 08 event contract before accepting invalidation facts;
+- validate the supported File 08 `1.x` event-contract range and fail closed below `1.0.0` or at future incompatible major `2.0.0+`;
 - recognize current clinic/appointment lifecycle event names and invalidate File 03 cache/reconciliation state without copying File 08 truth;
 - preserve opaque subject-UUID safety by using global generation/reconciliation invalidation when no canonical local profile mapping is available;
-- add runtime regression coverage and a permanent ninth 20-round exact-head gate; and
+- add runtime regression coverage, a permanent ninth 20-round exact-head gate and a human-readable 20-round ledger; and
 - correct stale eighth-cycle repository evidence after PR #37 merged and its resulting main SHA passed required exact-head workflows.
 
-Release identity is `1.2.0-rc18`; DB schema remains `1.2.0`; public contract remains `1.4.0`. Ninth-cycle exact-head CI/package evidence is pending on the corrected branch. Exact deployed code, live DB/migration state and deployment parity remain unverified.
+Release identity is `1.2.0-rc18`; DB schema remains `1.2.0`; public contract remains `1.4.0`. The ninth audit completed 20/20 rounds; rounds 04, 07 and 20 were defect-bearing and corrected. Closure requires the final branch and resulting main SHAs to pass their exact-head CI/package gates. Exact deployed code, live DB/migration state and deployment parity remain unverified.
 
 ## 1.2.0-rc17 — eighth cross-file twenty-round corrective review
 
