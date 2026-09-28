@@ -8,18 +8,24 @@ File 03 owns stable public profile identity, profile fields/audiences, Founder o
 
 ## Current repository candidate
 
-- Plugin: `1.2.0-rc17`
+- Plugin: `1.2.0-rc18`
 - Database schema: `1.2.0`
 - Public contract: `1.4.0`
 - PHP target matrix: `8.1`, `8.3`, `8.4`
 - WordPress baseline: `7.0+`
-- Current review branch: `audit/file03-eighth-twenty-round-20260927`
+- Current review branch: `audit/file03-ninth-twenty-round-20260928`
 - R20 pre-correction exact HEAD: `95c90da025d2157b578126d69559fc6bac733918`
 - Seventh-cycle ledger: `SEVENTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-29.md`
 - Seventh-cycle review: **20/20 completed** under complete review → consolidated defect ledger → correction → exact-state retest → next round
 - Defect-bearing rounds: `03, 04, 05, 06, 07, 08, 11, 14, 15, 17, 19, 20`
 - Clean rounds: `01, 02, 09, 10, 12, 13, 16, 18`
 - Totals: `12/20` defect-bearing · `8/20` clean
+
+## Ninth-cycle current-companion correction boundary
+
+The ninth review starts from exact main SHA `695329cced81a1b2ee5c59e3b4a92c9809a2564b`. Fresh comparison with current File 08 exact HEAD `70541974ce0ffb16aebef557c3016eb7447662f4` proved a transport mismatch: File 08 emits clinic/appointment owner facts through `wca_outbox_event`, but rc17 did not subscribe to that exact surface. rc18 adds the versioned File 08 outbox consumer and actual current event names, and uses them only to invalidate File 03 cache/reconciliation state. No File 08 truth is copied or mutated.
+
+The candidate is `1.2.0-rc18`; DB schema remains `1.2.0` and public contract remains `1.4.0`. Current branch exact-head CI/package evidence is pending until workflows complete. Staging, deployed artifact parity, live DB/migration state and live verification remain unverified.
 
 ## Eighth-cycle cross-file correction boundary
 

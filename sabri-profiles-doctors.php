@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Profiles and Doctors
  * Plugin URI: https://www.sabrihomeopathy.com/
  * Description: Canonical, privacy-controlled Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
- * Version: 1.2.0-rc17
+ * Version: 1.2.0-rc18
  * Requires at least: 7.0
  * Requires PHP: 8.1
  * Author: Dr. Allamah Majid Hussain Sabri
@@ -13,10 +13,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SPD_VERSION', '1.2.0-rc17' );
+define( 'SPD_VERSION', '1.2.0-rc18' );
 define( 'SPD_DB_VERSION', '1.2.0' );
 define( 'SPD_CONTRACT_VERSION', '1.4.0' );
-define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW+FIFTH-TEN-ROUND-CORRECTIVE-REVIEW+SIXTH-TEN-ROUND-CORRECTIVE-REVIEW+SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW+EIGHTH-TEN-ROUND-CORRECTIVE-REVIEW+NINTH-TEN-ROUND-CORRECTIVE-REVIEW+TENTH-TEN-ROUND-CORRECTIVE-REVIEW+TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SECOND-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+THIRD-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+EIGHTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' );
+define( 'SPD_PLAN_VERSION', 'SSH-F03-PLAN-2026-v1.0+2026-08-07-central-addendum+FUTURE-SUPERSET-18+80-ROUND-CORRECTIVE-REVIEW+THIRD-TEN-ROUND-CORRECTIVE-REVIEW+FOURTH-TEN-ROUND-CORRECTIVE-REVIEW+FIFTH-TEN-ROUND-CORRECTIVE-REVIEW+SIXTH-TEN-ROUND-CORRECTIVE-REVIEW+SEVENTH-TEN-ROUND-CORRECTIVE-REVIEW+EIGHTH-TEN-ROUND-CORRECTIVE-REVIEW+NINTH-TEN-ROUND-CORRECTIVE-REVIEW+TENTH-TEN-ROUND-CORRECTIVE-REVIEW+TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SECOND-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+THIRD-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FOURTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+FIFTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+EIGHTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW+NINTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' );
 define( 'SPD_FILE', __FILE__ );
 define( 'SPD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SPD_URL', plugin_dir_url( __FILE__ ) );
@@ -398,7 +398,8 @@ function spd_get_profile_contract_manifest() {
 				),
 			);
 			$manifest['rc16_history'] = array( 'candidate' => '1.2.0-rc16', 'supersedes_release_identity' => '1.2.0-rc15', 'historical_extension_key_preserved' => 'rc15_extensions' );
-			$manifest['rc17_current'] = array( 'candidate' => SPD_VERSION, 'supersedes_release_identity' => '1.2.0-rc16', 'cross_file_event_bridge' => true, 'file19_notification_contract' => 'sun.event.v1' );
+			$manifest['rc17_history'] = array( 'candidate' => '1.2.0-rc17', 'supersedes_release_identity' => '1.2.0-rc16', 'cross_file_event_bridge' => true, 'file19_notification_contract' => 'sun.event.v1' );
+			$manifest['rc18_current'] = array( 'candidate' => SPD_VERSION, 'supersedes_release_identity' => '1.2.0-rc17', 'file08_outbox_event_contract' => SPD_Cross_File_Events::FILE08_EVENT_CONTRACT_MIN, 'file19_notification_contract' => 'sun.event.v1' );
 			return $manifest;
 		},
 		'contract_manifest'

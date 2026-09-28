@@ -2,11 +2,13 @@
 
 ## Current candidate identity
 
-- Software: `1.2.0-rc17`
+- Software: `1.2.0-rc18`
 - DB schema: `1.2.0`
 - Public contract: `1.4.0`
-- Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`, `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `EIGHTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`
-- Eighth-cycle branch: `audit/file03-eighth-twenty-round-20260927`
+- Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`, `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`, `EIGHTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `NINTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`
+- Ninth-cycle branch: `audit/file03-ninth-twenty-round-20260928`
+- Ninth-cycle starting exact main freeze: `695329cced81a1b2ee5c59e3b4a92c9809a2564b`
+- Eighth-cycle branch (historical): `audit/file03-eighth-twenty-round-20260927`
 - Eighth-cycle starting exact main freeze: `88da03fa4b92576384f4542ee7fc17312043bc0f`
 - Eighth-cycle ledger: `EIGHTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-27.md`
 - Seventh-cycle branch (historical): `audit/file-03-seventh-twenty-round-20260813`
@@ -18,11 +20,17 @@
 
 The exact candidate SHA for any present CI/package assertion is the `github.sha` of the corresponding successful exact-head workflow run. Repository source SHA and deployed package truth remain separate.
 
+## Ninth-cycle current-companion candidate boundary
+
+Starting exact main freeze: `695329cced81a1b2ee5c59e3b4a92c9809a2564b`. Fresh audit against current File 08 exact HEAD `70541974ce0ffb16aebef557c3016eb7447662f4` proved that File 08 emits canonical clinic/appointment owner facts on `wca_outbox_event`. rc17 did not subscribe to that exact transport, so an anonymous cached profile clinic/availability projection could remain stale until another invalidation. rc18 subscribes to the versioned current File 08 outbox, recognizes the actual clinic/appointment fact names, and performs invalidation/reconciliation only. File 08 remains the canonical data owner.
+
+The ninth cycle is not closed until all 20 review rounds and all required exact-head CI/package gates are green on one final SHA. No staging/deployed/live claim is made.
+
 ## Eighth-cycle cross-file candidate boundary
 
 Starting exact main freeze: `88da03fa4b92576384f4542ee7fc17312043bc0f`. The rc17 source candidate adds plan-required external event invalidation, the canonical File 19 `sun.event.v1` producer/intake bridge, event-manifest parity for appeal review/reopen, File 19 System Check health evidence and dynamic latest-plan artifact naming. These changes do not alter DB schema `1.2.0` or public contract `1.4.0`.
 
-The eighth source review has 20 explicit repository gates. Exact-head CI/package evidence remains pending until the branch/PR workflows succeed; therefore no staging, deployed or operational claim is made here.
+The eighth source review completed its explicit repository gates; PR #37 was merged and the resulting main SHA `695329cced81a1b2ee5c59e3b4a92c9809a2564b` passed its required exact-head workflows. That evidence is historical baseline evidence only and does not pre-authorize the rc18 ninth-cycle candidate.
 
 ## Current exact-head package evidence contract
 
@@ -49,7 +57,7 @@ The expected top-level package directory remains `03-sabri-profiles-and-doctors`
 
 ## Historical release evidence
 
-`RELEASE-INVENTORY.tsv`, `SOURCE-INVENTORY.tsv`, `CHECKSUMS.sha256`, `RELEASE-CHECKSUMS.sha256` and historical fields inside `RELEASE-LOCK.json` are **historical provenance/evidence only**. They must not be interpreted as current rc17 exact-head package truth. Current rc17 package truth comes only from the exact-head workflow artifact and its generated checksum/SBOM for that SHA.
+`RELEASE-INVENTORY.tsv`, `SOURCE-INVENTORY.tsv`, `CHECKSUMS.sha256`, `RELEASE-CHECKSUMS.sha256` and historical fields inside `RELEASE-LOCK.json` are **historical provenance/evidence only**. They must not be interpreted as current rc17 exact-head package truth. Current rc18 package truth comes only from the exact-head workflow artifact and its generated checksum/SBOM for that SHA.
 
 ## Seventh-cycle correction boundary — final 20/20
 

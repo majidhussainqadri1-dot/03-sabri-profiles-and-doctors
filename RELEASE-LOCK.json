@@ -14,7 +14,7 @@
   "historical_source_tree_sha256": "1550223e5eec10029bac48c0de05a2add2fd90a96f831fe1e35091a56ff46d72",
   "historical_inventory_file": "RELEASE-INVENTORY.tsv",
   "historical_checksums_file": "RELEASE-CHECKSUMS.sha256",
-  "current_repository_candidate": "1.2.0-rc17",
+  "current_repository_candidate": "1.2.0-rc18",
   "tenth_review_starting_repository_freeze": "a74583a8498ece843f1d1e9736cee22b2f760a86",
   "twenty_round_review_starting_repository_freeze": "60207107479c971cae4be379e427e1adb212ea92",
   "second_twenty_round_review_starting_repository_freeze": "a34e4e2b808134237ae9945759745595685c8733",
@@ -54,8 +54,13 @@
   "production_authorized": false,
   "staging_authorized": false,
   "deployed_version_verified": false,
-  "note": "Historical inventory/checksum files are provenance only. The current rc17 candidate adds the eighth cross-file corrective source changes; its exact package/checksum/SBOM/source-parity evidence must come from successful exact-head CI for the promoted SHA. Repository evidence does not establish staging or live deployment. Exact deployed code remains unverified.",
+  "note": "Historical inventory/checksum files are provenance only. The current rc18 candidate adds the ninth current-companion corrective source changes; its exact package/checksum/SBOM/source-parity evidence must come from successful exact-head CI for the promoted SHA. Repository evidence does not establish staging or live deployment. Exact deployed code remains unverified.",
   "eighth_twenty_round_review_starting_repository_freeze": "88da03fa4b92576384f4542ee7fc17312043bc0f",
   "eighth_twenty_round_source_audit_completed": true,
-  "eighth_twenty_round_exact_head_ci_verified": false
+  "eighth_twenty_round_exact_head_ci_verified": true,
+  "eighth_twenty_round_merged_main_sha": "695329cced81a1b2ee5c59e3b4a92c9809a2564b",
+  "ninth_twenty_round_review_starting_repository_freeze": "695329cced81a1b2ee5c59e3b4a92c9809a2564b",
+  "ninth_twenty_round_source_audit_completed": false,
+  "ninth_twenty_round_exact_head_ci_verified": false,
+  "ninth_twenty_round_current_file08_head": "70541974ce0ffb16aebef557c3016eb7447662f4"
 }

@@ -38,6 +38,7 @@ jobs:
         run: |
           python3 tests/latest-plan-coverage.py
           python3 tests/eighth-twenty-round-sequential.py
+          python3 tests/ninth-twenty-round-sequential.py
       - name: Existing File 03 regression suites
         run: |
           set -euo pipefail

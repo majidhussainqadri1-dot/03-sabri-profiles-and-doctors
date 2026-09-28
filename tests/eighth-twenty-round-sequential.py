@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,7 +30,9 @@ def gate(name, ok):
     require(ok, 'Eighth 20-round review failed — ' + name)
     rounds.append(name)
 
-gate('R01 exact candidate identity', "Version: 1.2.0-rc17" in main and "define( 'SPD_VERSION', '1.2.0-rc17' );" in main)
+version_match = re.search(r"Version:\\s+(1\\.2\\.0-rc(\\d+))", main)
+current_version = version_match.group(1) if version_match else ''
+gate('R01 historical rc17 closure retained', version_match is not None and int(version_match.group(2)) >= 17 and "'rc17_history'" in main)
 gate('R02 plan lineage', 'EIGHTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main)
 gate('R03 bridge composition', "'class-spd-cross-file-events.php'" in main and 'SPD_Cross_File_Events::register();' in main)
 gate('R04 legacy inbound event contract', all(x in bridge for x in ('DoctorVerified.v1','DoctorSuspended.v1','PublicationPublished.v1','ClinicProfileChanged.v1')))
@@ -48,7 +51,7 @@ gate('R16 File 21 reconciliation preserved', 'spd_file21_timeline_items_adapter'
 gate('R17 File 26 reconciliation preserved', 'sabri_file26_owner_connector_adapters' in main and 'file26_owner_connector_adapters' in contracts)
 gate('R18 exact-head workflow includes eighth gate', 'python3 tests/eighth-twenty-round-sequential.py' in workflow)
 gate('R19 latest-plan package identity is dynamic', 'id: pkg' in latest_workflow and 'steps.pkg.outputs.version' in latest_workflow and 'file03-latest-plan-1.1.0-rc1' not in latest_workflow)
-gate('R20 release truth synchronized', '1.2.0-rc17' in latest and '1.2.0-rc17' in status and '1.2.0-rc17' in manifest and release_lock.get('current_repository_candidate') == '1.2.0-rc17' and release_lock.get('production_authorized') is False and release_lock.get('staging_authorized') is False and release_lock.get('deployed_version_verified') is False)
+gate('R20 release truth synchronized', current_version in latest and current_version in status and current_version in manifest and release_lock.get('current_repository_candidate') == current_version and release_lock.get('production_authorized') is False and release_lock.get('staging_authorized') is False and release_lock.get('deployed_version_verified') is False)
 
 print('File 03 eighth sequential review: PASS 20/20')
 for i, name in enumerate(rounds, 1):

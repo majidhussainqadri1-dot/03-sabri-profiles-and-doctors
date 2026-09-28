@@ -12,6 +12,23 @@ final class SPD_Cross_File_Events {
 	const FILE19_PRODUCER = 'file03-profiles';
 	const FILE19_OWNER    = 'File 03';
 	const FILE19_SCHEMA   = '1.0';
+	const FILE08_EVENT_CONTRACT_MIN = '1.0.0';
+
+	private static $file08_events = array(
+		'ClinicActivated.v1',
+		'ClinicBranchChanged.v1',
+		'ClinicAvailabilityChanged.v1',
+		'ClinicServiceChanged.v1',
+		'AppointmentRequested.v1',
+		'AppointmentConfirmed.v1',
+		'AppointmentDeclined.v1',
+		'AppointmentRescheduleProposed.v1',
+		'AppointmentCheckedIn.v1',
+		'AppointmentCompleted.v1',
+		'AppointmentCancelled.v1',
+		'AppointmentNoShow.v1',
+		'AppointmentChanged.v1',
+	);
 
 	private static $external_events = array(
 		'DoctorVerified.v1',
@@ -35,7 +52,30 @@ final class SPD_Cross_File_Events {
 	public static function register() {
 		add_action( 'sabri_platform_event', array( __CLASS__, 'consume_external_event' ), 15, 3 );
 		add_action( 'sun_event_processed', array( __CLASS__, 'consume_file19_event' ), 20, 3 );
+		add_action( 'wca_outbox_event', array( __CLASS__, 'consume_file08_outbox_event' ), 20, 1 );
 		add_action( 'init', array( __CLASS__, 'register_file19_producer' ), 40 );
+	}
+
+	/**
+	 * Consume File 08's exact current transactional-outbox contract.
+	 *
+	 * File 08 owns clinic/appointment truth and emits versioned owner facts on
+	 * wca_outbox_event. File 03 uses those facts only to invalidate cached public
+	 * profile projections; subject UUIDs are never guessed into WordPress IDs.
+	 */
+	public static function consume_file08_outbox_event( $envelope ) {
+		if ( ! is_array( $envelope ) ) { return; }
+		$topic = sanitize_text_field( (string) ( $envelope['topic'] ?? '' ) );
+		if ( ! in_array( $topic, self::$file08_events, true ) ) { return; }
+		$contract = sanitize_text_field( (string) ( $envelope['contract'] ?? '' ) );
+		if ( ! preg_match( '/^\\d+\\.\\d+\\.\\d+$/', $contract ) || version_compare( $contract, self::FILE08_EVENT_CONTRACT_MIN, '<' ) ) {
+			return;
+		}
+		$payload = isset( $envelope['payload'] ) && is_array( $envelope['payload'] ) ? $envelope['payload'] : array();
+		if ( ! empty( $envelope['aggregate_ref'] ) && empty( $payload['aggregate_ref'] ) ) {
+			$payload['aggregate_ref'] = sanitize_text_field( (string) $envelope['aggregate_ref'] );
+		}
+		self::consume_external_event( $topic, $payload, array( 'owner' => 'file08', 'producer' => 'wca_outbox' ) );
 	}
 
 	/** Consume current companion facts after File 19 has validated their event envelope. */
@@ -83,7 +123,7 @@ final class SPD_Cross_File_Events {
 	 */
 	public static function consume_external_event( $event_name, $payload = array(), $meta = array() ) {
 		$event_name = sanitize_text_field( (string) $event_name );
-		if ( ! in_array( $event_name, self::$external_events, true ) ) {
+		if ( ! in_array( $event_name, self::$external_events, true ) && ! in_array( $event_name, self::$file08_events, true ) ) {
 			return;
 		}
 		$meta = is_array( $meta ) ? $meta : array();
