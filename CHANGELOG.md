@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0-rc18 — ninth current-companion twenty-round corrective review
+
+Fresh comparison against the amended File 03 plan, central plan and current companion repository heads found a concrete File 08 integration gap: the current File 08 implementation publishes clinic/appointment owner facts through `wca_outbox_event`, while rc17 subscribed only to legacy/generic event surfaces. Because File 03 caches anonymous public profile DTOs containing File 08 clinic/availability projections, that mismatch could leave a stale projection after a legitimate File 08 owner change.
+
+Corrections applied in this cycle:
+- subscribe to File 08's exact current `wca_outbox_event` integration surface;
+- validate the supported File 08 `1.x` event-contract range and fail closed below `1.0.0` or at future incompatible major `2.0.0+`;
+- recognize current clinic/appointment lifecycle event names and invalidate File 03 cache/reconciliation state without copying File 08 truth;
+- preserve opaque subject-UUID safety by using global generation/reconciliation invalidation when no canonical local profile mapping is available;
+- add runtime regression coverage, a permanent ninth 20-round exact-head gate and a human-readable 20-round ledger; and
+- correct stale eighth-cycle repository evidence after PR #37 merged and its resulting main SHA passed required exact-head workflows.
+
+Release identity is `1.2.0-rc18`; DB schema remains `1.2.0`; public contract remains `1.4.0`. The ninth audit completed 20/20 rounds; rounds 04, 07 and 20 were defect-bearing and corrected. Closure requires the final branch and resulting main SHAs to pass their exact-head CI/package gates. Exact deployed code, live DB/migration state and deployment parity remain unverified.
+
 ## 1.2.0-rc17 — eighth cross-file twenty-round corrective review
 
 The eighth source audit checks File 03 against its amended master plan, the central governing plan and current companion-owner contracts. It starts from exact main SHA `88da03fa4b92576384f4542ee7fc17312043bc0f`.
