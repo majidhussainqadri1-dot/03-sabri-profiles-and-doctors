@@ -7,7 +7,8 @@
 | Coded | Repository-owned File 03 scope plus Future Superset 18 and retained corrective hardening through the ninth current-companion twenty-round cycle |
 | Ninth 20-round source audit | **20/20 completed; defect-bearing rounds 04, 07, 20; all corrections applied; exact-head CI/package gates required and verified before merge** |
 | Ninth-cycle starting main freeze | `695329cced81a1b2ee5c59e3b4a92c9809a2564b` |
-| Ninth-cycle branch | `audit/file03-ninth-twenty-round-20260928` |
+| Ninth-cycle branch (historical) | `audit/file03-ninth-twenty-round-20260928` |
+| Ninth-cycle merged main closure | `6ed5c0ee5b518a62d961a0d12378adc2960871e7`; required exact-head workflows succeeded |
 | Ninth-cycle reviewed parent HEAD | `117dbfac30fac35260947383abd86b11b5481461` |
 | Ninth-cycle ledger | `NINTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-28.md` |
 | Ninth-cycle defect-bearing rounds | `04, 07, 20` |
@@ -38,8 +39,13 @@
 
 ## Repository closure boundary
 
-The eighth source audit contains 20 completed review rounds recorded in `EIGHTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-27.md`; its corrected PR #37 was merged and the resulting main SHA passed the required exact-head workflows. The ninth cycle starts from that merge SHA and reopens repository review because current File 08 companion transport evidence exposed an additional integration defect. The ninth cycle completed 20/20 rounds; rounds 04, 07 and 20 were defect-bearing and were corrected together at their round boundaries. The final branch SHA and any resulting merge SHA must pass the required exact-head CI/package gates separately.
+The eighth source audit contains 20 completed review rounds recorded in `EIGHTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-27.md`; its corrected PR #37 was merged and the resulting main SHA passed the required exact-head workflows. The ninth cycle starts from that merge SHA and reopens repository review because current File 08 companion transport evidence exposed an additional integration defect. The ninth cycle completed 20/20 rounds; rounds 04, 07 and 20 were defect-bearing and were corrected together at their round boundaries. PR #38 merged as `6ed5c0ee5b518a62d961a0d12378adc2960871e7`; its required exact-head CI/package gates passed. Any later SHA still requires its own matching workflow evidence.
 
 Repository and CI evidence do not establish Hostinger staging or live state. External acceptance remains: staging reality freeze → exact installed package/version/checksum → DB/schema/migration verification → current companion contracts → representative browser/mobile/RTL/WCAG journeys → backup/restore/rollback → Founder acceptance → controlled deployment → live re-test → parity confirmation.
 
 **Exact deployed code remains unverified; repository-based diagnosis is provisional for any live incident.**
+
+
+## Tenth current-main audit
+
+Starting exact main freeze: `6ed5c0ee5b518a62d961a0d12378adc2960871e7`. Fresh result: **20/20 reviewed**; clean rounds `01–19`; defect-bearing round `20` only. R20 corrects stale post-merge release wording and adds a permanent exact-head regression gate. No runtime, DB-schema, migration, or public-contract change is implied. Current HEAD truth is resolved from the GitHub `main` ref plus matching workflows rather than embedded as a self-referential claim.

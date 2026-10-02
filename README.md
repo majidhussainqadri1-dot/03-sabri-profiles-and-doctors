@@ -13,7 +13,8 @@ File 03 owns stable public profile identity, profile fields/audiences, Founder o
 - Public contract: `1.4.0`
 - PHP target matrix: `8.1`, `8.3`, `8.4`
 - WordPress baseline: `7.0+`
-- Current review branch: `audit/file03-ninth-twenty-round-20260928`
+- Latest completed corrective branch (historical): `audit/file03-ninth-twenty-round-20260928`
+- Latest merged repository closure SHA: `6ed5c0ee5b518a62d961a0d12378adc2960871e7`
 - Ninth-cycle ledger: `NINTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-28.md`
 - Ninth-cycle review: **20/20 completed**
 - Ninth-cycle defect-bearing rounds: `04, 07, 20`
@@ -29,7 +30,7 @@ File 03 owns stable public profile identity, profile fields/audiences, Founder o
 
 The ninth review starts from exact main SHA `695329cced81a1b2ee5c59e3b4a92c9809a2564b`. Fresh comparison with current File 08 exact HEAD `70541974ce0ffb16aebef557c3016eb7447662f4` proved a transport mismatch: File 08 emits clinic/appointment owner facts through `wca_outbox_event`, but rc17 did not subscribe to that exact surface. rc18 adds the versioned File 08 outbox consumer and actual current event names, and uses them only to invalidate File 03 cache/reconciliation state. No File 08 truth is copied or mutated.
 
-The candidate is `1.2.0-rc18`; DB schema remains `1.2.0` and public contract remains `1.4.0`. The complete branch audit is recorded in the ninth-cycle ledger; closure is valid only after required exact-head CI/package workflows pass on the final branch SHA and again on the resulting main SHA. Staging, deployed artifact parity, live DB/migration state and live verification remain unverified.
+The candidate is `1.2.0-rc18`; DB schema remains `1.2.0` and public contract remains `1.4.0`. The complete branch audit is recorded in the ninth-cycle ledger. PR #38 merged as `6ed5c0ee5b518a62d961a0d12378adc2960871e7`, and the required exact-head CI/package workflows passed on that resulting main SHA. Staging, deployed artifact parity, live DB/migration state and live verification remain unverified.
 
 ## Eighth-cycle cross-file correction boundary
 
@@ -54,3 +55,8 @@ Historical review ledgers, package inventories, checksums and CI runs remain reg
 Repository source, CI and deterministic package evidence do **not** authorize staging or production. Staging reality, exact installed-package checksum parity, live DB/schema/migration state, real companion-provider integration, representative browser/mobile/Urdu-Arabic RTL/WCAG journeys, backup/restore/rollback and Founder acceptance remain separate mandatory gates.
 
 **Exact deployed code remains unverified; repository-based diagnosis is provisional for any live incident.**
+
+
+## Tenth-cycle current-main re-audit
+
+A fresh twenty-round read-only audit started from exact main SHA `6ed5c0ee5b518a62d961a0d12378adc2960871e7` and current companion heads on 2026-10-03. Rounds 01–19 were clean. Round 20 found stale post-merge release wording that still described the historical review branch as current and the already-successful merge-SHA closure as pending. The correction is evidence/test-only: runtime source, DB schema `1.2.0`, and public contract `1.4.0` are unchanged. The permanent gate is `tests/tenth-twenty-round-sequential.py`; exact-head workflow records, not a self-referential document SHA, remain authoritative.
