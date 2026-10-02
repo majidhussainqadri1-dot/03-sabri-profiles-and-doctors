@@ -13,6 +13,7 @@ status=read('STATUS.md')
 manifest=read('RELEASE-MANIFEST.md')
 trace=read('LATEST-PLAN-TRACEABILITY.md')
 ledger=read('TENTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-10-03.md')
+round_section=ledger.split('## Twenty sequential frozen rounds',1)[1].split('Defect-bearing rounds:',1)[0]
 fresh=read('.github/workflows/fresh-eighty-round-review.yml')
 latest=read('.github/workflows/latest-plan-completion.yml')
 lock=json.loads(read('RELEASE-LOCK.json'))
@@ -30,7 +31,7 @@ checks=[
 ('R10 schema/migration round', 'Schema/migration/retention/erasure' in ledger),
 ('R11 API/event/provider round', 'API/event/provider compatibility' in ledger),
 ('R12 package round', 'deterministic package/SBOM parity' in ledger),
-('R13 exactly 20 frozen rows', sum(1 for line in ledger.splitlines() if line.startswith('| ') and line[2:4].isdigit())==20),
+('R13 exactly 20 frozen rows', sum(1 for line in round_section.splitlines() if line.startswith('| ') and line[2:4].isdigit())==20),
 ('R14 defect ledger exact', 'Defect-bearing rounds: `20`' in ledger),
 ('R15 clean ledger exact', 'Clean rounds: `01–19`' in ledger),
 ('R16 20/20 ledger', 'Total reviewed: **20/20**' in ledger),

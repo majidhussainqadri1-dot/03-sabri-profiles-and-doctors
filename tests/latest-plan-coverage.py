@@ -57,8 +57,8 @@ for name,tokens in checks.items():
             missing.append(f'{name}:{token}')
 if missing: raise SystemExit('Latest-plan/future coverage gaps:\n'+'\n'.join(missing))
 # Current candidate/reconciliation truth must not regress to an older release header or legacy File 26 registration only.
-if 'Candidate: `1.2.0-rc18`' not in trace or 'sixth/seventh/eighth/ninth twenty-round corrective closure' not in trace:
-    raise SystemExit('Latest governing traceability is stale relative to the current rc18 candidate.')
+if 'Candidate: `1.2.0-rc18`' not in trace or 'sixth/seventh/eighth/ninth/tenth twenty-round corrective closure' not in trace:
+    raise SystemExit('Latest governing traceability is stale relative to the current rc18 tenth-cycle evidence.')
 for token in ('sabri_file26_owner_connector_adapters','file26_owner_connector_adapters','file26_list_batch','file26_can_view','file26_health'):
     if token not in combined:
         raise SystemExit(f'Missing current File 26 owner-connector contract: {token}')
