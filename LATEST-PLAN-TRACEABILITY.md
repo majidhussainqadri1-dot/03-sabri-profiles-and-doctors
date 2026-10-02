@@ -1,7 +1,7 @@
 # File 03 — Latest Governing Plan Traceability
 
 Candidate: `1.2.0-rc18`  
-Plan: `SSH-F03-PLAN-2026-v1.0 + 2026-08-07 central addendum + FUTURE-SUPERSET-18 + sixth/seventh/eighth/ninth twenty-round corrective closure`  
+Plan: `SSH-F03-PLAN-2026-v1.0 + 2026-08-07 central addendum + FUTURE-SUPERSET-18 + sixth/seventh/eighth/ninth/tenth twenty-round corrective closure`  
 Contract: `1.4.0`  
 Base DB schema: `1.2.0`  
 Central extension schema: `1.0.0`
@@ -111,4 +111,12 @@ Hostinger fresh install/upgrade, real File 00/08/09/20/21/25/26 contracts, brows
 - Current File 08 exact HEAD `70541974ce0ffb16aebef557c3016eb7447662f4` emits clinic/appointment owner facts through `wca_outbox_event`; rc17 did not subscribe to that exact transport.
 - rc18 adds a minimum `1.0.0` File 08 outbox contract check and consumes actual current clinic/appointment event names as invalidation/reconciliation facts only. Opaque File 08 subject UUIDs are not guessed into local WordPress user IDs.
 - Runtime and static regression gates now preserve this exact current-companion boundary. DB schema remains `1.2.0`, public contract remains `1.4.0`.
-- Ninth-cycle exact-head CI/package, staging, deployment, live DB/migration and live verification remain separate pending evidence gates.
+- PR #38 merged as `6ed5c0ee5b518a62d961a0d12378adc2960871e7`; required exact-head CI/package gates succeeded on that main SHA. Staging, deployment, live DB/migration and live verification remain separate unverified evidence gates.
+
+
+## 2026-10-03 tenth current-main twenty-round re-audit
+
+- Exact starting main SHA: `6ed5c0ee5b518a62d961a0d12378adc2960871e7`.
+- Current File 19 HEAD `04078025b643ab7696e4cb4e37826bf152defa18` was re-audited after it advanced: the delta from the previously reviewed source lineage changes only `STATUS.md` and `RELEASE-SHA256.txt`; runtime source/schema remain rooted at `c2881b12fc7e91c050782f7b17bda00d1d69b2f2`.
+- Current Files 00, 01, 02, 04, 07, 08, 09, 17, 19, 20, 21, 22, 23, 24, 25 and 26 contracts were checked without copying companion truth.
+- Fresh rounds 01–19 were clean. R20 corrected stale post-merge repository wording and added a permanent release-truth regression gate. Runtime, schema and public contract are unchanged.

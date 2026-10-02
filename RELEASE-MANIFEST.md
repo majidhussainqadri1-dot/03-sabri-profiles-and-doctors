@@ -6,7 +6,8 @@
 - DB schema: `1.2.0`
 - Public contract: `1.4.0`
 - Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`, `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`, `EIGHTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `NINTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`
-- Ninth-cycle branch: `audit/file03-ninth-twenty-round-20260928`
+- Ninth-cycle branch (historical): `audit/file03-ninth-twenty-round-20260928`
+- Ninth-cycle merged main closure: `6ed5c0ee5b518a62d961a0d12378adc2960871e7`; required exact-head workflows succeeded
 - Ninth-cycle starting exact main freeze: `695329cced81a1b2ee5c59e3b4a92c9809a2564b`
 - Ninth-cycle reviewed parent HEAD: `117dbfac30fac35260947383abd86b11b5481461`
 - Ninth-cycle ledger: `NINTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-09-28.md`
@@ -27,7 +28,7 @@ The exact candidate SHA for any present CI/package assertion is the `github.sha`
 
 Starting exact main freeze: `695329cced81a1b2ee5c59e3b4a92c9809a2564b`. Fresh audit against current File 08 exact HEAD `70541974ce0ffb16aebef557c3016eb7447662f4` proved that File 08 emits canonical clinic/appointment owner facts on `wca_outbox_event`. rc17 did not subscribe to that exact transport, so an anonymous cached profile clinic/availability projection could remain stale until another invalidation. rc18 subscribes to the versioned current File 08 outbox, recognizes the actual clinic/appointment fact names, and performs invalidation/reconciliation only. File 08 remains the canonical data owner.
 
-The ninth cycle completed all 20 review rounds. The File 08 transport omission, future-major contract fail-closed gap, and missing closure ledger/evidence were corrected. Repository closure still requires all exact-head CI/package gates to pass on the final branch SHA and again on the resulting main SHA. No staging/deployed/live claim is made.
+The ninth cycle completed all 20 review rounds. The File 08 transport omission, future-major contract fail-closed gap, and missing closure ledger/evidence were corrected. Repository closure was proven for PR #38's final branch SHA and resulting main SHA `6ed5c0ee5b518a62d961a0d12378adc2960871e7` by their matching exact-head CI/package records. No staging/deployed/live claim is made.
 
 ## Eighth-cycle cross-file candidate boundary
 
@@ -86,3 +87,8 @@ This manifest is **repository candidate evidence only**. It does not prove:
 Required order remains: exact repository candidate → deterministic package → staging reality freeze → artifact/DB/migration/companion parity → staging acceptance → backup/restore + rollback proof → Founder approval → controlled live deploy → live re-test → final parity confirmation.
 
 **Exact deployed code remains unverified; repository-based diagnosis is provisional for any live incident.**
+
+
+## Tenth-cycle current-main evidence correction
+
+Starting exact main freeze: `6ed5c0ee5b518a62d961a0d12378adc2960871e7`. Exactly 20 fresh rounds were completed against the current plans and companion heads. Rounds `01–19` were clean; R20 alone found stale post-merge wording. The correction records the already-proven ninth merge closure and adds a permanent non-self-referential release-truth gate. Runtime package bytes, software identity `1.2.0-rc18`, DB schema `1.2.0`, and public contract `1.4.0` are unchanged.

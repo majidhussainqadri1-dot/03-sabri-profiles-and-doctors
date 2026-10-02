@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0-rc18 — tenth current-main twenty-round evidence correction
+
+A fresh exact-main audit on `6ed5c0ee5b518a62d961a0d12378adc2960871e7` completed 20/20 rounds against current plans and companion heads. Rounds 01–19 were clean. R20 corrected stale post-merge wording and added a permanent release-truth gate. Runtime code, package bytes, DB schema `1.2.0`, and public contract `1.4.0` are unchanged. GitHub repository evidence does not establish staging/live deployment.
+
+
 ## 1.2.0-rc18 — ninth current-companion twenty-round corrective review
 
 Fresh comparison against the amended File 03 plan, central plan and current companion repository heads found a concrete File 08 integration gap: the current File 08 implementation publishes clinic/appointment owner facts through `wca_outbox_event`, while rc17 subscribed only to legacy/generic event surfaces. Because File 03 caches anonymous public profile DTOs containing File 08 clinic/availability projections, that mismatch could leave a stale projection after a legitimate File 08 owner change.

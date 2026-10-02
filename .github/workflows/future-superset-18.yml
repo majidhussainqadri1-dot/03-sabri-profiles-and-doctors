@@ -53,6 +53,8 @@ jobs:
           node --check assets/js/future-profiles.js
       - name: Latest governing coverage
         run: python3 tests/latest-plan-coverage.py
+      - name: Tenth 20-round current-main release-truth invariants
+        run: python3 tests/tenth-twenty-round-sequential.py
       - name: Future Superset 18 coverage
         run: python3 tests/future-superset-coverage.py
       - name: Eighty numbered corrective review gates

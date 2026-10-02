@@ -64,5 +64,33 @@
   "ninth_twenty_round_exact_head_ci_verified": true,
   "ninth_twenty_round_current_file08_head": "70541974ce0ffb16aebef557c3016eb7447662f4",
   "ninth_twenty_round_final_review_parent_head": "117dbfac30fac35260947383abd86b11b5481461",
-  "ninth_twenty_round_final_candidate_head_unpinned": true
+  "ninth_twenty_round_final_candidate_head_unpinned": true,
+  "tenth_twenty_round_review_starting_repository_freeze": "6ed5c0ee5b518a62d961a0d12378adc2960871e7",
+  "tenth_twenty_round_source_audit_completed": true,
+  "tenth_twenty_round_defect_rounds": [
+    20
+  ],
+  "tenth_twenty_round_clean_rounds": "01-19",
+  "tenth_twenty_round_runtime_changed": false,
+  "tenth_twenty_round_exact_head_ci_authority": "GitHub Actions matching the candidate/main SHA",
+  "ninth_twenty_round_merged_main_sha": "6ed5c0ee5b518a62d961a0d12378adc2960871e7",
+  "ninth_twenty_round_merged_main_ci_verified": true,
+  "tenth_twenty_round_current_companion_heads": {
+    "file00": "2fa7c022ee9cd1b65432e900579512f304532442",
+    "file01": "adf6dbb9980a85f25f7cf4c2ee679b52703c2e71",
+    "file02": "224c39bcb8c28f77504c7348dbad41226753c7e8",
+    "file04": "00ea021c8b89b233fbf6be18459e0fd7fb6bfbcd",
+    "file07": "67c32ec4af45a7de6e3d9c1dbf0f8614d6b5a844",
+    "file08": "70541974ce0ffb16aebef557c3016eb7447662f4",
+    "file09": "d35eb982becdf0224a5b850a0c6fb4ace8bf075b",
+    "file17": "8ae656e51796d1f05865d8be5dca2480443d79ca",
+    "file19": "04078025b643ab7696e4cb4e37826bf152defa18",
+    "file20": "8a4dbcaf4fef8e926b9b834ecfde16c21a0f00ca",
+    "file21": "f2eb7e95ddea327af36ea725ffb923b029f885e6",
+    "file22": "b7a7f2e69411cbd32f0574fd12d766fb70c01b7a",
+    "file23": "a8a8c805f4730998ccb44bd95c87591836561759",
+    "file24": "ed86814e40ad7edba7a265a29ea5b44f4fd8f8c3",
+    "file25": "59927df876dc92c7461351420c7b7c95c65c6a93",
+    "file26": "bbea3aad466792a4a6a62b53532bbd45c7c592de"
+  }
 }
