@@ -115,6 +115,9 @@ jobs:
           php tests/timeline-runtime.php
           php tests/forty-round-runtime.php
 
+      - name: File 26 canonical document version and privacy revalidation
+        run: php tests/file26-document-version-runtime.php
+
   exact-package-parity:
     name: Exact HEAD — deterministic ZIP, checksum, SBOM and source/package parity
     runs-on: ubuntu-latest
