@@ -17,7 +17,7 @@ $GLOBALS['f03_current_projection'] = [
     'canonical_id'=>DOCTOR_ID,
     'version'=>12,
     'profile_type'=>'doctor',
-    'badge'=>['verified'=>true],
+    'badge'=>['key'=>'verified_doctor','verified'=>true],
 ];
 function spd_get_search_projection($identity) {
     return $identity === DOCTOR_ID ? $GLOBALS['f03_current_projection'] : new WP_Error();
@@ -35,10 +35,10 @@ $indexed=[
     'payload'=>['verified_doctor'=>true],
 ];
 verify(SPD_Contracts::file26_can_view($indexed) === true, 'matching approved verified doctor must be visible');
-$GLOBALS['f03_current_projection']['badge']['verified'] = false;
+$GLOBALS['f03_current_projection']['badge'] = ['key'=>'member','verified'=>false];
 verify(SPD_Contracts::file26_can_view($indexed) === false, 'revoked File09 verified-doctor fact remains visible through stale File26 index');
 $indexed['payload']['verified_doctor'] = false;
 verify(SPD_Contracts::file26_can_view($indexed) === true, 'refreshed no-longer-verified doctor index should be visible without a false badge');
-$GLOBALS['f03_current_projection']['badge']['verified'] = true;
+$GLOBALS['f03_current_projection']['badge'] = ['key'=>'verified_doctor','verified'=>true];
 verify(SPD_Contracts::file26_can_view($indexed) === false, 'new current File09 verification does not match old unverified index');
 echo "PASS File 03/File 09/File 26 current doctor-badge projection and index revocation\n";
