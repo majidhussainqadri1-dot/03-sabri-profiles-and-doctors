@@ -113,6 +113,9 @@ jobs:
           /tmp/wp config set SA_MASTER_KEY 'f02-disposable-integration-only-master-key-v12' --type=constant --path=/tmp/wordpress
           /tmp/wp config set GDO_KEYRING '{"active":"ci","keys":{"ci":"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="}}' --type=constant --path=/tmp/wordpress
           /tmp/wp config set GDO_CLAIM_SIGNING_KEY 'disposable-gdo-ci-v12-claim-signing-key-2026' --type=constant --path=/tmp/wordpress
+          mkdir -p /tmp/f03-gdo-private
+          chmod 700 /tmp/f03-gdo-private
+          /tmp/wp config set GDO_PRIVATE_STORAGE_DIR '/tmp/f03-gdo-private' --type=constant --path=/tmp/wordpress
           /tmp/wp core install --url=http://example.test --title='F03 Seven Module Disposable CI' --admin_user=admin --admin_password='Integration-Only-Password-2026!' --admin_email=admin@example.test --skip-email --path=/tmp/wordpress --quiet
           root=/tmp/wordpress/wp-content/plugins
           cp -R file00/source/sabri-membership-core "$root/sabri-membership-core"
