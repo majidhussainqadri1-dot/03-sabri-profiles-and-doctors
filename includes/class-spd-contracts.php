@@ -248,12 +248,14 @@ final class SPD_Contracts {
 		// File 09 can revoke a doctor badge without incrementing File 03's
 		// profile version. Search returns the saved File 26 payload, therefore
 		// stale verified-doctor status must also be denied at view time.
-		if ( 'doctor' === (string) ( $document['entity_type'] ?? '' )
-			|| 'doctor' === (string) ( $current['profile_type'] ?? '' ) ) {
-			$indexed_payload = is_array( $document['payload'] ?? null ) ? $document['payload'] : array();
-			$current_badge = is_array( $current['badge'] ?? null ) ? $current['badge'] : array();
-			if ( ! empty( $indexed_payload['verified_doctor'] ) !== ( 'verified_doctor' === (string) ( $current_badge['key'] ?? '' ) && ! empty( $current_badge['verified'] ) ) ) { return false; }
-		}
+		$indexed_payload = is_array( $document['payload'] ?? null ) ? $document['payload'] : array();
+		$current_badge = is_array( $current['badge'] ?? null ) ? $current['badge'] : array();
+		$current_verified_doctor = 'doctor' === (string) ( $current['profile_type'] ?? '' )
+			&& 'verified_doctor' === (string) ( $current_badge['key'] ?? '' )
+			&& ! empty( $current_badge['verified'] );
+		// Older Founder documents may have carried the incorrect doctor flag.
+		// The revalidation must cover every entity type, not just doctor rows.
+		if ( ! empty( $indexed_payload['verified_doctor'] ) !== $current_verified_doctor ) { return false; }
 		$current_version = $current['version'] ?? null;
 		return ( is_int( $current_version ) || is_string( $current_version ) )
 			&& (bool) preg_match( '/^[1-9][0-9]*$/D', (string) $current_version )
