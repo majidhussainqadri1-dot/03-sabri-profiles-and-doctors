@@ -32,6 +32,10 @@ function check(bool $ok,string $name): void {if(!$ok){fwrite(STDERR,"FAIL: {$nam
 $founder=SPD_Contracts::file26_fetch_object(ID);
 check(is_array($founder) && ($founder['entity_type']??'')==='founder','Founder document not produced');
 check(($founder['payload']['verified_doctor']??null)===false,'Founder badge conflated with verified doctor in File26 search');
+$legacy=$founder;
+$legacy['payload']['verified_doctor']=true;
+check(SPD_Contracts::file26_can_view($legacy) === false,'previously indexed Founder false-doctor badge remained visible');
+check(SPD_Contracts::file26_can_view($founder) === true,'corrected Founder index was unexpectedly hidden');
 $GLOBALS['f03_search_current']['profile_type']='doctor';
 $GLOBALS['f03_search_current']['badge']=['key'=>'verified_doctor','verified'=>true];
 $doctor=SPD_Contracts::file26_fetch_object(ID);
