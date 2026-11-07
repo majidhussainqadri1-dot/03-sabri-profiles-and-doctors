@@ -30,6 +30,12 @@ Frozen start: GitHub File 03 `main` `636e3ef965423887f810718abec3cd1c11c3659d` (
 - `.github/workflows/fresh-eighty-round-review.yml` — mandatory exact-head permanent execution of all 5 new PHP gates before package job.
 - `.github/workflows/file03-v12-wordpress701-mariadb114.yml` — real disposable WordPress 7.0.1/PHP8.3/MariaDB11.4 with pinned exact File00 1.2.44, actual File00 deferred administrator bootstrap, File03 fresh install, owned base/central/future schema postconditions, repeated repair and contract state. **This is not staging or live acceptance**.
 
+## Separate CI/release-evidence correction (not a sixth runtime defect)
+
+The prior Fresh Eighty PR artifact was named from the GitHub **synthetic pull-request merge** `github.sha` rather than the actual candidate branch head. That distinction matters for the platform's Evidence-First Exact-HEAD rule even when both code trees appear compatible. This was proved by previous artifact identity `file03-1.2.0-rc18-9576fbb916e0fffdb8694335d09f9f4cba4497c0-exact-package` while PR source head was `113dd48d66d18dbba507bbf46c09a8ed82b4a1b1`.
+
+CI fix `74896136068ab974eb04169a0371e67f6d493566`: both Fresh Eighty source and package jobs explicitly checkout `github.event.pull_request.head.sha || github.sha` and assert `git rev-parse HEAD` equality, while package artifact name uses that exact input SHA. Verified package artifact for that exact code head: `file03-1.2.0-rc18-74896136068ab974eb04169a0371e67f6d493566-exact-package`; GitHub artifact-envelope digest `sha256:a9e705810f4ab82f700c364f0061b14018f7ae20ccfb6286d91d1e56fe6d20ec`. Note: artifact-envelope digest is **not** installable ZIP SHA-256. The package workflow's own internal ZIP/checksum/SBOM/source-byte parity job passed; deployable package remains uninstalled. This makes **1 additional CI truth/provenance defect corrected**, in addition to the 5 source defects.
+
 ## Release and external acceptance remaining
 
 `STAGING-ACCEPTANCE.md` is now labeled rc18/v12 and has **72 unchecked** practical staging receipts (69 earlier + 3 current regressions). These remain required despite source CI success.
