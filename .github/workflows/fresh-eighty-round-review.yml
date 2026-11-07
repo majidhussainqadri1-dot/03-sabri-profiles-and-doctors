@@ -117,6 +117,8 @@ jobs:
 
       - name: File 26 canonical document version and privacy revalidation
         run: php tests/file26-document-version-runtime.php
+      - name: File 09 current doctor badge and File 26 index revocation
+        run: php tests/file26-doctor-badge-revocation-runtime.php
 
   exact-package-parity:
     name: Exact HEAD — deterministic ZIP, checksum, SBOM and source/package parity
