@@ -14,7 +14,7 @@ env:
   FILE02_REF: 224c39bcb8c28f77504c7348dbad41226753c7e8
   FILE07_REF: 2f4a89707724fd2b9946600afe10ddab27ec3c2d
   FILE09_REF: a93c7f1fd52eb58da0c8f47cf13fdf0abba2bce2
-  FILE08_REF: dbe5795f84c3f7e135ece29fc188acfbc167cccb
+  FILE08_REF: acef00c953599e4336ad2f30824c0c9985fc207a
   FILE26_REF: 1b064c6ea9f81195611ed001d5457e8ced65460a
 
 jobs:
@@ -159,6 +159,16 @@ jobs:
           set -euo pipefail
           /tmp/wp plugin activate worldwide-clinic --path=/tmp/wordpress
           /tmp/wp eval 'if(!SWC_Activator::dependencies_ready()||!has_action("wca_outbox_event")){fwrite(STDERR,"FAIL File08 profile owner event integration\n");exit(1);} echo "PASS File08 File03 outbox transport\n";' --path=/tmp/wordpress
+      - name: Confirm File08 never enters runtime migration failure on normal boot
+        run: |
+          set -euo pipefail
+          /tmp/wp eval 'if(get_option("wca_runtime_migration_failure",false)){fwrite(STDERR,"FAIL File08 migration failure flag present\\n");exit(1);} if(!has_action("init",array("WCA_Routes","register"))){fwrite(STDERR,"FAIL File08 init-time route missing\\n");exit(1);} echo "PASS File08 runtime migration clean and init route registered\\n";' --path=/tmp/wordpress
+          if [[ -f /tmp/wordpress/wp-content/debug.log ]]; then
+            if grep -Fq '"event":"runtime_migration_failed"' /tmp/wordpress/wp-content/debug.log; then
+              echo 'FAIL File08 runtime migration error was logged during genuine WP startup'
+              exit 1
+            fi
+          fi
       - name: File 26 schema and canonical File03 connector collection
         run: |
           set -euo pipefail
