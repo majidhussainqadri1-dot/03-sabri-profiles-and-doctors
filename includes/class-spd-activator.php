@@ -41,9 +41,27 @@ final class SPD_Activator {
 	private static function persist_exact_option( $option, $value ) {
 		$option = sanitize_key( (string) $option );
 		if ( '' === $option ) { return false; }
-		$updated = update_option( $option, $value, false );
-		if ( false === $updated && get_option( $option, null ) !== $value ) { return false; }
-		return get_option( $option, null ) === $value;
+		// In real WordPress, update_option( absent_option, false ) can be a
+		// no-op because the missing option also reads as false. Explicitly
+		// create absent options, then verify persisted values rather than the
+		// API's no-op return. WP stores booleans and numbers as DB strings.
+		if ( null === get_option( $option, null ) ) {
+			add_option( $option, $value, '', false );
+		} else {
+			update_option( $option, $value, false );
+		}
+		$stored = get_option( $option, null );
+		if ( null === $stored ) { return false; }
+		if ( is_bool( $value ) ) {
+			return $value
+				? ( true === $stored || '1' === $stored )
+				: ( false === $stored || '' === $stored || '0' === $stored );
+		}
+		if ( is_int( $value ) || is_float( $value ) ) {
+			return ( is_int( $stored ) || is_float( $stored ) || is_string( $stored ) )
+				&& (string) $stored === (string) $value;
+		}
+		return $stored === $value;
 	}
 
 	public static function deactivate() {
