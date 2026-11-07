@@ -108,6 +108,9 @@ jobs:
           test "$(/tmp/wp core version --path=/tmp/wordpress)" = '7.0.1'
           /tmp/wp config create --dbname=wordpress --dbuser=wordpress --dbpass=wordpress --dbhost=127.0.0.1:3306 --path=/tmp/wordpress --skip-check --quiet
           /tmp/wp config set WP_ENVIRONMENT_TYPE 'staging' --type=constant --path=/tmp/wordpress
+          /tmp/wp config set WP_DEBUG true --raw --type=constant --path=/tmp/wordpress
+          /tmp/wp config set WP_DEBUG_LOG true --raw --type=constant --path=/tmp/wordpress
+          /tmp/wp config set WP_DEBUG_DISPLAY false --raw --type=constant --path=/tmp/wordpress
           /tmp/wp config set SMC_MASTER_KEY 'f03-disposable-integration-only-master-key-v12' --type=constant --path=/tmp/wordpress
           /tmp/wp config set SMC_MASTER_KEY_ID 'f03-disposable-ci-key-v12' --type=constant --path=/tmp/wordpress
           /tmp/wp config set SA_MASTER_KEY 'f02-disposable-integration-only-master-key-v12' --type=constant --path=/tmp/wordpress
@@ -161,6 +164,15 @@ jobs:
           set -euo pipefail
           /tmp/wp plugin activate sabri-file26 --path=/tmp/wordpress
           /tmp/wp eval '$owner=\\Sabri\\File26\\Plugin::instance()->connectors()->get("file03-profiles"); if(!\\Sabri\\File26\\DB::schema_physical_ok()||!is_array($owner)||($owner["owner_file"]??"")!=="File 03"||!is_callable($owner["can_view"]??null)||!is_callable($owner["list_batch"]??null)){fwrite(STDERR,"FAIL File26/File03 current connector\n");exit(1);} if(($owner["status"]??"")==="active"){fwrite(STDERR,"FAIL unapproved connector unexpectedly production-active\n");exit(1);} echo "PASS File26 File03 canonical adapter, inactive governance\n";' --path=/tmp/wordpress
+      - name: Surface disposable WordPress PHP fatal evidence without weakening production controls
+        if: failure()
+        run: |
+          if [[ -f /tmp/wordpress/wp-content/debug.log ]]; then
+            tail -n 100 /tmp/wordpress/wp-content/debug.log
+          else
+            echo "No WP debug.log created; do not infer root cause from surface error."
+          fi
+
       - name: Real WordPress File03/File26 callback denial for invalid stored document
         run: |
           set -euo pipefail
