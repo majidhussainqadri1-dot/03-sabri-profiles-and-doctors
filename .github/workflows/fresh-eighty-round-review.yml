@@ -121,6 +121,8 @@ jobs:
         run: php tests/file26-doctor-badge-revocation-runtime.php
       - name: File 03 real WordPress option persistence semantics
         run: php tests/activator-option-persistence.php
+      - name: FHIR only for current verified professional identities
+        run: php tests/fhir-verified-professional-runtime.php
 
   exact-package-parity:
     name: Exact HEAD — deterministic ZIP, checksum, SBOM and source/package parity
