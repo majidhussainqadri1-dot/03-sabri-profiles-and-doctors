@@ -1,5 +1,5 @@
 # File 03 governing v12: real disposable cross-file WordPress integration.
-# Does NOT deploy or alter the Hostinger live/staging website.
+# Does NOT deploy or alter Hostinger live/staging. File09 candidate is NOT merged.
 name: File 03 v12 Seven-Plugin Real Cross-File Integration
 
 on:
@@ -13,7 +13,7 @@ env:
   FILE00_REF: 2fa7c022ee9cd1b65432e900579512f304532442
   FILE02_REF: 224c39bcb8c28f77504c7348dbad41226753c7e8
   FILE07_REF: 2f4a89707724fd2b9946600afe10ddab27ec3c2d
-  FILE09_REF: cfc5f781a766330314dc98c42abeca0eb7786eba
+  FILE09_REF: a93c7f1fd52eb58da0c8f47cf13fdf0abba2bce2
   FILE08_REF: 92e2422d6a235632810ed4981f151fc3250784aa
   FILE26_REF: 1b064c6ea9f81195611ed001d5457e8ced65460a
 
