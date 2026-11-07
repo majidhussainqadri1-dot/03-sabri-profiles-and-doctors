@@ -245,6 +245,15 @@ final class SPD_Contracts {
 		$current = spd_get_search_projection( (string) $document['object_id'] );
 		if ( ! is_array( $current ) || is_wp_error( $current )
 			|| sanitize_text_field( (string) ( $current['canonical_id'] ?? '' ) ) !== sanitize_text_field( (string) $document['object_id'] ) ) { return false; }
+		// File 09 can revoke a doctor badge without incrementing File 03's
+		// profile version. Search returns the saved File 26 payload, therefore
+		// stale verified-doctor status must also be denied at view time.
+		if ( 'doctor' === (string) ( $document['entity_type'] ?? '' )
+			|| 'doctor' === (string) ( $current['profile_type'] ?? '' ) ) {
+			$indexed_payload = is_array( $document['payload'] ?? null ) ? $document['payload'] : array();
+			$current_badge = is_array( $current['badge'] ?? null ) ? $current['badge'] : array();
+			if ( ! empty( $indexed_payload['verified_doctor'] ) !== ! empty( $current_badge['verified'] ) ) { return false; }
+		}
 		$current_version = $current['version'] ?? null;
 		return ( is_int( $current_version ) || is_string( $current_version ) )
 			&& (bool) preg_match( '/^[1-9][0-9]*$/D', (string) $current_version )
