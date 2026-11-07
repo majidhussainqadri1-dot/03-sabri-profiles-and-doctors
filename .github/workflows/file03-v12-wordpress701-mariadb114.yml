@@ -87,6 +87,12 @@ jobs:
           set -euo pipefail
           /tmp/wp plugin activate sabri-profiles-doctors --path=/tmp/wordpress
           /tmp/wp eval 'if(!defined("SPD_VERSION")||SPD_VERSION!=="1.2.0-rc18"||SPD_DB_VERSION!=="1.2.0"||SPD_CONTRACT_VERSION!=="1.4.0") exit(1); foreach(array("spd_version"=>SPD_VERSION,"spd_db_version"=>SPD_DB_VERSION,"spd_contract_version"=>SPD_CONTRACT_VERSION,"spd_central_schema_version"=>SPD_Central_Profile::SCHEMA_VERSION,"spd_future_schema_version"=>SPD_Future_Profile::SCHEMA_VERSION) as $key=>$value){if((string)get_option($key,"")!==(string)$value){fwrite(STDERR,"FAIL option ".$key."\n");exit(1);}} if(!SPD_Schema_Guard::base_ready()||!SPD_Schema_Guard::central_ready()||!SPD_Schema_Guard::future_ready()){fwrite(STDERR,"FAIL exact schema shape\n");exit(1);} echo "PASS File03 real WordPress/MariaDB fresh activation and owned schemas\n";' --path=/tmp/wordpress
+      - name: Diagnose failed initial option persistence (disposable CI only)
+        if: failure()
+        run: |
+          set -euo pipefail
+          /tmp/wp eval 'global $wpdb; foreach(array("spd_safe_mode","spd_migration_cursor") as $key){$v=get_option($key,null);$raw=$wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name=%s",$key));echo wp_json_encode(array("key"=>$key,"exists"=>null!==$v,"type"=>gettype($v),"value"=>$v,"raw_db"=>$raw))."\\n";}' --path=/tmp/wordpress
+
       - name: Re-enter plugin and check safe idempotent repair
         run: |
           set -euo pipefail
