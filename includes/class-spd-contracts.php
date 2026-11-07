@@ -229,7 +229,7 @@ final class SPD_Contracts {
 			'location' => sanitize_text_field( (string) ( $fields['city'] ?? '' ) ),
 			'freshness_at' => sanitize_text_field( (string) ( $projection['generated_at'] ?? gmdate( 'c' ) ) ),
 			'safety_class' => 'professional_profile',
-			'payload' => array( 'verified_doctor' => ! empty( $badge['verified'] ) ),
+			'payload' => array( 'verified_doctor' => 'doctor' === $type && 'verified_doctor' === (string) ( $badge['key'] ?? '' ) && ! empty( $badge['verified'] ) ),
 		);
 	}
 
@@ -252,7 +252,7 @@ final class SPD_Contracts {
 			|| 'doctor' === (string) ( $current['profile_type'] ?? '' ) ) {
 			$indexed_payload = is_array( $document['payload'] ?? null ) ? $document['payload'] : array();
 			$current_badge = is_array( $current['badge'] ?? null ) ? $current['badge'] : array();
-			if ( ! empty( $indexed_payload['verified_doctor'] ) !== ! empty( $current_badge['verified'] ) ) { return false; }
+			if ( ! empty( $indexed_payload['verified_doctor'] ) !== ( 'verified_doctor' === (string) ( $current_badge['key'] ?? '' ) && ! empty( $current_badge['verified'] ) ) ) { return false; }
 		}
 		$current_version = $current['version'] ?? null;
 		return ( is_int( $current_version ) || is_string( $current_version ) )
