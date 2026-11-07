@@ -229,17 +229,37 @@ final class SPD_Contracts {
 			'location' => sanitize_text_field( (string) ( $fields['city'] ?? '' ) ),
 			'freshness_at' => sanitize_text_field( (string) ( $projection['generated_at'] ?? gmdate( 'c' ) ) ),
 			'safety_class' => 'professional_profile',
-			'payload' => array( 'verified_doctor' => ! empty( $badge['verified'] ) ),
+			'payload' => array( 'verified_doctor' => 'doctor' === $type && 'verified_doctor' === (string) ( $badge['key'] ?? '' ) && ! empty( $badge['verified'] ) ),
 		);
 	}
 
 	public static function file26_can_view( $document, $audience = array() ) {
 		unset( $audience );
 		if ( ! is_array( $document ) || empty( $document['object_id'] ) ) { return false; }
+		// File 26 renders stored index fields after this owner callback. A profile
+		// audience/privacy change increments its version; an older index document
+		// must not expose fields that the current public DTO no longer allows.
+		$document_version = $document['object_version'] ?? null;
+		if ( ! ( is_int( $document_version ) || is_string( $document_version ) )
+			|| ! preg_match( '/^[1-9][0-9]*$/D', (string) $document_version ) ) { return false; }
 		$current = spd_get_search_projection( (string) $document['object_id'] );
-		return is_array( $current )
-			&& ! is_wp_error( $current )
-			&& sanitize_text_field( (string) ( $current['canonical_id'] ?? '' ) ) === sanitize_text_field( (string) $document['object_id'] );
+		if ( ! is_array( $current ) || is_wp_error( $current )
+			|| sanitize_text_field( (string) ( $current['canonical_id'] ?? '' ) ) !== sanitize_text_field( (string) $document['object_id'] ) ) { return false; }
+		// File 09 can revoke a doctor badge without incrementing File 03's
+		// profile version. Search returns the saved File 26 payload, therefore
+		// stale verified-doctor status must also be denied at view time.
+		$indexed_payload = is_array( $document['payload'] ?? null ) ? $document['payload'] : array();
+		$current_badge = is_array( $current['badge'] ?? null ) ? $current['badge'] : array();
+		$current_verified_doctor = 'doctor' === (string) ( $current['profile_type'] ?? '' )
+			&& 'verified_doctor' === (string) ( $current_badge['key'] ?? '' )
+			&& ! empty( $current_badge['verified'] );
+		// Older Founder documents may have carried the incorrect doctor flag.
+		// The revalidation must cover every entity type, not just doctor rows.
+		if ( ! empty( $indexed_payload['verified_doctor'] ) !== $current_verified_doctor ) { return false; }
+		$current_version = $current['version'] ?? null;
+		return ( is_int( $current_version ) || is_string( $current_version ) )
+			&& (bool) preg_match( '/^[1-9][0-9]*$/D', (string) $current_version )
+			&& hash_equals( (string) $current_version, (string) $document_version );
 	}
 
 	public static function file26_health() {

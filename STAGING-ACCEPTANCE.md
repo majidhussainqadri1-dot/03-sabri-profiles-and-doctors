@@ -1,6 +1,8 @@
-# File 03 — Staging Acceptance Matrix for 1.2.0-rc15
+# File 03 — Staging Acceptance Matrix for 1.2.0-rc18 (Master Plan v12)
 
 **Status:** checklist only. No staging acceptance, live deployment or operational claim is made by this document.
+
+The new repository-only WP7.0.1/MariaDB11.4 smoke and exact-head File26/FHIR regressions are **not** substitutes for these unchecked staging acceptance receipts. Confirm source-to-installed checksum parity first.
 
 Before any Founder approval or live promotion, freeze staging reality: exact installed File 03 package/version/checksum, active companion versions/contracts, DB/schema versions, migration cursor/failure state, Safe Mode state, scheduled workers, relevant configuration and fresh runtime logs. Compare the installed artifact with the exact reviewed GitHub candidate; a repository-green result is not deployment parity.
 
@@ -13,6 +15,12 @@ Before any Founder approval or live promotion, freeze staging reality: exact ins
 - [ ] System Check labels an owned required page `unpublished` until repair, rather than reporting it available.
 - [ ] Legacy public `/profile/?public_id=<UUID>` for an eligible public profile returns a permanent 301 to `/profile/<UUID>/`; invalid/private/DB-uncertain cases do not disclose object existence.
 - [ ] Alias and share-token redirects remain canonical and revoked share epochs stop resolving.
+
+## A2. Fresh-activation and current-owner negative acceptance
+
+- [ ] Fresh WordPress 7.0.1 / PHP 8.3 / MariaDB 11.4 staging activation persists `spd_safe_mode=false` and `spd_migration_cursor=0` as actual existing wp_options rows, with correct readback on a fresh request.
+- [ ] File 26 search results deny a stale profile-version document and any historical Founder `verified_doctor=true` index document; rebuilt current public results remain accessible.
+- [ ] File 09 doctor verification revoke/reinstate changes invalidate cached File 26 doctor-badge claims, even without a File 03 version increment; FHIR Practitioner projection is absent for ordinary or unverified members.
 
 ## B. Identity, role and authorization
 
