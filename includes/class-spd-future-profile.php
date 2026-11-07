@@ -348,6 +348,13 @@ final class SPD_Future_Profile {
 
 	/** FUT-17: FHIR-compatible public professional projection; no patient record. */
 	public static function fhir_projection( array $dto ) {
+		// FHIR Practitioner is a professional role, not a generic member card.
+		// Founder verification proves an official founder, not doctor licensure;
+		// require the distinct current File 09 verified-doctor badge.
+		$badge = is_array( $dto['badge'] ?? null ) ? $dto['badge'] : array();
+		if ( 'doctor' !== (string) ( $dto['profile_type'] ?? '' )
+			|| 'verified_doctor' !== (string) ( $badge['key'] ?? '' )
+			|| empty( $badge['verified'] ) ) { return array(); }
 		$lifecycle = $dto['future']['lifecycle']['status'] ?? 'unknown';
 		$practitioner = array( 'resourceType' => 'Practitioner', 'id' => 'sabri-' . strtolower( str_replace( '-', '', $dto['public_id'] ) ), 'active' => 'active' === $lifecycle, 'identifier' => array( array( 'system' => 'https://sabrihomeopathy.com/profile-id', 'value' => $dto['public_id'] ) ), 'name' => array( array( 'text' => $dto['display_name'] ) ) );
 		if ( ! empty( $dto['fields']['languages'] ) ) { $practitioner['communication'] = array( array( 'language' => array( 'text' => $dto['fields']['languages'] ) ) ); }
