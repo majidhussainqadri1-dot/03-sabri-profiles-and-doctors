@@ -236,10 +236,19 @@ final class SPD_Contracts {
 	public static function file26_can_view( $document, $audience = array() ) {
 		unset( $audience );
 		if ( ! is_array( $document ) || empty( $document['object_id'] ) ) { return false; }
+		// File 26 renders stored index fields after this owner callback. A profile
+		// audience/privacy change increments its version; an older index document
+		// must not expose fields that the current public DTO no longer allows.
+		$document_version = $document['object_version'] ?? null;
+		if ( ! ( is_int( $document_version ) || is_string( $document_version ) )
+			|| ! preg_match( '/^[1-9][0-9]*$/D', (string) $document_version ) ) { return false; }
 		$current = spd_get_search_projection( (string) $document['object_id'] );
-		return is_array( $current )
-			&& ! is_wp_error( $current )
-			&& sanitize_text_field( (string) ( $current['canonical_id'] ?? '' ) ) === sanitize_text_field( (string) $document['object_id'] );
+		if ( ! is_array( $current ) || is_wp_error( $current )
+			|| sanitize_text_field( (string) ( $current['canonical_id'] ?? '' ) ) !== sanitize_text_field( (string) $document['object_id'] ) ) { return false; }
+		$current_version = $current['version'] ?? null;
+		return ( is_int( $current_version ) || is_string( $current_version ) )
+			&& (bool) preg_match( '/^[1-9][0-9]*$/D', (string) $current_version )
+			&& hash_equals( (string) $current_version, (string) $document_version );
 	}
 
 	public static function file26_health() {
