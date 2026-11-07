@@ -119,6 +119,8 @@ jobs:
         run: php tests/file26-document-version-runtime.php
       - name: File 09 current doctor badge and File 26 index revocation
         run: php tests/file26-doctor-badge-revocation-runtime.php
+      - name: File 03 real WordPress option persistence semantics
+        run: php tests/activator-option-persistence.php
 
   exact-package-parity:
     name: Exact HEAD — deterministic ZIP, checksum, SBOM and source/package parity
