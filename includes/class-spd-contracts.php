@@ -164,12 +164,19 @@ final class SPD_Contracts {
 
 	public static function file26_list_batch( $cursor, $limit, $scope = array() ) {
 		global $wpdb;
-		unset( $scope );
+		// A degraded owner is NOT an empty successful snapshot. File26 can
+		// otherwise promote an empty shadow generation and remove public profiles.
 		if ( ! SPD_DB::tables_exist() ) {
-			return array( 'items' => array(), 'next_cursor' => '', 'done' => true, 'degraded' => true );
+			return new WP_Error( 'spd_file26_owner_schema_unavailable', 'Canonical File03 profile schema is unavailable; snapshot denied.' );
+		}
+		if ( ! is_array( $scope ) || array_key_exists( 'object_id', $scope ) ) {
+			return new WP_Error( 'spd_file26_partial_scope_unverified', 'Only complete source snapshots are supported until source object scopes are proven.' );
+		}
+		if ( '' !== $cursor && ( ! is_string( $cursor ) || ! preg_match( '/^[0-9]{1,18}$/D', $cursor ) ) ) {
+			return new WP_Error( 'spd_file26_invalid_cursor', 'Invalid File03 owner cursor.' );
 		}
 		$limit = max( 1, min( 100, absint( $limit ) ) );
-		$after = absint( $cursor );
+		$after = (int) $cursor;
 		$table = SPD_DB::table( 'profiles' );
 		$wpdb->last_error = '';
 		$rows = $wpdb->get_results(
@@ -181,7 +188,7 @@ final class SPD_Contracts {
 			ARRAY_A
 		);
 		if ( $wpdb->last_error || ! is_array( $rows ) ) {
-			return array( 'items' => array(), 'next_cursor' => (string) $after, 'done' => false, 'degraded' => true );
+			return new WP_Error( 'spd_file26_owner_batch_unreadable', 'Canonical profile owner batch could not be read reliably.' );
 		}
 		$items = array();
 		$last_id = $after;
@@ -227,7 +234,8 @@ final class SPD_Contracts {
 			'author_key' => 'profile:' . sanitize_text_field( (string) $projection['canonical_id'] ),
 			'country' => sanitize_text_field( (string) ( $fields['country'] ?? '' ) ),
 			'location' => sanitize_text_field( (string) ( $fields['city'] ?? '' ) ),
-			'freshness_at' => sanitize_text_field( (string) ( $projection['generated_at'] ?? gmdate( 'c' ) ) ),
+			// No generated_at as freshness_at: request-time data changes the
+			// File26 checksum for an otherwise identical immutable owner version.
 			'safety_class' => 'professional_profile',
 			'payload' => array( 'verified_doctor' => 'doctor' === $type && 'verified_doctor' === (string) ( $badge['key'] ?? '' ) && ! empty( $badge['verified'] ) ),
 		);
