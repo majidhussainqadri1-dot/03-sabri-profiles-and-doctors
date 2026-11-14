@@ -21,7 +21,7 @@ checks = [
 (7,'Core schema fail-closed installer remains present',lambda:has('includes/class-spd-db.php','spd_schema_install_failed')),
 (8,'Activation uses atomic owner-token lock',lambda:has('includes/class-spd-activator.php',"acquire_lock( 'activation'") and lacks('includes/class-spd-activator.php',"set_transient( 'spd_activation_lock'")),
 (9,'Migration batch is serialized by atomic guard',lambda:has('includes/class-spd-plugin.php',"acquire_lock( 'migration_batch'") and has('includes/class-spd-plugin.php','run_migration_batch') and has('includes/class-spd-helpers.php','option_name=%s AND option_value=%s')),
-(10,'Database transactions rollback and commit',lambda:has('includes/class-spd-db.php',"query('ROLLBACK')") and has('includes/class-spd-db.php',"query('COMMIT')")),
+(10,'Database transactions rollback/commit with nested MySQL savepoints',lambda:all(has('includes/class-spd-db.php', token) for token in ("'START TRANSACTION'", "'ROLLBACK'", "'COMMIT'", "'SAVEPOINT '", "'ROLLBACK TO SAVEPOINT '", "'RELEASE SAVEPOINT '")) and has('.github/workflows/fresh-eighty-round-review.yml', 'tests/nested-transaction-atomicity-runtime.php')),
 (11,'Founder transition enforces singleton',lambda:has('includes/trait-spd-profile-identity-create.php',"profile_type='founder' AND id<>%d")),
 (12,'Identity refresh emits event and reconciles',lambda:has('includes/trait-spd-profile-identity-create.php',"'identity_refresh'") and has('includes/trait-spd-profile-identity-create.php','PublicProfileUpdated.v1') and has('includes/trait-spd-profile-identity-create.php','spd_reconciliation_required')),
 (13,'Slug collisions fail explicitly',lambda:has('includes/trait-spd-profile-identity-create.php','spd_slug_collision')),
