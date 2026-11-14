@@ -48,6 +48,8 @@ jobs:
         run: find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
       - name: JavaScript syntax
         run: find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: V12.3 public-work AI clinical-scope boundary negative language regression
+        run: php tests/ai-clinical-intent-boundary-runtime.php
       - name: V12.3 JSON-LD HTML script-boundary regression
         run: php tests/jsonld-script-boundary-runtime.php
       - name: V12.3 QR true-symbol scanner-golden regression
