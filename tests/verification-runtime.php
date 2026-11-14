@@ -1,5 +1,6 @@
 <?php
 require __DIR__.'/test-bootstrap.php';
+require dirname(__DIR__).'/includes/class-spd-helpers.php';
 require dirname(__DIR__).'/includes/class-spd-membership-adapter.php';
 require dirname(__DIR__).'/includes/class-spd-verification-adapter.php';
 $GLOBALS['users'][2]=array('display_name'=>'Doctor');
