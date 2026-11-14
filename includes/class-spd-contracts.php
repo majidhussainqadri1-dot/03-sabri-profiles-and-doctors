@@ -248,6 +248,15 @@ final class SPD_Contracts {
 		$fields = (array) ( $projection['fields'] ?? array() );
 		$professional = (array) ( $projection['professional'] ?? array() );
 		$badge = (array) ( $projection['badge'] ?? array() );
+		// F03-FUT-16: retiring or memorializing a professional does not necessarily
+		// increment the native File03 version; preserve current lifecycle in the
+		// owner index payload and never rank a retired profile as active/verified.
+		$lifecycle = strtolower( trim( (string) ( $projection['professional_lifecycle'] ?? 'active' ) ) );
+		if ( ! in_array( $lifecycle, array( 'active', 'retired', 'legacy' ), true ) ) {
+			return $strict_owner_error
+				? new WP_Error( 'spd_file26_lifecycle_unavailable', 'Current professional lifecycle cannot be validated.' )
+				: array();
+		}
 		return array(
 			'connector_slug' => 'file03-profiles',
 			'domain' => 'profiles',
@@ -267,7 +276,7 @@ final class SPD_Contracts {
 			// No generated_at as freshness_at: request-time data changes the
 			// File26 checksum for an otherwise identical immutable owner version.
 			'safety_class' => 'professional_profile',
-			'payload' => array( 'verified_doctor' => 'doctor' === $type && 'verified_doctor' === (string) ( $badge['key'] ?? '' ) && ! empty( $badge['verified'] ) ),
+			'payload' => array( 'verified_doctor' => 'active' === $lifecycle && 'doctor' === $type && 'verified_doctor' === (string) ( $badge['key'] ?? '' ) && ! empty( $badge['verified'] ), 'professional_lifecycle' => $lifecycle ),
 		);
 	}
 
@@ -309,8 +318,14 @@ final class SPD_Contracts {
 		// profile version. Search returns the saved File 26 payload, therefore
 		// stale verified-doctor status must also be denied at view time.
 		$indexed_payload = is_array( $document['payload'] ?? null ) ? $document['payload'] : array();
+		// Source-of-truth lifecycle is independent of the local profile version.
+		// Mismatched/stale index states are denied until File26 reindexes them.
+		$current_lifecycle = strtolower( trim( (string) ( $current['professional_lifecycle'] ?? 'active' ) ) );
+		$indexed_lifecycle = strtolower( trim( (string) ( $indexed_payload['professional_lifecycle'] ?? 'active' ) ) );
+		if ( ! in_array( $current_lifecycle, array( 'active', 'retired', 'legacy' ), true )
+			|| ! hash_equals( $current_lifecycle, $indexed_lifecycle ) ) { return false; }
 		$current_badge = is_array( $current['badge'] ?? null ) ? $current['badge'] : array();
-		$current_verified_doctor = 'doctor' === (string) ( $current['profile_type'] ?? '' )
+		$current_verified_doctor = 'active' === $current_lifecycle && 'doctor' === (string) ( $current['profile_type'] ?? '' )
 			&& 'verified_doctor' === (string) ( $current_badge['key'] ?? '' )
 			&& ! empty( $current_badge['verified'] );
 		// Older Founder documents may have carried the incorrect doctor flag.
