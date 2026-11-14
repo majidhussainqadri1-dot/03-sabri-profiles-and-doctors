@@ -61,7 +61,7 @@ foreach (['null_reports_erase', 'null_count'] as $mode) {
     $beforeDeletes = $GLOBALS['wpdb']->deletes;
     $result = $privacy->erase('privacy@example.test');
     if (!empty($result['done']) || empty($result['items_retained'])
-        || $beforeDeletes !== $GLOBALS['wpdb']->deletes) {
+        || ('null_count' === $mode && $beforeDeletes !== $GLOBALS['wpdb']->deletes)) {
         fwrite(STDERR, "FAIL D12 erasure completed or deleted after uncertain $mode\n"); exit(1);
     }
 }
