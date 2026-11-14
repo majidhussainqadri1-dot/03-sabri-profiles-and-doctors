@@ -185,15 +185,62 @@ final class SPD_DB {
 		return true;
 	}
 
+	private static $transaction_depth = 0;
+	private static $transaction_compromised = false;
+
+	/**
+	 * Execute owner commands atomically, including calls nested inside a REST
+	 * idempotency transaction. A second START TRANSACTION implicitly commits
+	 * the first in MySQL/MariaDB; use InnoDB savepoints for nested commands.
+	 *
+	 * The outermost caller alone may COMMIT. If a savepoint cannot be rolled
+	 * back, poison the outer transaction so it cannot report a false success.
+	 */
 	public static function transaction( callable $callback ) {
 		global $wpdb;
-		$wpdb->last_error='';
-		if ( false === $wpdb->query('START TRANSACTION') ) { return new WP_Error('spd_transaction_unavailable',__( 'The database transaction could not be started.','sabri-profiles-doctors')); }
+		$nested = self::$transaction_depth > 0;
+		if ( ! $nested ) {
+			self::$transaction_compromised = false;
+		}
+		$savepoint = $nested ? 'spd_nested_' . ( self::$transaction_depth + 1 ) : '';
+		$start_sql = $nested ? 'SAVEPOINT ' . $savepoint : 'START TRANSACTION';
+		$wpdb->last_error = '';
+		if ( false === $wpdb->query( $start_sql ) || $wpdb->last_error ) {
+			if ( $nested ) { self::$transaction_compromised = true; }
+			return new WP_Error( 'spd_transaction_unavailable', __( 'The database transaction could not be started.', 'sabri-profiles-doctors' ) );
+		}
+		++self::$transaction_depth;
 		try {
-			$result=$callback();
-			if ( is_wp_error($result) || $wpdb->last_error ) { $wpdb->query('ROLLBACK'); return is_wp_error($result)?$result:new WP_Error('spd_database_error',__( 'The profile update could not be completed.','sabri-profiles-doctors')); }
-			if ( false === $wpdb->query('COMMIT') ) { $wpdb->query('ROLLBACK'); return new WP_Error('spd_commit_failed',__( 'The profile update could not be committed.','sabri-profiles-doctors')); }
+			$result = $callback();
+			if ( is_wp_error( $result ) || $wpdb->last_error || self::$transaction_compromised ) {
+				$rolled_back = $wpdb->query( $nested ? 'ROLLBACK TO SAVEPOINT ' . $savepoint : 'ROLLBACK' );
+				if ( false === $rolled_back ) { self::$transaction_compromised = true; }
+				if ( $nested && false !== $rolled_back && false === $wpdb->query( 'RELEASE SAVEPOINT ' . $savepoint ) ) {
+					self::$transaction_compromised = true;
+				}
+				if ( self::$transaction_compromised ) {
+					return new WP_Error( 'spd_transaction_uncertain', __( 'The database transaction could not be safely completed.', 'sabri-profiles-doctors' ) );
+				}
+				return is_wp_error( $result ) ? $result : new WP_Error( 'spd_database_error', __( 'The profile update could not be completed.', 'sabri-profiles-doctors' ) );
+			}
+			$commit_sql = $nested ? 'RELEASE SAVEPOINT ' . $savepoint : 'COMMIT';
+			if ( false === $wpdb->query( $commit_sql ) || $wpdb->last_error ) {
+				$rolled_back = $wpdb->query( $nested ? 'ROLLBACK TO SAVEPOINT ' . $savepoint : 'ROLLBACK' );
+				if ( false === $rolled_back || $nested ) { self::$transaction_compromised = true; }
+				return new WP_Error( 'spd_commit_failed', __( 'The profile update could not be committed.', 'sabri-profiles-doctors' ) );
+			}
 			return $result;
-		} catch ( Throwable $e ) { $wpdb->query('ROLLBACK'); return new WP_Error('spd_database_exception',__( 'The profile update could not be completed.','sabri-profiles-doctors')); }
+		} catch ( Throwable $e ) {
+			if ( false === $wpdb->query( $nested ? 'ROLLBACK TO SAVEPOINT ' . $savepoint : 'ROLLBACK' ) ) {
+				self::$transaction_compromised = true;
+			}
+			return new WP_Error( 'spd_database_exception', __( 'The profile update could not be completed.', 'sabri-profiles-doctors' ) );
+		} finally {
+			--self::$transaction_depth;
+			if ( 0 === self::$transaction_depth ) {
+				self::$transaction_compromised = false;
+			}
+		}
 	}
+
 }
