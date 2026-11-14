@@ -27,4 +27,17 @@ unset($GLOBALS['smc_claims'][2]['suspended']);
 test_reset_filters();
 add_filter('sabri_doctor_verification_public_projection_v1',function($v,$uid){return array('user_id'=>$uid,'status'=>'verified','reviewer_id'=>9,'reviewed_at'=>gmdate('c',time()-3600),'generated_at'=>gmdate('c',time()-7200),'valid_until'=>gmdate('c',time()+3600),'claim_version'=>'7','contract_version'=>'1.0.0');},10,2);
 test_assert(!SPD_Verification_Adapter::is_verified(2),'Stale File 09 projection must fail closed.');
+
+test_reset_filters();
+add_filter('sabri_doctor_verification_public_projection_v1',function($v,$uid){
+    return array('user_id'=>$uid,'status'=>'under_review','approved_fields'=>array(),
+        'reviewer_id'=>0,'reviewed_at'=>'','generated_at'=>gmdate('c'),
+        'valid_until'=>gmdate('c',time()+300),'claim_version'=>'1.0.1',
+        'contract_version'=>'1.0.0','issuer'=>'file09');
+},10,2);
+test_assert(SPD_Verification_Adapter::status(2)==='under_review',
+    'Current File09 under-review state must not be mislabeled as provider unavailable when no reviewer decision yet exists.');
+test_assert(!SPD_Verification_Adapter::is_verified(2),
+    'An under-review doctor must not obtain a verified public badge.');
+
 echo "Verification runtime checks passed.\n";
