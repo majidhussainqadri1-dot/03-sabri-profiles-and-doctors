@@ -14,7 +14,7 @@ content = (root / "STAGING-ACCEPTANCE.md").read_text(encoding="utf-8")
 original = content.split("## A. Install / upgrade / schema / routes", 1)
 if len(original) != 2:
     raise SystemExit("FAIL no original Staging group A")
-baseline = original[1].split("## V12.3 D14–D18 supplemental safety gate", 1)
+baseline = original[1].split("## V12.3 D14–D19 supplemental safety gate", 1)
 if len(baseline) != 2:
     raise SystemExit("FAIL missing separate V12.3 supplementary annex")
 baseline_text, annex = baseline
@@ -46,11 +46,11 @@ if len({x[0] for x in items}) != 72:
     raise SystemExit("FAIL duplicated original Staging acceptance identifier")
 
 # Supplemental code-defect acceptance is never counted in the original 72.
-for defect in ("D14", "D15", "D16", "D17", "D18"):
+for defect in ("D14", "D15", "D16", "D17", "D18", "D19"):
     if not re.search(r"^- \[ \] \*\*" + defect + r"\b", annex, re.MULTILINE):
         raise SystemExit("FAIL missing supplemental test for " + defect)
 
 accepted = sum(mark.lower() == "x" for _, mark, _ in items)
 print("PASS File03 V12.3 checklist integrity: 72 unique original cases, "
       f"{accepted} checkmarks (NOT Stage receipts); "
-      "D14–D18 supplemental checks recorded outside the 72.")
+      "D14–D19 supplemental checks recorded outside the 72.")
