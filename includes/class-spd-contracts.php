@@ -169,7 +169,9 @@ final class SPD_Contracts {
 		if ( ! SPD_DB::tables_exist() ) {
 			return new WP_Error( 'spd_file26_owner_schema_unavailable', 'Canonical File03 profile schema is unavailable; snapshot denied.' );
 		}
-		if ( ! is_array( $scope ) || array_key_exists( 'object_id', $scope ) ) {
+		// This owner supports only complete snapshots. An unknown filter must
+		// never be silently interpreted as full coverage during File26 cutover.
+		if ( ! is_array( $scope ) || array() !== $scope ) {
 			return new WP_Error( 'spd_file26_partial_scope_unverified', 'Only complete source snapshots are supported until source object scopes are proven.' );
 		}
 		if ( '' !== $cursor && ( ! is_string( $cursor ) || ! preg_match( '/^[0-9]{1,18}$/D', $cursor ) ) ) {
