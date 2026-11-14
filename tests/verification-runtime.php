@@ -40,4 +40,16 @@ test_assert(SPD_Verification_Adapter::status(2)==='under_review',
 test_assert(!SPD_Verification_Adapter::is_verified(2),
     'An under-review doctor must not obtain a verified public badge.');
 
+test_reset_filters();
+add_filter('sabri_doctor_verification_public_projection_v1',function($v,$uid){
+    return array('user_id'=>$uid,'status'=>'under_review','approved_fields'=>array('qualification'=>'PRIVATE PENDING CLAIM'),
+        'reviewer_id'=>0,'reviewed_at'=>'','generated_at'=>gmdate('c'),
+        'valid_until'=>gmdate('c',time()+300),'claim_version'=>'1.0.1',
+        'contract_version'=>'1.0.0','issuer'=>'file09');
+},10,2);
+test_assert(SPD_Verification_Adapter::status(2)==='verification_unavailable',
+    'A pending doctor projection containing unapproved credentials must fail closed.');
+test_assert(!SPD_Verification_Adapter::is_verified(2),
+    'Pending professional data must never be used as a verified badge.');
+
 echo "Verification runtime checks passed.\n";
