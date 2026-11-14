@@ -275,6 +275,14 @@ final class SPD_Contracts {
 		$current = spd_get_search_projection( (string) $document['object_id'] );
 		if ( ! is_array( $current ) || is_wp_error( $current )
 			|| sanitize_text_field( (string) ( $current['canonical_id'] ?? '' ) ) !== sanitize_text_field( (string) $document['object_id'] ) ) { return false; }
+		// File26 renders persisted entity_type into search facets and doctor
+		// ranking after this owner callback. Historical/malformed index rows
+		// must never label a current member or Founder as a doctor even when
+		// the native profile version and verified_doctor flag still match.
+		$current_type = (string) ( $current['profile_type'] ?? '' );
+		if ( ! in_array( $current_type, array( 'member', 'doctor', 'founder' ), true ) ) { return false; }
+		$current_entity_type = 'doctor' === $current_type ? 'doctor' : ( 'founder' === $current_type ? 'founder' : 'member_profile' );
+		if ( $current_entity_type !== (string) ( $document['entity_type'] ?? '' ) ) { return false; }
 		// File 09 can revoke a doctor badge without incrementing File 03's
 		// profile version. Search returns the saved File 26 payload, therefore
 		// stale verified-doctor status must also be denied at view time.
