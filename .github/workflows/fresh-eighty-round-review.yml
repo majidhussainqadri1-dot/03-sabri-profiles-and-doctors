@@ -62,6 +62,8 @@ jobs:
         run: php tests/central-privacy-null-read-failclosed-runtime.php
       - name: V12.3 privacy export-erasure null DB read fail-closed regression
         run: php tests/privacy-null-read-failclosed-runtime.php
+      - name: V12.3 future profile consent and transactional outbox negative regression
+        run: php tests/future-owner-consent-outbox-runtime.php
       - name: V12.3 public-work AI clinical-scope boundary negative language regression
         run: php tests/ai-clinical-intent-boundary-runtime.php
       - name: V12.3 JSON-LD HTML script-boundary regression
