@@ -114,7 +114,7 @@ Before any Founder approval or live promotion, freeze staging reality: exact ins
 - [ ] Founder acceptance records exact package checksum, staging evidence and explicit promotion decision.
 - [ ] After controlled live deployment, repeat critical smoke tests and confirm deployed artifact checksum/version/DB/migration parity before calling the incident/change resolved.
 
-## V12.3 D14–D19 supplemental safety gate (not part of the original 72)
+## V12.3 D14–D20 supplemental safety gate (not part of the original 72)
 
 These extra checks do not increase the original 72-case baseline and do not count as accepted without actual independently logged staging outcomes.
 
@@ -130,6 +130,8 @@ These extra checks do not increase the original 72-case baseline and do not coun
 - [ ] **D18 guard dependency failure**: if the shared medical-scope guard is unavailable, direct File16 requests return a safe 503, not a provider call; after recovery a legitimate public-work query functions again.
 
 - [ ] **D19 DB uncertainty HTTP semantics**: real WordPress REST mutations return 503 for a temporary database transaction start, SQL/commit failure or uncertainty; unrelated current membership/authorization denial continues to return its correct 403/401. Verify retry instructions and a fresh healthy request after recovery.
+
+- [ ] **D20 doctor retirement and search**: with File09 doctor verification still current but File03 professional lifecycle changed to retired/legacy without native profile-version increment, old File26 active verified-doctor search rows must fail click-time owner ACL; reindexed records may represent historical profiles only with current lifecycle and without an active verified-doctor tier. Verify both query results and doctor directory, cache invalidation, indexed payload/contract version and true current File09 assertion.
 
 For each supplemental case attach: exact GitHub SHA, installed package SHA256, actor/role, timestamp, actual DB rows before/after, provider version, HTTP response, relevant sanitized logs, expected/actual, clean-up/restore proof, independent QA approver, and retest status. These checks are in addition to the existing 72 and V12.3 QA-15..24.
 
