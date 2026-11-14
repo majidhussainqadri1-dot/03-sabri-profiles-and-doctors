@@ -30,6 +30,7 @@ $indexed=[
     'connector_slug'=>'file03-profiles',
     'object_id'=>DOCTOR_ID,
     'object_version'=>12,
+    'entity_type'=>'doctor',
     'visibility'=>'public',
     'state'=>'active',
     'payload'=>['verified_doctor'=>true],
