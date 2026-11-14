@@ -164,6 +164,12 @@ final class SPD_Membership_Adapter {
 		// field before an older optional filter; never infer adulthood from
 		// missing, malformed or contradictory age information.
 		if ( array_key_exists( 'age_context', $raw ) ) {
+			// The structured inline age contract is authoritative only at File 00
+			// contract v1.2.3 or later; older assertions cannot add an ungoverned
+			// adult label and bypass the purpose-bound age gate.
+			if ( empty( $raw['contract_version'] ) || version_compare( (string) $raw['contract_version'], '1.2.3', '<' ) ) {
+				return array( 'age_known' => false );
+			}
 			$inline = $raw['age_context'];
 			if ( ! is_array( $inline ) ) { return array( 'age_known' => false ); }
 			$known = $inline['known'] ?? null;
