@@ -202,38 +202,31 @@ final class SPD_Membership_Adapter {
 		if ( ! SPD_Helpers::current_contract_claim( $claim, self::MIN_CONTRACT_VERSION, 600 ) ) {
 			return array( 'age_known' => false );
 		}
-		// File 00's purpose-bound, non-recursive claim exposes an age band,
-		// never a date of birth or exact age. Reject malformed or downgraded
-		// claims without granting an adult public profile.
-		if ( array_key_exists( 'known', $claim ) || array_key_exists( 'age_band', $claim ) ) {
-			if ( 'file00' !== ( $claim['owner'] ?? '' )
-				|| 'public_profile_age_assurance' !== ( $claim['purpose'] ?? '' )
-				|| version_compare( (string) ( $claim['contract_version'] ?? '' ), '1.2.3', '<' )
-				|| true !== ( $claim['known'] ?? null )
-				|| ! is_bool( $claim['is_minor'] ?? null )
-				|| ! is_bool( $claim['guardian_required'] ?? null )
-				|| ! is_bool( $claim['guardian_verified'] ?? null )
-				|| $claim['guardian_required'] !== $claim['is_minor']
-				|| ( $claim['is_minor'] ? 'minor' !== ( $claim['age_band'] ?? '' ) : 'adult' !== ( $claim['age_band'] ?? '' ) ) ) {
-				return array( 'age_known' => false );
-			}
-			return array(
-				'age_known' => true,
-				'is_minor' => $claim['is_minor'],
-				'guardian_required' => $claim['guardian_required'],
-				'guardian_verified' => $claim['guardian_verified'],
-			);
-		}
-		$age = absint( $claim['age'] ?? 0 );
-		if ( ! $age || $age > 120 ) {
+		// Only File 00's purpose-bound, non-recursive and privacy-minimized
+		// claim can determine adulthood in this callback. The historical
+		// unscoped numeric age predicate could accept a contradictory
+		// age=14/is_minor=false payload and incorrectly authorize public
+		// profile opt-in. Never infer adulthood from legacy numeric ages.
+		if ( 'file00' !== ( $claim['owner'] ?? '' )
+			|| 'public_profile_age_assurance' !== ( $claim['purpose'] ?? '' )
+			|| version_compare( (string) ( $claim['contract_version'] ?? '' ), '1.2.3', '<' )
+			|| true !== ( $claim['known'] ?? null )
+			|| ! is_bool( $claim['is_minor'] ?? null )
+			|| ! is_bool( $claim['guardian_required'] ?? null )
+			|| ! is_bool( $claim['guardian_verified'] ?? null )
+			|| $claim['guardian_required'] !== $claim['is_minor']
+			|| ( $claim['is_minor'] ? 'minor' !== ( $claim['age_band'] ?? '' ) : 'adult' !== ( $claim['age_band'] ?? '' ) )
+			|| array_key_exists( 'age', $claim )
+			|| array_key_exists( 'date_of_birth', $claim ) ) {
 			return array( 'age_known' => false );
 		}
 		return array(
-			'age_known'         => true,
-			'age'               => $age,
-			'is_minor'          => isset( $claim['is_minor'] ) ? (bool) $claim['is_minor'] : $age < 18,
-			'guardian_verified' => ! empty( $claim['guardian_verified'] ),
+			'age_known' => true,
+			'is_minor' => $claim['is_minor'],
+			'guardian_required' => $claim['guardian_required'],
+			'guardian_verified' => $claim['guardian_verified'],
 		);
+
 	}
 
 	public static function profile( $user_id ) { return self::claims( $user_id ); }
