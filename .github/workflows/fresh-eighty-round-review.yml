@@ -62,6 +62,8 @@ jobs:
         run: php tests/central-privacy-null-read-failclosed-runtime.php
       - name: V12.3 privacy export-erasure null DB read fail-closed regression
         run: php tests/privacy-null-read-failclosed-runtime.php
+      - name: V12.3 temporary DB transaction failures preserve HTTP 503
+        run: php tests/db-transaction-error-status-runtime.php
       - name: V12.3 nested transaction no premature commit regression
         run: php tests/nested-transaction-atomicity-runtime.php
       - name: V12.3 lifecycle-aware federation transport regression
