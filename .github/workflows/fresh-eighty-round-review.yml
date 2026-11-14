@@ -68,6 +68,8 @@ jobs:
         run: php tests/future-federation-lifecycle-runtime.php
       - name: V12.3 future profile consent and transactional outbox negative regression
         run: php tests/future-owner-consent-outbox-runtime.php
+      - name: V12.3 direct AI multilingual provider no-call boundary
+        run: php tests/ai-direct-multilingual-provider-nocall-runtime.php
       - name: V12.3 public-work AI clinical-scope boundary negative language regression
         run: php tests/ai-clinical-intent-boundary-runtime.php
       - name: V12.3 JSON-LD HTML script-boundary regression
