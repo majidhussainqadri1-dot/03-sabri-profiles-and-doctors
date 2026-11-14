@@ -36,6 +36,16 @@ $legacy=$founder;
 $legacy['payload']['verified_doctor']=true;
 check(SPD_Contracts::file26_can_view($legacy) === false,'previously indexed Founder false-doctor badge remained visible');
 check(SPD_Contracts::file26_can_view($founder) === true,'corrected Founder index was unexpectedly hidden');
+// File26 renders the persisted entity_type into doctor tier/facets *after* this
+// callback, so a historical mismatched type must not survive click-time ACL.
+$false_doctor=$founder;
+$false_doctor['entity_type']='doctor';
+$false_doctor['payload']['verified_doctor']=false;
+check(SPD_Contracts::file26_can_view($false_doctor) === false,'historical Founder result displayed as a doctor despite current canonical Founder identity');
+$unknown_type=$founder;
+$unknown_type['entity_type']='ineligible';
+check(SPD_Contracts::file26_can_view($unknown_type) === false,'unknown entity type accepted as current canonical profile');
+
 $GLOBALS['f03_search_current']['profile_type']='doctor';
 $GLOBALS['f03_search_current']['badge']=['key'=>'verified_doctor','verified'=>true];
 $doctor=SPD_Contracts::file26_fetch_object(ID);
