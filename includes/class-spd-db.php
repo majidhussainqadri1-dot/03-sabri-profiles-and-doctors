@@ -207,7 +207,7 @@ final class SPD_DB {
 		$wpdb->last_error = '';
 		if ( false === $wpdb->query( $start_sql ) || $wpdb->last_error ) {
 			if ( $nested ) { self::$transaction_compromised = true; }
-			return new WP_Error( 'spd_transaction_unavailable', __( 'The database transaction could not be started.', 'sabri-profiles-doctors' ) );
+			return new WP_Error( 'spd_transaction_unavailable', __( 'The database transaction could not be started.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 		}
 		++self::$transaction_depth;
 		try {
@@ -219,22 +219,22 @@ final class SPD_DB {
 					self::$transaction_compromised = true;
 				}
 				if ( self::$transaction_compromised ) {
-					return new WP_Error( 'spd_transaction_uncertain', __( 'The database transaction could not be safely completed.', 'sabri-profiles-doctors' ) );
+					return new WP_Error( 'spd_transaction_uncertain', __( 'The database transaction could not be safely completed.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 				}
-				return is_wp_error( $result ) ? $result : new WP_Error( 'spd_database_error', __( 'The profile update could not be completed.', 'sabri-profiles-doctors' ) );
+				return is_wp_error( $result ) ? $result : new WP_Error( 'spd_database_error', __( 'The profile update could not be completed.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 			}
 			$commit_sql = $nested ? 'RELEASE SAVEPOINT ' . $savepoint : 'COMMIT';
 			if ( false === $wpdb->query( $commit_sql ) || $wpdb->last_error ) {
 				$rolled_back = $wpdb->query( $nested ? 'ROLLBACK TO SAVEPOINT ' . $savepoint : 'ROLLBACK' );
 				if ( false === $rolled_back || $nested ) { self::$transaction_compromised = true; }
-				return new WP_Error( 'spd_commit_failed', __( 'The profile update could not be committed.', 'sabri-profiles-doctors' ) );
+				return new WP_Error( 'spd_commit_failed', __( 'The profile update could not be committed.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 			}
 			return $result;
 		} catch ( Throwable $e ) {
 			if ( false === $wpdb->query( $nested ? 'ROLLBACK TO SAVEPOINT ' . $savepoint : 'ROLLBACK' ) ) {
 				self::$transaction_compromised = true;
 			}
-			return new WP_Error( 'spd_database_exception', __( 'The profile update could not be completed.', 'sabri-profiles-doctors' ) );
+			return new WP_Error( 'spd_database_exception', __( 'The profile update could not be completed.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 		} finally {
 			--self::$transaction_depth;
 			if ( 0 === self::$transaction_depth ) {
