@@ -163,6 +163,10 @@ jobs:
               }
             echo "PASS File03 installed-version, schema, manifest and safe-mode read-only freeze\n";
           '
+      - name: V12.3 approved source to installed runtime manifest parity
+        run: |
+          set -euo pipefail
+          python3 file03/tools/f03-v123-manifest-parity.py --approved-root file03 --installed-json /tmp/f03-v123-runtime-freeze.json
       - name: D17 real MariaDB nested savepoint / rollback atomicity
         run: |
           set -euo pipefail
