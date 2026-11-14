@@ -146,7 +146,13 @@ final class SPD_Privacy {
 		$retry    = ! empty( $result['retry'] );
 		$messages = (array) ( $result['messages'] ?? array() );
 
-		if ( apply_filters( 'spd_profile_report_legal_hold', false, absint( $user->ID ) ) ) {
+		try {
+			$legal_hold = apply_filters( 'spd_profile_report_legal_hold', false, absint( $user->ID ) );
+		} catch ( Throwable $exception ) {
+			$messages[] = __( 'Profile erasure retention status could not be verified; retry is required.', 'sabri-profiles-doctors' );
+			return array( 'items_removed' => $removed, 'items_retained' => true, 'messages' => $messages, 'done' => false );
+		}
+		if ( $legal_hold ) {
 			$retained   = true;
 			$messages[] = __( 'Profile-report evidence is retained under an active legal, safety, or governance hold.', 'sabri-profiles-doctors' );
 		} else {
@@ -187,7 +193,13 @@ final class SPD_Privacy {
 			}
 		}
 
-		if ( apply_filters( 'spd_professional_submission_legal_hold', false, absint( $user->ID ) ) ) {
+		try {
+			$legal_hold = apply_filters( 'spd_professional_submission_legal_hold', false, absint( $user->ID ) );
+		} catch ( Throwable $exception ) {
+			$messages[] = __( 'Profile erasure retention status could not be verified; retry is required.', 'sabri-profiles-doctors' );
+			return array( 'items_removed' => $removed, 'items_retained' => true, 'messages' => $messages, 'done' => false );
+		}
+		if ( $legal_hold ) {
 			$retained   = true;
 			$messages[] = __( 'Professional-profile proposal data is retained under an active legal or governance hold.', 'sabri-profiles-doctors' );
 		} else {
