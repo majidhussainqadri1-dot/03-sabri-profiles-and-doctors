@@ -10,8 +10,10 @@ define('ABSPATH', __DIR__ . '/');
 define('ARRAY_A', 'ARRAY_A');
 class WP_Error {
     private string $code;
-    public function __construct(string $code = 'unavailable', string $message = '') { $this->code = $code; }
+    private $data;
+    public function __construct(string $code = 'unavailable', string $message = '', $data = null) { $this->code = $code; $this->data = $data; }
     public function get_error_code(): string { return $this->code; }
+    public function get_error_data() { return $this->data; }
 }
 function is_wp_error($v): bool { return $v instanceof WP_Error; }
 function absint($v): int { return abs((int)$v); }
@@ -54,7 +56,8 @@ $GLOBALS['profile'] = [
     'generated_at' => '2026-11-01T12:00:00+00:00',
 ];
 function spd_get_search_projection($id) {
-    return $id === PROFILE_ID ? $GLOBALS['profile'] : new WP_Error('not_found');
+    if (!empty($GLOBALS['projection_error'])) { return $GLOBALS['projection_error']; }
+    return $id === PROFILE_ID ? $GLOBALS['profile'] : new WP_Error('not_found', '', ['status' => 404]);
 }
 require_once __DIR__.'/../includes/class-spd-contracts.php';
 function check($test, string $message): void {
@@ -87,6 +90,17 @@ check(is_array($empty) && ($empty['items'] ?? null) === [] && ($empty['done'] ??
 $GLOBALS['wpdb']->rows = [['id' => 6, 'public_id' => PROFILE_ID]];
 $batch = SPD_Contracts::file26_list_batch('', 10, []);
 check(is_array($batch) && count($batch['items'] ?? []) === 1 && ($batch['done'] ?? false) === true, 'current public owner row remains enumerable');
+// A public-row projection can fail after SQL succeeds. Never promote a
+// truncated index generation as complete when the owner returns 503/unknown.
+$GLOBALS['projection_error'] = new WP_Error('spd_profile_store_unavailable', '', ['status' => 503]);
+check(err(SPD_Contracts::file26_list_batch('', 10, []), 'spd_file26_owner_projection_unavailable'), 'a 503 while projecting an active row must fail the entire source snapshot');
+$GLOBALS['projection_error'] = new WP_Error('spd_unknown_read_fault');
+check(err(SPD_Contracts::file26_list_batch('', 10, []), 'spd_file26_owner_projection_unavailable'), 'unknown projection errors must fail closed');
+// An intentionally unavailable/private profile is a normal exclusion.
+$GLOBALS['projection_error'] = new WP_Error('spd_profile_unavailable', '', ['status' => 404]);
+$hidden = SPD_Contracts::file26_list_batch('', 10, []);
+check(is_array($hidden) && ($hidden['items'] ?? null) === [] && ($hidden['done'] ?? false) === true, 'explicit 404 private projection must remain excluded without a false 503');
+$GLOBALS['projection_error'] = null;
 $first = SPD_Contracts::file26_fetch_object(PROFILE_ID);
 $GLOBALS['profile']['generated_at'] = '2026-11-13T14:00:00+00:00';
 $second = SPD_Contracts::file26_fetch_object(PROFILE_ID);
