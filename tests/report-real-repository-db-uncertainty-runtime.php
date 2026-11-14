@@ -30,7 +30,8 @@ trait SPD_Profile_Update { public function update_profile() {} }
 trait SPD_Profile_Professional {}
 trait SPD_Profile_Media {}
 trait SPD_Profile_Moderation {}
-trait SPD_Profile_Lifecycle {}
+require __DIR__.'/../includes/trait-spd-profile-report-appeals.php';
+trait SPD_Profile_Lifecycle { use SPD_Profile_Report_Appeals; }
 trait SPD_Profile_Events {
     private function idempotency_begin(...$args) { return []; }
     private function idempotency_fail(...$args) { return true; }
@@ -47,6 +48,7 @@ class SPD_Membership_Adapter {
     public static function health() { return ['status' => 'available']; }
     public static function claims($id) { return ['eligible' => true, 'suspended' => false]; }
 }
+class SPD_Observability { public static function safe_mode() { return false; } }
 class SPD_Authorization {
     public static function profile_visibility_allows($profile, $viewer) { return true; }
 }
@@ -93,5 +95,18 @@ $success = $repo->create_safety_report(...$args);
 if (!is_array($success) || ($success['status'] ?? '') !== 'submitted'
     || $GLOBALS['wpdb']->writes !== 1) {
     fwrite(STDERR, "FAIL D13 known healthy zero count did not permit report\n"); exit(1);
+}
+$GLOBALS['wpdb']->count = null;
+$beforeStrict = $GLOBALS['wpdb']->writes;
+$strict = $repo->create_safety_report_strict(...$args);
+if (!is_wp_error($strict) || $strict->get_error_code() !== 'spd_report_store_unavailable'
+    || $GLOBALS['wpdb']->writes !== $beforeStrict) {
+    fwrite(STDERR, "FAIL D13 actual frontend strict method accepted uncertain count\n"); exit(1);
+}
+$GLOBALS['wpdb']->count = '0';
+$strictOk = $repo->create_safety_report_strict(...$args);
+if (!is_array($strictOk) || ($strictOk['status'] ?? '') !== 'submitted'
+    || $GLOBALS['wpdb']->writes !== $beforeStrict + 1) {
+    fwrite(STDERR, "FAIL D13 actual frontend strict method rejected healthy count\n"); exit(1);
 }
 echo "PASS File03 D13 active REST repository count uncertainty and healthy-zero semantics\n";
