@@ -471,6 +471,11 @@ final class SPD_Future_Profile {
 		$actor_id = absint( $actor_id );
 		$is_owner = absint( $profile['user_id'] ) === $actor_id;
 		$is_governor = SPD_Membership_Adapter::can_manage_founder( $actor_id ) || SPD_Membership_Adapter::can_operate_profiles( $actor_id );
+		// The Founder record is not subject to generic profile-operator moderation.
+		if ( 'founder' === sanitize_key( (string) ( $profile['profile_type'] ?? '' ) )
+			&& ! SPD_Membership_Adapter::can_manage_founder( $actor_id ) ) {
+			return new WP_Error( 'spd_founder_governance_required', __( 'Founder profile state requires Founder governance.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) );
+		}
 		if ( ! $is_owner && ! $is_governor ) { return new WP_Error( 'spd_forbidden', __( 'You cannot change this professional lifecycle state.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		if ( $is_owner ) { $guard = SPD_Authorization::mutation_guard( $profile, $actor_id ); if ( is_wp_error( $guard ) ) { return $guard; } }
 		$current = self::state_for_profile( $profile['id'] );
