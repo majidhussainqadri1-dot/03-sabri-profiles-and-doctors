@@ -52,6 +52,10 @@ jobs:
         run: php tests/report-real-repository-db-uncertainty-runtime.php
       - name: V12.3 report quota and appeal DB uncertainty regression
         run: php tests/report-appeal-db-uncertainty-runtime.php
+      - name: V12.3 all legal-hold privacy erasers fail closed on provider exceptions
+        run: |
+          php tests/privacy-legal-hold-provider-failure-runtime.php
+          php tests/privacy-base-central-legal-hold-runtime.php
       - name: V12.3 future professional translation and attestation privacy null DB fail-closed
         run: php tests/future-privacy-null-read-failclosed-runtime.php
       - name: V12.3 central delegation and appeal privacy null DB fail-closed
