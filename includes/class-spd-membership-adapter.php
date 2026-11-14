@@ -249,8 +249,11 @@ final class SPD_Membership_Adapter {
 	}
 
 	public static function public_profile_age_eligible( $user_id ) {
-		$claims = self::claims( absint( $user_id ) );
-		return ! empty( $claims['age_known'] ) && empty( $claims['is_minor'] );
+		// This predicate is also called during File 00 assertions creation via
+		// smc_public_profile_opt_in. Calling claims() here would recurse back
+		// into the same owner callback. Keep the independent, fail-closed path.
+		$claim = self::age_guardian_claim( absint( $user_id ) );
+		return ! empty( $claim['age_known'] ) && empty( $claim['is_minor'] );
 	}
 
 	public static function guardian_verified( $user_id ) {
