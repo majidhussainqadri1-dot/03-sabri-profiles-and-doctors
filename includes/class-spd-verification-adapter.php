@@ -74,8 +74,17 @@ final class SPD_Verification_Adapter {
 		$reviewed_at = strtotime( (string) $projection['reviewed_at'] );
 		$generated_at = strtotime( (string) ( $projection['generated_at'] ?? '' ) );
 		$valid_until = strtotime( (string) ( $projection['valid_until'] ?? '' ) );
-		if ( empty( $projection['reviewer_id'] ) || false === $reviewed_at || false === $generated_at || false === $valid_until ) { return false; }
-		if ( $reviewed_at > time() + 300 || abs( time() - $generated_at ) > 600 || $valid_until <= time() || $valid_until <= $reviewed_at ) { return false; }
+		// A fresh pending/under-review/rejected decision can legitimately have no
+		// reviewer or review timestamp. File 09's canonical validator still checks
+		// its present state at use time; only a VERIFIED claim needs finalized
+		// reviewer evidence and is allowed to expose professional fields.
+		if ( false === $generated_at || false === $valid_until || $generated_at > time() + 300 || abs( time() - $generated_at ) > 600 || $valid_until <= time() || $valid_until <= $generated_at ) { return false; }
+		if ( 'verified' === ( $projection['status'] ?? '' ) ) {
+			if ( empty( $projection['reviewer_id'] ) || false === $reviewed_at || $reviewed_at > time() + 300 || $valid_until <= $reviewed_at ) { return false; }
+		} elseif ( ! empty( $projection['approved_fields'] ) ) {
+			// Non-verified states must never carry public approved credentials.
+			return false;
+		}
 		return true;
 	}
 
