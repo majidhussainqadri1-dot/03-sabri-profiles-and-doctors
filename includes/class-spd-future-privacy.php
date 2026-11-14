@@ -66,10 +66,10 @@ final class SPD_Future_Privacy {
 		if ( ! SPD_Schema_Guard::future_ready() ) { return new WP_Error( 'spd_future_privacy_schema_unavailable', __( 'Future-profile privacy storage is temporarily unavailable.', 'sabri-profiles-doctors' ) ); }
 		$wpdb->last_error = '';
 		$translations = $wpdb->get_results( $wpdb->prepare( 'SELECT locale,headline,bio,source,status,version,created_at,updated_at FROM ' . SPD_Future_Profile::translations_table() . ' WHERE profile_id=%d ORDER BY id ASC', $profile_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_privacy_export_failed', __( 'Future-profile translation data could not be read for export.', 'sabri-profiles-doctors' ) ); }
+		if ( $wpdb->last_error || ! is_array( $translations ) ) { return new WP_Error( 'spd_future_privacy_export_failed', __( 'Future-profile translation data could not be read for export.', 'sabri-profiles-doctors' ) ); }
 		$wpdb->last_error = '';
 		$attestations = $wpdb->get_results( $wpdb->prepare( 'SELECT field_key,confirmed_at,expires_at,version FROM ' . SPD_Future_Profile::attestations_table() . ' WHERE profile_id=%d ORDER BY id ASC', $profile_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_privacy_export_failed', __( 'Future-profile freshness data could not be read for export.', 'sabri-profiles-doctors' ) ); }
+		if ( $wpdb->last_error || ! is_array( $attestations ) ) { return new WP_Error( 'spd_future_privacy_export_failed', __( 'Future-profile freshness data could not be read for export.', 'sabri-profiles-doctors' ) ); }
 		$wpdb->last_error = '';
 		$state = $wpdb->get_row( $wpdb->prepare( 'SELECT federation_opt_in,professional_lifecycle,lifecycle_reason,lifecycle_changed_at,version,updated_at FROM ' . SPD_Future_Profile::state_table() . ' WHERE profile_id=%d LIMIT 1', $profile_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		if ( $wpdb->last_error ) { return new WP_Error( 'spd_future_privacy_export_failed', __( 'Future-profile lifecycle data could not be read for export.', 'sabri-profiles-doctors' ) ); }
