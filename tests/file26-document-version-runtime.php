@@ -17,6 +17,8 @@ const F03_ID = 'a1111111-1111-4111-8111-111111111111';
 $GLOBALS['f03_current'] = [
     'canonical_id' => F03_ID,
     'version' => 8,
+    'profile_type' => 'member',
+    'badge' => array(),
 ];
 function spd_get_search_projection($identity) {
     return $identity === F03_ID ? $GLOBALS['f03_current'] : new WP_Error();
@@ -32,6 +34,7 @@ $document = [
     'connector_slug' => 'file03-profiles',
     'object_id' => F03_ID,
     'object_version' => 8,
+    'entity_type' => 'member_profile',
     'visibility' => 'public',
     'state' => 'active',
 ];
