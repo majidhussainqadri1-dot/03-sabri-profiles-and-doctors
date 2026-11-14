@@ -13,6 +13,9 @@ function sanitize_key($x) { return preg_replace('/[^a-z0-9_-]/','',strtolower((s
 function sanitize_text_field($x) { return trim(strip_tags((string)$x)); }
 function absint($x) { return abs((int)$x); }
 function esc_url_raw($x) { return (string)$x; }
+function wp_strip_all_tags($x, $remove_breaks = false) { return strip_tags((string) $x); }
+class File26FixtureNormalizer { public function normalize($x) { return preg_replace('/\\s+/', ' ', strtolower(trim((string) $x))); } }
+class_alias('File26FixtureNormalizer', 'Sabri\\File26\\Normalizer');
 class SPD_Helpers {
     public static function normalize_locale($x) { return (string)$x; }
     public static function sanitize_multiline($x,$max=1000) { return substr((string)$x,0,$max); }
@@ -30,6 +33,7 @@ function spd_get_search_projection($id) {
 require_once __DIR__.'/../includes/class-spd-contracts.php';
 function check(bool $ok,string $name): void {if(!$ok){fwrite(STDERR,"FAIL: {$name}\n");exit(1);}}
 $founder=SPD_Contracts::file26_fetch_object(ID);
+$founder['normalized_body'] = 'founder profile';
 check(is_array($founder) && ($founder['entity_type']??'')==='founder','Founder document not produced');
 check(($founder['payload']['verified_doctor']??null)===false,'Founder badge conflated with verified doctor in File26 search');
 $legacy=$founder;
