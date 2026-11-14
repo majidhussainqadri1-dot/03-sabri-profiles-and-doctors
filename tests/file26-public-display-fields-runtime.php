@@ -21,7 +21,7 @@ define('ABSPATH',__DIR__.'/');
 class WP_Error {}
 function is_wp_error($v) {return $v instanceof WP_Error;}
 function sanitize_text_field($v){return trim(strip_tags((string)$v));}
-function wp_strip_all_tags($v,$remove_breaks=false){return strip_tags((string)$v);}
+function wp_strip_all_tags($v,$remove_breaks=false){$v=strip_tags((string)$v);return $remove_breaks?preg_replace('/[\r\n\t ]+/u',' ',$v):$v;}
 function esc_url_raw($v){return trim((string)$v);}
 class SPD_Helpers {
     public static function sanitize_multiline($v,$length=600) {return substr(trim((string)$v),0,$length);}
@@ -53,6 +53,10 @@ $doc=[
   'payload'=>['verified_doctor'=>true,'professional_lifecycle'=>'active'],
 ];
 expect(\SPD_Contracts::file26_can_view($doc),'approved current document denied');
+// File26's indexer removes line breaks from a public excerpt before saving.
+$GLOBALS['current_projection']['fields']['bio']="Approved\n public biography";
+expect(\SPD_Contracts::file26_can_view($doc),'normal WordPress multiline excerpt normalization incorrectly denied');
+$GLOBALS['current_projection']['fields']['bio']='Approved public biography';
 foreach ([
    ['title','Unapproved impersonation'],
    ['excerpt','Formerly public but now private statement'],
