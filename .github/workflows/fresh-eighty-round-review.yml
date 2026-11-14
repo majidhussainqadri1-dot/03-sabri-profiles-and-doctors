@@ -48,6 +48,8 @@ jobs:
         run: find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
       - name: JavaScript syntax
         run: find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: V12.3 actual repository REST and strict-report null count regression
+        run: php tests/report-real-repository-db-uncertainty-runtime.php
       - name: V12.3 report quota and appeal DB uncertainty regression
         run: php tests/report-appeal-db-uncertainty-runtime.php
       - name: V12.3 future professional translation and attestation privacy null DB fail-closed
