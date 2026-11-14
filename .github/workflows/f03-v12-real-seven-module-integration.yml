@@ -152,7 +152,7 @@ jobs:
       - name: File 00 and File 09 current scoped doctor-intake contract is wired without public grants
         run: |
           set -euo pipefail
-          /tmp/wp eval 'if(!defined("SMC_FILE09_INTAKE_CONTRACT_VERSION")||SMC_FILE09_INTAKE_CONTRACT_VERSION!=="1.0.0"||!class_exists("SMC_File09_Intake_Contract")||!GDO_Membership_Adapter::intake_available()){fwrite(STDERR,"FAIL File00/File09 source intake interface unavailable\\n");exit(1);} $manifest=SMC_File09_Intake_Contract::contract(); if(($manifest["contract_name"]??"")!=="smc.file09.doctor-intake"&&($manifest["name"]??"")!=="smc.file09.doctor-intake"){fwrite(STDERR,"FAIL intake contract name\\n");exit(1);} echo "PASS File00/File09 scoped intake interface; no verification granted\\n";' --path=/tmp/wordpress
+          /tmp/wp eval 'if(!defined("SMC_FILE09_INTAKE_CONTRACT_VERSION")||SMC_FILE09_INTAKE_CONTRACT_VERSION!=="1.0.0"||!class_exists("SMC_File09_Intake_Contract")||!GDO_Membership_Adapter::intake_available()){fwrite(STDERR,"FAIL File00/File09 source intake interface unavailable\\n");exit(1);} $manifest=SMC_File09_Intake_Contract::contract(); if(($manifest["contract"]??"")!=="smc.file09.doctor-intake"||($manifest["contract_version"]??"")!=="1.0.0"||!empty($manifest["grants_clinical_authorization"])||!empty($manifest["writes_professional_decisions"])){fwrite(STDERR,"FAIL intake contract name\\n");exit(1);} echo "PASS File00/File09 scoped intake interface; no verification granted\\n";' --path=/tmp/wordpress
       - name: File 07 doctor directory consuming File03/File09 current claims
         run: |
           set -euo pipefail
