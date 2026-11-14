@@ -187,6 +187,11 @@ jobs:
         run: |
           set -euo pipefail
           /tmp/wp eval '$owner=\Sabri\File26\Plugin::instance()->connectors()->get("file03-profiles");$cb=$owner["can_view"]; $invalid=array("object_id"=>"00000000-0000-4000-8000-000000000000","object_version"=>1,"entity_type"=>"doctor","payload"=>array("verified_doctor"=>true)); if(true===call_user_func($cb,$invalid,array())){fwrite(STDERR,"FAIL unknown owner ID shown\n");exit(1);} echo "PASS real-owner callback refuses missing canonical profile\n";' --path=/tmp/wordpress
+      - name: Real WordPress File03 owner full-snapshot metadata scope and negative partial test
+        run: |
+          set -euo pipefail
+          /tmp/wp eval '$owner=\Sabri\File26\Plugin::instance()->connectors()->get("file03-profiles"); if(!is_array($owner)||!is_callable($owner["list_batch"]??null)){fwrite(STDERR,"FAIL File03 connector batch unavailable\n");exit(1);} $fn=$owner["list_batch"]; $full=call_user_func($fn,"",10,array("connector"=>"file03-profiles")); if(!is_array($full)||!isset($full["items"])||!is_array($full["items"])||!array_key_exists("done",$full)){fwrite(STDERR,"FAIL File26 full scope owner batch not valid\n");exit(1);} $partial=call_user_func($fn,"",10,array("connector"=>"file03-profiles","mode"=>"partial")); if(!is_wp_error($partial)){fwrite(STDERR,"FAIL unknown partial scope accepted\n");exit(1);} $wrong=call_user_func($fn,"",10,array("connector"=>"file07-doctors")); if(!is_wp_error($wrong)){fwrite(STDERR,"FAIL wrong connector routing key accepted\n");exit(1);} echo "PASS WordPress File03 File26 full-scope and partial fail-closed\n";' --path=/tmp/wordpress
+
       - name: Summarize pinned disposable integration evidence
         if: always()
         run: |
