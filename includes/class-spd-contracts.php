@@ -169,9 +169,12 @@ final class SPD_Contracts {
 		if ( ! SPD_DB::tables_exist() ) {
 			return new WP_Error( 'spd_file26_owner_schema_unavailable', 'Canonical File03 profile schema is unavailable; snapshot denied.' );
 		}
-		// This owner supports only complete snapshots. An unknown filter must
-		// never be silently interpreted as full coverage during File26 cutover.
-		if ( ! is_array( $scope ) || array() !== $scope ) {
+		// File26 transports its own connector routing key within scope_json even
+		// for a full snapshot. Only that exact key is permitted; object_id or
+		// other partial/unknown filters cannot be silently treated as complete.
+		$full_scope = array() === $scope || ( is_array( $scope ) && 1 === count( $scope )
+			&& isset( $scope['connector'] ) && 'file03-profiles' === $scope['connector'] );
+		if ( ! $full_scope ) {
 			return new WP_Error( 'spd_file26_partial_scope_unverified', 'Only complete source snapshots are supported until source object scopes are proven.' );
 		}
 		if ( '' !== $cursor && ( ! is_string( $cursor ) || ! preg_match( '/^[0-9]{1,18}$/D', $cursor ) ) ) {
