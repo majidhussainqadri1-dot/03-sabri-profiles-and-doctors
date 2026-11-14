@@ -13,6 +13,9 @@ define('ABSPATH', __DIR__ . '/');
 class WP_Error { public function __construct(public string $code = 'missing') {} }
 function is_wp_error($x) { return $x instanceof WP_Error; }
 function sanitize_text_field($x) { return trim(strip_tags((string) $x)); }
+function wp_strip_all_tags($x, $remove_breaks = false) { return strip_tags((string) $x); }
+class File26FixtureNormalizer { public function normalize($x) { return preg_replace('/\\s+/', ' ', strtolower(trim((string) $x))); } }
+class_alias('File26FixtureNormalizer', 'Sabri\\File26\\Normalizer');
 const F03_ID = 'a1111111-1111-4111-8111-111111111111';
 $GLOBALS['f03_current'] = [
     'canonical_id' => F03_ID,
@@ -34,6 +37,7 @@ $document = [
     'connector_slug' => 'file03-profiles',
     'object_id' => F03_ID,
     'object_version' => 8,
+    'normalized_body' => '',
     'entity_type' => 'member_profile',
     'visibility' => 'public',
     'state' => 'active',
