@@ -48,6 +48,8 @@ jobs:
         run: find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
       - name: JavaScript syntax
         run: find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: V12.3 central delegation and appeal privacy null DB fail-closed
+        run: php tests/central-privacy-null-read-failclosed-runtime.php
       - name: V12.3 privacy export-erasure null DB read fail-closed regression
         run: php tests/privacy-null-read-failclosed-runtime.php
       - name: V12.3 public-work AI clinical-scope boundary negative language regression
