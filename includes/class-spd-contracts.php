@@ -319,12 +319,14 @@ final class SPD_Contracts {
 				// A standalone contract fixture may omit the full WordPress
 				// helper; actual stored excerpts require the real helper.
 				if ( ! class_exists( 'SPD_Helpers' ) ) { return false; }
-				$expected = SPD_Helpers::sanitize_multiline( $owner_value, 600 );
+				$expected = wp_strip_all_tags( SPD_Helpers::sanitize_multiline( $owner_value, 600 ), true );
 			} elseif ( 'canonical_url' === $field ) {
 				if ( ! function_exists( 'esc_url_raw' ) ) { return false; }
 				$expected = esc_url_raw( $owner_value );
 			} else {
 				$expected = sanitize_text_field( $owner_value );
+				// File26 stores bounded location columns (191 characters).
+				if ( in_array( $field, array( 'country', 'location' ), true ) ) { $expected = substr( $expected, 0, 191 ); }
 			}
 			if ( ! is_string( $expected ) || ! hash_equals( $expected, $document[ $field ] ) ) { return false; }
 		}
