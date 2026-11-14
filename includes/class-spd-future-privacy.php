@@ -44,8 +44,12 @@ final class SPD_Future_Privacy {
 		if ( is_wp_error( $profile ) ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( $profile->get_error_message() ), 'done' => false ); }
 		if ( ! $profile ) { return array( 'items_removed' => false, 'items_retained' => false, 'messages' => array(), 'done' => true ); }
 		if ( SPD_Membership_Adapter::is_founder( $user->ID ) ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'The official Founder future-profile record requires an authorized governance decision before removal.', 'sabri-profiles-doctors' ) ), 'done' => true ); }
-		$base_hold = apply_filters( 'spd_profile_legal_hold', false, absint( $user->ID ), $profile );
-		$future_hold = apply_filters( 'spd_future_profile_legal_hold', false, absint( $user->ID ), $profile );
+		try {
+			$base_hold = apply_filters( 'spd_profile_legal_hold', false, absint( $user->ID ), $profile );
+			$future_hold = apply_filters( 'spd_future_profile_legal_hold', false, absint( $user->ID ), $profile );
+		} catch ( Throwable $exception ) {
+			return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'Future professional data retention or legal-hold status could not be verified; retry is required.', 'sabri-profiles-doctors' ) ), 'done' => false );
+		}
 		if ( $base_hold || $future_hold ) { return array( 'items_removed' => false, 'items_retained' => true, 'messages' => array( __( 'Future professional profile data is retained under an active legal or governance hold.', 'sabri-profiles-doctors' ) ), 'done' => true ); }
 		if ( 'tombstoned' !== sanitize_key( (string) ( $profile['state'] ?? '' ) ) ) {
 			return array(
