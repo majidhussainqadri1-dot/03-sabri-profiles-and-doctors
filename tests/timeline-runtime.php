@@ -9,7 +9,7 @@ class SPD_Observability{public static function safe_mode(){return false;}}
 require dirname(__DIR__).'/includes/class-spd-timeline.php';
 $GLOBALS['users'][2]=array('display_name'=>'Adult');
 $GLOBALS['smc_claims'][2]=array('user_id'=>2,'contract_version'=>'1.2.0','status'=>'approved','approved'=>true,'eligible'=>true,'session_two_factor'=>true,'membership_type'=>'member','approved_membership_types'=>array('member'),'professional_verified'=>false,'email_verified'=>true,'phone_verified'=>true,'public_profile_allowed'=>true,'guardian_verified'=>true);
-add_filter('smc_profile_age_guardian_claim_v1',fn($v,$id)=>array('user_id'=>$id,'age'=>35,'is_minor'=>false,'guardian_verified'=>true,'contract_version'=>'1.2.0','generated_at'=>gmdate('c'),'valid_until'=>gmdate('c',time()+600)),10,2);
+add_filter('smc_profile_age_guardian_claim_v1',fn($v,$id)=>array('owner'=>'file00','purpose'=>'public_profile_age_assurance','user_id'=>$id,'known'=>true,'age_band'=>'adult','is_minor'=>false,'guardian_required'=>false,'guardian_verified'=>true,'contract_version'=>'1.2.3','generated_at'=>gmdate('c'),'valid_until'=>gmdate('c',time()+120)),10,2);
 SPD_Profile_Repository::$profile=array('id'=>5,'user_id'=>2,'public_id'=>'123e4567-e89b-42d3-a456-426614174000','profile_type'=>'member','state'=>'active','profile_visibility'=>'public');
 add_filter('sabri_file21_profile_timeline_provider_health_v1',fn()=>array('status'=>'available','contract_version'=>'1.0.0','generated_at'=>gmdate('c'),'valid_until'=>gmdate('c',time()+300)));
 add_filter('sabri_file21_profile_timeline_items_v1',function(){return array(
