@@ -50,7 +50,7 @@ trait SPD_Profile_Report_Appeals {
 		$reports = SPD_DB::table( 'reports' );
 		$wpdb->last_error = '';
 		$count_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$reports} WHERE reporter_user_id=%d AND created_at >= (UTC_TIMESTAMP() - INTERVAL 1 DAY)", $reporter_user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		if ( $wpdb->last_error ) {
+		if ( $wpdb->last_error || ! is_scalar( $count_raw ) || ! preg_match( '/^[0-9]+$/D', (string) $count_raw ) ) {
 			$this->idempotency_fail( $reporter_user_id, 'create_safety_report', $idempotency_key );
 			return new WP_Error( 'spd_report_store_unavailable', __( 'Profile reporting is temporarily unavailable because report-rate evidence could not be read safely.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
 		}
