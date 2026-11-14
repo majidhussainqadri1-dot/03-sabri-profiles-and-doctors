@@ -287,7 +287,13 @@ trait SPD_Profile_Central {
 		if ( is_wp_error( $idem ) ) { return $idem; }
 		if ( is_array( $idem ) && isset( $idem['replay'] ) ) { return $idem['response']; }
 		$reports = SPD_DB::table( 'reports' );
-		$count = absint( $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$reports} WHERE reporter_user_id=%d AND created_at >= (UTC_TIMESTAMP() - INTERVAL 1 DAY)", $reporter_user_id ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->last_error = '';
+		$count_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$reports} WHERE reporter_user_id=%d AND created_at >= (UTC_TIMESTAMP() - INTERVAL 1 DAY)", $reporter_user_id ) );
+		if ( $wpdb->last_error || ! is_scalar( $count_raw ) || ! preg_match( '/^[0-9]+$/D', (string) $count_raw ) ) {
+			$this->idempotency_fail( $reporter_user_id, 'create_safety_report', $idempotency_key );
+			return new WP_Error( 'spd_report_store_unavailable', __( 'Report limits could not be verified safely; retry later.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		$count = absint( $count_raw ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		if ( $count >= 5 || ! SPD_Helpers::consume_rate_limit( 'profile_report_' . $reporter_user_id, 5, DAY_IN_SECONDS ) ) { $this->idempotency_fail( $reporter_user_id, 'create_safety_report', $idempotency_key ); return new WP_Error( 'spd_report_rate_limited', __( 'Too many reports were submitted. Try again later.', 'sabri-profiles-doctors' ), array( 'status' => 429 ) ); }
 		$uuid = SPD_Helpers::public_id(); $now = SPD_Helpers::now();
 		$critical = in_array( $reason, array( 'harm','child_safety','impersonation','privacy','privacy_breach','scam' ), true );
@@ -312,7 +318,11 @@ trait SPD_Profile_Central {
 		if ( SPD_Helpers::text_length( $reason ) < 10 ) { return new WP_Error( 'spd_appeal_reason_required', __( 'Provide a clear reason for the appeal.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
 		$reports = SPD_DB::table( 'reports' );
 		$report_uuid = sanitize_text_field( $report_uuid );
-		$report = $wpdb->get_row( $wpdb->prepare( "SELECT id,reporter_user_id,status FROM {$reports} WHERE report_uuid=%s LIMIT 1", $report_uuid ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->last_error = '';
+		$report = $wpdb->get_row( $wpdb->prepare( "SELECT id,reporter_user_id,status FROM {$reports} WHERE report_uuid=%s LIMIT 1", $report_uuid ), ARRAY_A );
+		if ( $wpdb->last_error ) {
+			return new WP_Error( 'spd_appeal_report_store_unavailable', __( 'Report eligibility could not be verified safely for appeal; retry later.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		} // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		if ( ! $report || absint( $report['reporter_user_id'] ) !== $requester_id || ! in_array( $report['status'], array( 'rejected','closed','actioned' ), true ) ) { return new WP_Error( 'spd_appeal_unavailable', __( 'This report is not eligible for appeal by this account.', 'sabri-profiles-doctors' ), array( 'status' => 403 ) ); }
 		$request_hash = hash( 'sha256', SPD_Helpers::json_encode( array( $report_uuid, $requester_id, $reason ) ) );
 		$idem = $this->idempotency_begin( $requester_id, 'request_report_appeal', $idempotency_key, $request_hash, true );
