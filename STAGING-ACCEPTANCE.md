@@ -114,7 +114,7 @@ Before any Founder approval or live promotion, freeze staging reality: exact ins
 - [ ] Founder acceptance records exact package checksum, staging evidence and explicit promotion decision.
 - [ ] After controlled live deployment, repeat critical smoke tests and confirm deployed artifact checksum/version/DB/migration parity before calling the incident/change resolved.
 
-## V12.3 D14–D16 supplemental safety gate (not part of the original 72)
+## V12.3 D14–D18 supplemental safety gate (not part of the original 72)
 
 These extra checks do not increase the original 72-case baseline and do not count as accepted without actual independently logged staging outcomes.
 
@@ -123,6 +123,11 @@ These extra checks do not increase the original 72-case baseline and do not coun
 - [ ] **D15 Founder governance**: a generic File 00 profile operator cannot retire, memorialize or alter Founder future state. Only a current actor with explicit Founder-governance authority may perform allowed changes; audit and revocation receipts are required.
 - [ ] **D16 retired/legacy federation**: with a previously opted-in active profile, change the lifecycle to retired/legacy; ensure public DTO, File 17 provider, caches, search and actual client never expose active inbox/outbox transport. Restoring active state without owner consent must not silently reactivate a previously revoked opt-in.
 - [ ] **D16 uncertain future state**: when the owner future-state provider is unreachable, null, stale or malformed, federation transport is unavailable, an explicit degraded state is retained, and no HTTP dispatch takes place.
+
+- [ ] **D17 true nested rollback**: in the actual approved Staging DB, invoke a Future-profile mutation inside REST idempotency transaction. Induce an idempotency-finalize failure **after** the inner mutation and outbox insert. Verify that neither mutation, event nor completed idempotency row exists. Separately exercise inner failure, outer continuation, and healthy single commit; record storage engine and a restored clean fixture.
+- [ ] **D17 savepoint uncertainty**: simulate savepoint creation or rollback failure in an isolated staging transaction. No false committed response, no cache/index publication, and operator-visible recovery evidence; reconcile the DB before rerun.
+- [ ] **D18 multilingual direct AI preflight**: authenticated direct Future-profile consumer rejects representative medical requests in English, Urdu, Arabic, Hindi, Chinese, Spanish, French, Portuguese, Bengali and Turkish **without invoking File16**. Prove the provider no-call trace and test a permitted, cited public-work query separately.
+- [ ] **D18 guard dependency failure**: if the shared medical-scope guard is unavailable, direct File16 requests return a safe 503, not a provider call; after recovery a legitimate public-work query functions again.
 
 For each supplemental case attach: exact GitHub SHA, installed package SHA256, actor/role, timestamp, actual DB rows before/after, provider version, HTTP response, relevant sanitized logs, expected/actual, clean-up/restore proof, independent QA approver, and retest status. These checks are in addition to the existing 72 and V12.3 QA-15..24.
 
