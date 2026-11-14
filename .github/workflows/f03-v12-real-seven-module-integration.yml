@@ -187,6 +187,11 @@ jobs:
         run: |
           set -euo pipefail
           /tmp/wp eval '$owner=\Sabri\File26\Plugin::instance()->connectors()->get("file03-profiles");$cb=$owner["can_view"]; $invalid=array("object_id"=>"00000000-0000-4000-8000-000000000000","object_version"=>1,"entity_type"=>"doctor","payload"=>array("verified_doctor"=>true)); if(true===call_user_func($cb,$invalid,array())){fwrite(STDERR,"FAIL unknown owner ID shown\n");exit(1);} echo "PASS real-owner callback refuses missing canonical profile\n";' --path=/tmp/wordpress
+      - name: Verify actual File26 normalizer runtime contract for current owner ACL
+        run: |
+          set -euo pipefail
+          /tmp/wp eval 'if(!class_exists("\\Sabri\\File26\\Normalizer")){fwrite(STDERR,"FAIL File26 current normalizer unavailable\\n");exit(1);} $n=new \\Sabri\\File26\\Normalizer(); if($n->normalize("Doctor  Classical-Homeopathy")!=="doctor classical-homeopathy"){fwrite(STDERR,"FAIL File26 owner search normalizer mismatch\\n");exit(1);} echo "PASS File26 production normalizer for source-body ACL\\n";' --path=/tmp/wordpress
+
       - name: Real WordPress File03 owner full-snapshot metadata scope and negative partial test
         run: |
           set -euo pipefail
