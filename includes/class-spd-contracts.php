@@ -218,6 +218,20 @@ final class SPD_Contracts {
 		);
 	}
 
+
+	/** Stable source text that File26 normalizes for the stored search body. */
+	private static function file26_search_text( array $projection ) {
+		$fields = (array) ( $projection['fields'] ?? array() );
+		$professional = (array) ( $projection['professional'] ?? array() );
+		return trim( implode( ' ', array_filter( array(
+			(string) ( $projection['display_name'] ?? '' ),
+			(string) ( $professional['professional_title'] ?? '' ),
+			(string) ( $professional['specialty'] ?? '' ),
+			(string) ( $fields['country'] ?? '' ),
+			(string) ( $fields['city'] ?? '' ),
+		) ) ) );
+	}
+
 	public static function file26_fetch_object( $identity, $strict_owner_error = false ) {
 		$projection = spd_get_search_projection( $identity );
 		// The external single-object callback retains the established empty
@@ -245,13 +259,7 @@ final class SPD_Contracts {
 			'visibility' => 'public',
 			'title' => sanitize_text_field( (string) ( $projection['display_name'] ?? '' ) ),
 			'excerpt' => SPD_Helpers::sanitize_multiline( (string) ( $fields['bio'] ?? '' ), 600 ),
-			'search_text' => trim( implode( ' ', array_filter( array(
-				(string) ( $projection['display_name'] ?? '' ),
-				(string) ( $professional['professional_title'] ?? '' ),
-				(string) ( $professional['specialty'] ?? '' ),
-				(string) ( $fields['country'] ?? '' ),
-				(string) ( $fields['city'] ?? '' ),
-			) ) ) ),
+			'search_text' => self::file26_search_text( $projection ),
 			'canonical_url' => esc_url_raw( (string) $projection['canonical_url'] ),
 			'author_key' => 'profile:' . sanitize_text_field( (string) $projection['canonical_id'] ),
 			'country' => sanitize_text_field( (string) ( $fields['country'] ?? '' ) ),
@@ -283,6 +291,20 @@ final class SPD_Contracts {
 		if ( ! in_array( $current_type, array( 'member', 'doctor', 'founder' ), true ) ) { return false; }
 		$current_entity_type = 'doctor' === $current_type ? 'doctor' : ( 'founder' === $current_type ? 'founder' : 'member_profile' );
 		if ( $current_entity_type !== (string) ( $document['entity_type'] ?? '' ) ) { return false; }
+		// File09 can replace a specialty/approved title while File03's local
+		// version and the verified boolean stay unchanged. File26 will serve its
+		// persisted normalized_body AFTER this callback; compare using File26's
+		// own normalizer, never a second home-grown search-ranking algorithm.
+		if ( ! isset( $document['normalized_body'] ) || ! is_string( $document['normalized_body'] )
+			|| ! class_exists( '\\Sabri\\File26\\Normalizer' ) ) { return false; }
+		try {
+			$normalizer = new \\Sabri\\File26\\Normalizer();
+			$current_body = $normalizer->normalize( wp_strip_all_tags( self::file26_search_text( $current ), true ) );
+			if ( ! is_string( $current_body ) || ! hash_equals( $current_body, $document['normalized_body'] ) ) { return false; }
+		} catch ( Throwable $e ) {
+			// Provider/normalizer outage can never authorize stale search text.
+			return false;
+		}
 		// File 09 can revoke a doctor badge without incrementing File 03's
 		// profile version. Search returns the saved File 26 payload, therefore
 		// stale verified-doctor status must also be denied at view time.
