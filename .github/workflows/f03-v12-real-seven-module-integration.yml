@@ -144,6 +144,24 @@ jobs:
           set -euo pipefail
           /tmp/wp plugin activate sabri-profiles-doctors --path=/tmp/wordpress
           /tmp/wp eval 'if(!class_exists("SPD_Schema_Guard")||!SPD_Schema_Guard::base_ready()||!SPD_Schema_Guard::central_ready()||!SPD_Schema_Guard::future_ready()){fwrite(STDERR,"FAIL File03 DB shape\n");exit(1);} echo "PASS File03\n";' --path=/tmp/wordpress
+      - name: V12.3 runtime-installed source and schema read-only freeze smoke
+        run: |
+          set -euo pipefail
+          /tmp/wp eval-file file03/tools/f03-v123-readonly-freeze.php --path=/tmp/wordpress > /tmp/f03-v123-runtime-freeze.json
+          php -r '
+            $json = json_decode(file_get_contents("/tmp/f03-v123-runtime-freeze.json"), true);
+            if (!is_array($json) || ($json["source"] ?? "") !== "installed-wordpress-runtime"
+              || empty($json["file03"]["installed_manifest_sha256"])
+              || ($json["file03"]["declared_plugin_version"] ?? "") !== "1.2.0-rc18"
+              || ($json["file03"]["schema_base_ready"] ?? null) !== true
+              || ($json["file03"]["schema_central_ready"] ?? null) !== true
+              || ($json["file03"]["schema_future_ready"] ?? null) !== true
+              || isset($json["credentials"]) || isset($json["users"])) {
+                fwrite(STDERR, "FAIL File03 V12.3 runtime freeze read-only evidence shape\n");
+                exit(1);
+              }
+            echo "PASS File03 installed-version, schema, manifest and safe-mode read-only freeze\n";
+          '
       - name: D17 real MariaDB nested savepoint / rollback atomicity
         run: |
           set -euo pipefail
