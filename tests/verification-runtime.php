@@ -10,6 +10,15 @@ add_filter('sabri_doctor_verification_public_projection_v1',function($v,$uid){re
 test_assert(SPD_Verification_Adapter::is_verified(2),'Current validated File 09 projection should verify doctor.');
 test_assert(!SPD_Membership_Adapter::is_minor(2),'Current verified adult File00 age_context must not be treated as an unknown/minor account.');
 test_assert(SPD_Verification_Adapter::directory_eligible(2),'Current File00 adult and current File09 verified doctor must be directory eligible.');
+test_assert(SPD_Membership_Adapter::public_profile_age_eligible(2),'Current File00 adult age proof must allow age-gated public profile eligibility.');
+$GLOBALS['smc_claims'][3] = array('user_id'=>3,'contract_version'=>'1.2.3','status'=>'approved','approved'=>true,'eligible'=>true,'membership_type'=>'member','guardian_verified'=>false,'age_context'=>array('known'=>false,'minor'=>false,'age_band'=>'unknown','guardian_required'=>false));
+test_assert(SPD_Membership_Adapter::is_minor(3),'Unknown File00 age must remain minor-safe.');
+test_assert(!SPD_Membership_Adapter::public_profile_age_eligible(3),'Unknown File00 age must never permit public adult-only profile.');
+$GLOBALS['smc_claims'][4] = array('user_id'=>4,'contract_version'=>'1.2.3','status'=>'approved','approved'=>true,'eligible'=>true,'membership_type'=>'member','guardian_verified'=>true,'age_context'=>array('known'=>true,'minor'=>true,'age_band'=>'minor','guardian_required'=>true));
+test_assert(SPD_Membership_Adapter::is_minor(4),'Current File00 confirmed minor must remain minor.');
+test_assert(!SPD_Membership_Adapter::public_profile_age_eligible(4),'Confirmed minor cannot obtain adult public-profile eligibility.');
+$GLOBALS['smc_claims'][5] = array('user_id'=>5,'contract_version'=>'1.2.3','status'=>'approved','approved'=>true,'eligible'=>true,'membership_type'=>'member','guardian_verified'=>true,'age_context'=>array('known'=>true,'minor'=>false,'age_band'=>'minor','guardian_required'=>false));
+test_assert(SPD_Membership_Adapter::is_minor(5),'Contradictory File00 age flags must fail closed rather than grant adult status.');
 test_reset_filters();
 add_filter('sabri_doctor_verification_public_projection_v1',function($v,$uid){return array('user_id'=>$uid,'status'=>'verified','reviewer_id'=>9,'reviewed_at'=>gmdate('c',time()-3600),'generated_at'=>gmdate('c',time()-7200),'valid_until'=>gmdate('c',time()+3600),'claim_version'=>'7','contract_version'=>'1.0.0');},10,2);
 test_assert(!SPD_Verification_Adapter::is_verified(2),'Stale File 09 projection must fail closed.');
