@@ -370,7 +370,13 @@ final class SPD_Future_Profile {
 		if ( is_wp_error( $state ) ) { return array( 'opt_in' => false, 'actor_id' => $dto['canonical_url'] . '#actor', 'type' => 'Person', 'name' => $dto['display_name'], 'url' => $dto['canonical_url'], 'transport_owner' => 'external', 'transport_active' => false, 'state_degraded' => true ); }
 		$opt_in = ! empty( $state['federation_opt_in'] );
 		$out = array( 'opt_in' => $opt_in, 'actor_id' => $dto['canonical_url'] . '#actor', 'type' => 'Person', 'name' => $dto['display_name'], 'url' => $dto['canonical_url'], 'transport_owner' => 'external', 'transport_active' => false );
-		if ( ! $opt_in ) { return $out; }
+		// A prior opt-in never authorizes transport for a retired, legacy or
+		// unknown professional state. Keep the choice recorded without exposure.
+		$lifecycle = sanitize_key( (string) ( $state['professional_lifecycle'] ?? '' ) );
+		if ( ! in_array( $lifecycle, array( 'active', 'retired', 'legacy' ), true ) ) {
+			$out['state_degraded'] = true;
+		}
+		if ( ! $opt_in || 'active' !== $lifecycle ) { return $out; }
 		$claim = self::current_claim( 'sabri_federation_actor_transport_v1', $profile['user_id'], 0, 300 );
 		if ( $claim && ! empty( $claim['active'] ) ) {
 			foreach ( array( 'inbox','outbox' ) as $key ) { if ( ! empty( $claim[ $key ] ) && SPD_Helpers::same_origin_url( (string) $claim[ $key ] ) ) { $out[ $key ] = esc_url_raw( $claim[ $key ] ); } }
