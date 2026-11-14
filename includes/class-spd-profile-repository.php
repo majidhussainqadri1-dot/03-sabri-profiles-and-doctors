@@ -367,7 +367,7 @@ final class SPD_Profile_Repository {
 		$reports = SPD_DB::table( 'reports' );
 		$wpdb->last_error = '';
 		$count_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$reports} WHERE reporter_user_id=%d AND created_at >= (UTC_TIMESTAMP() - INTERVAL 1 DAY)", $reporter_user_id ) );
-		if ( $wpdb->last_error ) { $this->idempotency_fail( $reporter_user_id, 'create_safety_report', $idempotency_key ); return new WP_Error( 'spd_report_store_unavailable', __( 'Profile reporting is temporarily unavailable because report-rate evidence could not be read safely.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
+		if ( $wpdb->last_error || ! is_scalar( $count_raw ) || ! preg_match( '/^[0-9]+$/D', (string) $count_raw ) ) { $this->idempotency_fail( $reporter_user_id, 'create_safety_report', $idempotency_key ); return new WP_Error( 'spd_report_store_unavailable', __( 'Profile reporting is temporarily unavailable because report-rate evidence could not be read safely.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) ); }
 		$count = absint( $count_raw );
 		if ( $count >= 5 || ! SPD_Helpers::consume_rate_limit( 'profile_report_' . $reporter_user_id, 5, DAY_IN_SECONDS ) ) { $this->idempotency_fail( $reporter_user_id, 'create_safety_report', $idempotency_key ); return new WP_Error( 'spd_report_rate_limited', __( 'Too many reports were submitted. Try again later.', 'sabri-profiles-doctors' ), array( 'status' => 429 ) ); }
 		$uuid = SPD_Helpers::public_id();
