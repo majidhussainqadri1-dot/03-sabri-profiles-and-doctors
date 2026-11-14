@@ -298,7 +298,7 @@ final class SPD_Contracts {
 		if ( ! isset( $document['normalized_body'] ) || ! is_string( $document['normalized_body'] )
 			|| ! class_exists( '\\Sabri\\File26\\Normalizer' ) ) { return false; }
 		try {
-			$normalizer = new \\Sabri\\File26\\Normalizer();
+			$normalizer = new \Sabri\File26\Normalizer();
 			$current_body = $normalizer->normalize( wp_strip_all_tags( self::file26_search_text( $current ), true ) );
 			if ( ! is_string( $current_body ) || ! hash_equals( $current_body, $document['normalized_body'] ) ) { return false; }
 		} catch ( Throwable $e ) {
