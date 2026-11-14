@@ -37,6 +37,7 @@ class SPD_Helpers {
     public static function sanitize_multiline($v, $n = 500) { return substr(trim((string) $v), 0, $n); }
     public static function current_contract_claim($claim, $version, $age) { return true; }
 }
+require __DIR__ . '/../includes/class-spd-future-rest.php';
 require __DIR__ . '/../includes/class-spd-future-profile.php';
 $cases = [
     'Please diagnose my illness',
