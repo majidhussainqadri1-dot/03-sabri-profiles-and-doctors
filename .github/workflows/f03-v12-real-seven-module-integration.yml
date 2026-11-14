@@ -144,6 +144,10 @@ jobs:
           set -euo pipefail
           /tmp/wp plugin activate sabri-profiles-doctors --path=/tmp/wordpress
           /tmp/wp eval 'if(!class_exists("SPD_Schema_Guard")||!SPD_Schema_Guard::base_ready()||!SPD_Schema_Guard::central_ready()||!SPD_Schema_Guard::future_ready()){fwrite(STDERR,"FAIL File03 DB shape\n");exit(1);} echo "PASS File03\n";' --path=/tmp/wordpress
+      - name: D17 real MariaDB nested savepoint / rollback atomicity
+        run: |
+          set -euo pipefail
+          /tmp/wp eval-file file03/tests/wp-mariadb-nested-transaction-runtime.php --path=/tmp/wordpress
       - name: File 09 true doctor identity verification provider with synthetic CI keyring
         run: |
           set -euo pipefail
