@@ -12,6 +12,9 @@ define('ABSPATH', __DIR__ . '/');
 class WP_Error { public function __construct(public string $code = 'unavailable') {} }
 function is_wp_error($value) { return $value instanceof WP_Error; }
 function sanitize_text_field($text) { return trim(strip_tags((string) $text)); }
+function wp_strip_all_tags($x, $remove_breaks = false) { return strip_tags((string) $x); }
+class File26FixtureNormalizer { public function normalize($x) { return preg_replace('/\\s+/', ' ', strtolower(trim((string) $x))); } }
+class_alias('File26FixtureNormalizer', 'Sabri\\File26\\Normalizer');
 const DOCTOR_ID = 'c3333333-3333-4333-8333-333333333333';
 $GLOBALS['f03_current_projection'] = [
     'canonical_id'=>DOCTOR_ID,
@@ -30,6 +33,7 @@ $indexed=[
     'connector_slug'=>'file03-profiles',
     'object_id'=>DOCTOR_ID,
     'object_version'=>12,
+    'normalized_body'=>'',
     'entity_type'=>'doctor',
     'visibility'=>'public',
     'state'=>'active',
