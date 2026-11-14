@@ -51,7 +51,7 @@ gate('Review/Fix Gate 2 — adversarial privacy, safety and degradation', [
  ('public selective disclosure is signed', 'hash_hmac' in future and 'hash_equals' in future),
  ('disclosure bounded and expiring', 'DISCLOSURE_MAX_TTL = 86400' in future and 'spd_disclosure_expired' in future),
  ('disclosure revocable with share epoch', 'share_epoch' in future and 'spd_disclosure_revoked' in future),
- ('AI blocks medical scope', all(x in future for x in ('diagnos','prescrib','dosage','emergency','spd_ai_scope_restricted'))),
+ ('AI blocks medical scope at REST and direct provider entry', all(x in rest for x in ('diagnos','prescrib','dosage','emergency','spd_ai_scope_restricted')) and 'SPD_Future_REST::medical_scope_question( $question )' in future and 'spd_ai_scope_restricted' in future and 'tests/ai-direct-multilingual-provider-nocall-runtime.php' in t('.github/workflows/fresh-eighty-round-review.yml')),
  ('AI requires grounded scope', "'public_professional_work'" in future and "empty( $claim['grounded'] )" in future),
  ('AI citations limited to same origin', 'SPD_Helpers::same_origin_url' in future and "claim['citations']" in future),
  ('external verified links require HTTPS', 'safe_external_url' in future and "array( 'https' )" in future),
