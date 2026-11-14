@@ -128,7 +128,13 @@ final class SPD_Central_Privacy {
 		$retry = false;
 		$messages = array();
 
-		if ( apply_filters( 'spd_profile_delegation_legal_hold', false, $user_id ) ) {
+		try {
+			$legal_hold = apply_filters( 'spd_profile_delegation_legal_hold', false, $user_id );
+		} catch ( Throwable $exception ) {
+			$messages[] = __( 'Profile erasure retention status could not be verified; retry is required.', 'sabri-profiles-doctors' );
+			return array( 'items_removed' => $removed, 'items_retained' => true, 'messages' => $messages, 'done' => false );
+		}
+		if ( $legal_hold ) {
 			$retained = true;
 			$messages[] = __( 'Profile delegation records are retained under an active legal or governance hold.', 'sabri-profiles-doctors' );
 		} else {
@@ -148,7 +154,13 @@ final class SPD_Central_Privacy {
 			}
 		}
 
-		if ( apply_filters( 'spd_profile_appeal_legal_hold', false, $user_id ) ) {
+		try {
+			$legal_hold = apply_filters( 'spd_profile_appeal_legal_hold', false, $user_id );
+		} catch ( Throwable $exception ) {
+			$messages[] = __( 'Profile erasure retention status could not be verified; retry is required.', 'sabri-profiles-doctors' );
+			return array( 'items_removed' => $removed, 'items_retained' => true, 'messages' => $messages, 'done' => false );
+		}
+		if ( $legal_hold ) {
 			$retained = true;
 			$messages[] = __( 'Profile appeal records are retained under an active legal, safety, or governance hold.', 'sabri-profiles-doctors' );
 		} else {
