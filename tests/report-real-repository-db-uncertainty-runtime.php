@@ -13,6 +13,7 @@ class WP_Error {
     public function __construct(private string $code, string $msg = '', array $data = []) {}
     public function get_error_code() { return $this->code; }
 }
+function add_action(...$args) { return true; }
 function is_wp_error($x) { return $x instanceof WP_Error; }
 function __($s, $domain = '') { return $s; }
 function absint($x) { return abs((int)$x); }
