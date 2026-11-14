@@ -62,6 +62,8 @@ jobs:
         run: php tests/central-privacy-null-read-failclosed-runtime.php
       - name: V12.3 privacy export-erasure null DB read fail-closed regression
         run: php tests/privacy-null-read-failclosed-runtime.php
+      - name: V12.3 original Staging checklist 72-case integrity
+        run: python3 tests/v123-staging-checklist-integrity.py
       - name: V12.3 temporary DB transaction failures preserve HTTP 503
         run: php tests/db-transaction-error-status-runtime.php
       - name: V12.3 nested transaction no premature commit regression
