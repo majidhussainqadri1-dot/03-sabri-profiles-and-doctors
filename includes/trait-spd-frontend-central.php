@@ -115,6 +115,6 @@ trait SPD_Frontend_Central {
 		}
 		if ( ! $public_id ) { return; }
 		$schema = SPD_Central_Profile::structured_data( $public_id );
-		if ( $schema ) { echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) . '</script>' . "\n"; }
+		if ( $schema ) { echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) . '</script>' . "\n"; }
 	}
 }

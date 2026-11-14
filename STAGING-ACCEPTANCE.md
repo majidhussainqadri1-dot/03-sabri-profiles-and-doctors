@@ -114,6 +114,29 @@ Before any Founder approval or live promotion, freeze staging reality: exact ins
 - [ ] Founder acceptance records exact package checksum, staging evidence and explicit promotion decision.
 - [ ] After controlled live deployment, repeat critical smoke tests and confirm deployed artifact checksum/version/DB/migration parity before calling the incident/change resolved.
 
+## V12.3 D14–D21 supplemental safety gate (not part of the original 72)
+
+These extra checks do not increase the original 72-case baseline and do not count as accepted without actual independently logged staging outcomes.
+
+- [ ] **D14 owner consent**: a generic profile operator cannot activate/deactivate federation for another owner; the eligible owner can grant and withdraw opt-in. Test current authorization, revoked operators, role switches and a second session.
+- [ ] **D14 transactional outbox**: on genuine MariaDB, deliberately fail event insertion in a safe disposable staging fixture for profile translation, field reconfirmation and future-state change; each must roll back **both** records. Healthy cases commit mutation and event once, and a current downstream consumer receives the event without duplicate effects.
+- [ ] **D15 Founder governance**: a generic File 00 profile operator cannot retire, memorialize or alter Founder future state. Only a current actor with explicit Founder-governance authority may perform allowed changes; audit and revocation receipts are required.
+- [ ] **D16 retired/legacy federation**: with a previously opted-in active profile, change the lifecycle to retired/legacy; ensure public DTO, File 17 provider, caches, search and actual client never expose active inbox/outbox transport. Restoring active state without owner consent must not silently reactivate a previously revoked opt-in.
+- [ ] **D16 uncertain future state**: when the owner future-state provider is unreachable, null, stale or malformed, federation transport is unavailable, an explicit degraded state is retained, and no HTTP dispatch takes place.
+
+- [ ] **D17 true nested rollback**: in the actual approved Staging DB, invoke a Future-profile mutation inside REST idempotency transaction. Induce an idempotency-finalize failure **after** the inner mutation and outbox insert. Verify that neither mutation, event nor completed idempotency row exists. Separately exercise inner failure, outer continuation, and healthy single commit; record storage engine and a restored clean fixture.
+- [ ] **D17 savepoint uncertainty**: simulate savepoint creation or rollback failure in an isolated staging transaction. No false committed response, no cache/index publication, and operator-visible recovery evidence; reconcile the DB before rerun.
+- [ ] **D18 multilingual direct AI preflight**: authenticated direct Future-profile consumer rejects representative medical requests in English, Urdu, Arabic, Hindi, Chinese, Spanish, French, Portuguese, Bengali and Turkish **without invoking File16**. Prove the provider no-call trace and test a permitted, cited public-work query separately.
+- [ ] **D18 guard dependency failure**: if the shared medical-scope guard is unavailable, direct File16 requests return a safe 503, not a provider call; after recovery a legitimate public-work query functions again.
+
+- [ ] **D19 DB uncertainty HTTP semantics**: real WordPress REST mutations return 503 for a temporary database transaction start, SQL/commit failure or uncertainty; unrelated current membership/authorization denial continues to return its correct 403/401. Verify retry instructions and a fresh healthy request after recovery.
+
+- [ ] **D20 doctor retirement and search**: with File09 doctor verification still current but File03 professional lifecycle changed to retired/legacy without native profile-version increment, old File26 active verified-doctor search rows must fail click-time owner ACL; reindexed records may represent historical profiles only with current lifecycle and without an active verified-doctor tier. Verify both query results and doctor directory, cache invalidation, indexed payload/contract version and true current File09 assertion.
+
+- [ ] **D21 public search display-field truth**: index a current public profile with a biography, display name, canonical URL, country and city; verify legitimate multiline WordPress-normalized excerpts work, then change each public field without a local version increase in a disposable fixture. File26's click-time owner callback must deny stale display records and permit a refreshed, owner-approved index. Include a File26 source/renderer receipt and privacy-checker review; neither old biography nor forged URLs may appear in results.
+
+For each supplemental case attach: exact GitHub SHA, installed package SHA256, actor/role, timestamp, actual DB rows before/after, provider version, HTTP response, relevant sanitized logs, expected/actual, clean-up/restore proof, independent QA approver, and retest status. These checks are in addition to the existing 72 and V12.3 QA-15..24.
+
 ## Required final staging evidence record
 
 Record separately: **Repository HEAD / Reviewed package SHA-256 / Staging installed version & checksum / DB version / central & future schema versions / Migration state / Safe Mode state / Companion contract versions / Backup restore evidence / Rollback evidence / Founder acceptance / Live verification status**.

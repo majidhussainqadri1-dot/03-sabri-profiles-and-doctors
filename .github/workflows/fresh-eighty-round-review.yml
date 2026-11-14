@@ -48,6 +48,42 @@ jobs:
         run: find . -type f -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
       - name: JavaScript syntax
         run: find assets -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: V12.3 actual repository REST and strict-report null count regression
+        run: php tests/report-real-repository-db-uncertainty-runtime.php
+      - name: V12.3 report quota and appeal DB uncertainty regression
+        run: php tests/report-appeal-db-uncertainty-runtime.php
+      - name: V12.3 all legal-hold privacy erasers fail closed on provider exceptions
+        run: |
+          php tests/privacy-legal-hold-provider-failure-runtime.php
+          php tests/privacy-base-central-legal-hold-runtime.php
+      - name: V12.3 future professional translation and attestation privacy null DB fail-closed
+        run: php tests/future-privacy-null-read-failclosed-runtime.php
+      - name: V12.3 central delegation and appeal privacy null DB fail-closed
+        run: php tests/central-privacy-null-read-failclosed-runtime.php
+      - name: V12.3 privacy export-erasure null DB read fail-closed regression
+        run: php tests/privacy-null-read-failclosed-runtime.php
+      - name: V12.3 original Staging checklist 72-case integrity
+        run: python3 tests/v123-staging-checklist-integrity.py
+      - name: V12.3 temporary DB transaction failures preserve HTTP 503
+        run: php tests/db-transaction-error-status-runtime.php
+      - name: V12.3 nested transaction no premature commit regression
+        run: php tests/nested-transaction-atomicity-runtime.php
+      - name: V12.3 lifecycle-aware federation transport regression
+        run: php tests/future-federation-lifecycle-runtime.php
+      - name: V12.3 future profile consent and transactional outbox negative regression
+        run: php tests/future-owner-consent-outbox-runtime.php
+      - name: V12.3 File26 public display fields must match canonical owner
+        run: php tests/file26-public-display-fields-runtime.php
+      - name: V12.3 File26 doctor lifecycle click-time revocation
+        run: php tests/file26-lifecycle-revocation-runtime.php
+      - name: V12.3 direct AI multilingual provider no-call boundary
+        run: php tests/ai-direct-multilingual-provider-nocall-runtime.php
+      - name: V12.3 public-work AI clinical-scope boundary negative language regression
+        run: php tests/ai-clinical-intent-boundary-runtime.php
+      - name: V12.3 JSON-LD HTML script-boundary regression
+        run: php tests/jsonld-script-boundary-runtime.php
+      - name: V12.3 QR true-symbol scanner-golden regression
+        run: node tests/qr-runtime-regression.js
       - name: First fresh exact-main 80-round invariants
         run: python3 tests/fresh-eighty-round-review.py
       - name: Second fresh 80-round invariants
@@ -127,6 +163,11 @@ jobs:
         run: php tests/activator-option-persistence.php
       - name: FHIR only for current verified professional identities
         run: php tests/fhir-verified-professional-runtime.php
+      - name: File 26 owner full-snapshot fail-closed scopes and stable document
+        run: php tests/file26-owner-batch-failclosed-runtime.php
+
+      - name: File 26 click-time File 09 specialty revocation and current search body
+        run: php tests/file26-current-professional-search-runtime.php
       - name: File 26 Founder badge and verified-doctor truth separation
         run: php tests/file26-founder-badge-separation-runtime.php
 

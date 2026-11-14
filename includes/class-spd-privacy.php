@@ -86,7 +86,7 @@ final class SPD_Privacy {
 			),
 			ARRAY_A
 		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		if ( $wpdb->last_error ) { return new WP_Error( 'spd_privacy_export_failed', __( 'Profile-report data could not be read for export.', 'sabri-profiles-doctors' ) ); }
+		if ( $wpdb->last_error || ! is_array( $reports ) ) { return new WP_Error( 'spd_privacy_export_failed', __( 'Profile-report data could not be read for export.', 'sabri-profiles-doctors' ) ); }
 		$wpdb->last_error = '';
 		$professional = $wpdb->get_results(
 			$wpdb->prepare(
@@ -95,7 +95,7 @@ final class SPD_Privacy {
 			),
 			ARRAY_A
 		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		if ( $wpdb->last_error ) { return new WP_Error( 'spd_privacy_export_failed', __( 'Professional-profile proposal data could not be read for export.', 'sabri-profiles-doctors' ) ); }
+		if ( $wpdb->last_error || ! is_array( $professional ) ) { return new WP_Error( 'spd_privacy_export_failed', __( 'Professional-profile proposal data could not be read for export.', 'sabri-profiles-doctors' ) ); }
 		$has_more = count( $reports ) > self::PAGE_SIZE || count( $professional ) > self::PAGE_SIZE;
 		foreach ( array_slice( $reports, 0, self::PAGE_SIZE ) as $report ) {
 			$data[] = array(
@@ -146,14 +146,20 @@ final class SPD_Privacy {
 		$retry    = ! empty( $result['retry'] );
 		$messages = (array) ( $result['messages'] ?? array() );
 
-		if ( apply_filters( 'spd_profile_report_legal_hold', false, absint( $user->ID ) ) ) {
+		try {
+			$legal_hold = apply_filters( 'spd_profile_report_legal_hold', false, absint( $user->ID ) );
+		} catch ( Throwable $exception ) {
+			$messages[] = __( 'Profile erasure retention status could not be verified; retry is required.', 'sabri-profiles-doctors' );
+			return array( 'items_removed' => $removed, 'items_retained' => true, 'messages' => $messages, 'done' => false );
+		}
+		if ( $legal_hold ) {
 			$retained   = true;
 			$messages[] = __( 'Profile-report evidence is retained under an active legal, safety, or governance hold.', 'sabri-profiles-doctors' );
 		} else {
 			$table = SPD_DB::table( 'reports' );
 			$wpdb->last_error = '';
 			$reports = $wpdb->get_results( $wpdb->prepare( "SELECT id,report_uuid FROM {$table} WHERE reporter_user_id=%d", absint( $user->ID ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			if ( $wpdb->last_error ) {
+			if ( $wpdb->last_error || ! is_array( $reports ) ) {
 				$retry = true;
 				$retained = true;
 				$messages[] = __( 'Profile-report data could not be read safely for erasure and requires a retry.', 'sabri-profiles-doctors' );
@@ -187,14 +193,20 @@ final class SPD_Privacy {
 			}
 		}
 
-		if ( apply_filters( 'spd_professional_submission_legal_hold', false, absint( $user->ID ) ) ) {
+		try {
+			$legal_hold = apply_filters( 'spd_professional_submission_legal_hold', false, absint( $user->ID ) );
+		} catch ( Throwable $exception ) {
+			$messages[] = __( 'Profile erasure retention status could not be verified; retry is required.', 'sabri-profiles-doctors' );
+			return array( 'items_removed' => $removed, 'items_retained' => true, 'messages' => $messages, 'done' => false );
+		}
+		if ( $legal_hold ) {
 			$retained   = true;
 			$messages[] = __( 'Professional-profile proposal data is retained under an active legal or governance hold.', 'sabri-profiles-doctors' );
 		} else {
 			$table = SPD_DB::table( 'professional_submissions' );
 			$wpdb->last_error = '';
 			$count_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE submitted_by=%d", absint( $user->ID ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			if ( $wpdb->last_error ) {
+			if ( $wpdb->last_error || ! is_scalar( $count_raw ) || ! preg_match( '/^[0-9]+$/D', (string) $count_raw ) ) {
 				$retry = true;
 				$retained = true;
 				$messages[] = __( 'Professional-profile proposal data could not be read safely for erasure and requires a retry.', 'sabri-profiles-doctors' );

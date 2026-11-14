@@ -58,7 +58,7 @@ final class SPD_Central_Privacy {
 			),
 			ARRAY_A
 		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		if ( $wpdb->last_error ) { return new WP_Error( 'spd_central_privacy_export_failed', __( 'Profile delegation data could not be read for export.', 'sabri-profiles-doctors' ) ); }
+		if ( $wpdb->last_error || ! is_array( $delegations ) ) { return new WP_Error( 'spd_central_privacy_export_failed', __( 'Profile delegation data could not be read for export.', 'sabri-profiles-doctors' ) ); }
 
 		$wpdb->last_error = '';
 		$appeals = $wpdb->get_results(
@@ -68,7 +68,7 @@ final class SPD_Central_Privacy {
 			),
 			ARRAY_A
 		); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		if ( $wpdb->last_error ) { return new WP_Error( 'spd_central_privacy_export_failed', __( 'Profile appeal data could not be read for export.', 'sabri-profiles-doctors' ) ); }
+		if ( $wpdb->last_error || ! is_array( $appeals ) ) { return new WP_Error( 'spd_central_privacy_export_failed', __( 'Profile appeal data could not be read for export.', 'sabri-profiles-doctors' ) ); }
 
 		$data = array();
 		foreach ( array_slice( (array) $delegations, 0, self::PAGE_SIZE ) as $row ) {
@@ -128,14 +128,20 @@ final class SPD_Central_Privacy {
 		$retry = false;
 		$messages = array();
 
-		if ( apply_filters( 'spd_profile_delegation_legal_hold', false, $user_id ) ) {
+		try {
+			$legal_hold = apply_filters( 'spd_profile_delegation_legal_hold', false, $user_id );
+		} catch ( Throwable $exception ) {
+			$messages[] = __( 'Profile erasure retention status could not be verified; retry is required.', 'sabri-profiles-doctors' );
+			return array( 'items_removed' => $removed, 'items_retained' => true, 'messages' => $messages, 'done' => false );
+		}
+		if ( $legal_hold ) {
 			$retained = true;
 			$messages[] = __( 'Profile delegation records are retained under an active legal or governance hold.', 'sabri-profiles-doctors' );
 		} else {
 			$table = SPD_Central_Profile::delegation_table();
 			$wpdb->last_error = '';
 			$count_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE owner_user_id=%d OR delegate_user_id=%d", $user_id, $user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			if ( $wpdb->last_error ) {
+			if ( $wpdb->last_error || ! is_scalar( $count_raw ) || ! preg_match( '/^[0-9]+$/D', (string) $count_raw ) ) {
 				$retry = true; $retained = true;
 				$messages[] = __( 'Profile delegation data could not be read safely for erasure and requires a retry.', 'sabri-profiles-doctors' );
 			} else {
@@ -148,7 +154,13 @@ final class SPD_Central_Privacy {
 			}
 		}
 
-		if ( apply_filters( 'spd_profile_appeal_legal_hold', false, $user_id ) ) {
+		try {
+			$legal_hold = apply_filters( 'spd_profile_appeal_legal_hold', false, $user_id );
+		} catch ( Throwable $exception ) {
+			$messages[] = __( 'Profile erasure retention status could not be verified; retry is required.', 'sabri-profiles-doctors' );
+			return array( 'items_removed' => $removed, 'items_retained' => true, 'messages' => $messages, 'done' => false );
+		}
+		if ( $legal_hold ) {
 			$retained = true;
 			$messages[] = __( 'Profile appeal records are retained under an active legal, safety, or governance hold.', 'sabri-profiles-doctors' );
 		} else {
@@ -159,7 +171,9 @@ final class SPD_Central_Privacy {
 			$wpdb->last_error = '';
 			$reviewer_count_raw = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE reviewer_id=%d", $user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$reviewer_count_error = (string) $wpdb->last_error;
-			if ( '' !== $requester_count_error || '' !== $reviewer_count_error ) {
+			if ( '' !== $requester_count_error || '' !== $reviewer_count_error
+				|| ! is_scalar( $requester_count_raw ) || ! preg_match( '/^[0-9]+$/D', (string) $requester_count_raw )
+				|| ! is_scalar( $reviewer_count_raw ) || ! preg_match( '/^[0-9]+$/D', (string) $reviewer_count_raw ) ) {
 				$retry = true; $retained = true;
 				$messages[] = __( 'Profile appeal data could not be read safely for erasure and requires a retry.', 'sabri-profiles-doctors' );
 			} else {

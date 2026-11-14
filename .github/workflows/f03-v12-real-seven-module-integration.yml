@@ -1,4 +1,6 @@
-# File 03 governing v12: real disposable cross-file WordPress integration.
+# File 03 V12.3: real disposable cross-file WordPress integration.
+# Canonical companion main pins refreshed on 2026-11-14: File00, File07 and File09.
+# File26 pinned to the unmerged, separate D20 lifecycle payload companion PR #38; do not deploy independently.
 # Does NOT deploy or alter Hostinger live/staging. File09 candidate is NOT merged.
 name: File 03 v12 Seven-Plugin Real Cross-File Integration
 
@@ -10,12 +12,12 @@ permissions:
   contents: read
 
 env:
-  FILE00_REF: 2fa7c022ee9cd1b65432e900579512f304532442
+  FILE00_REF: 1fad051c86d530d558be3eb1890d3c6e67bce6e8
   FILE02_REF: 224c39bcb8c28f77504c7348dbad41226753c7e8
-  FILE07_REF: 2f4a89707724fd2b9946600afe10ddab27ec3c2d
-  FILE09_REF: 13153e4bb5c98e449f638a2c24ec2f1c05083afc
+  FILE07_REF: 8f9b567c08e9456daf31ebadf17b13bb307571f8
+  FILE09_REF: 8f52f87a6d82fc89c6c78b7da80b474dff916d97
   FILE08_REF: d086840f7e2ac0ed328006385f064e0e2fb58cb1
-  FILE26_REF: 1b064c6ea9f81195611ed001d5457e8ced65460a
+  FILE26_REF: f654d2fdd9e00ace9acf46cce2f5fd5b8e50579e
 
 jobs:
   seven-module-disposable-wordpress:
@@ -89,7 +91,7 @@ jobs:
           grep -Fq "Version: 1.2.44" file00/source/sabri-membership-core/sabri-membership-core.php
           grep -Fq "Version: 1.3.4" file02/sabri-authentication.php
           grep -Fq "Version: 1.3.0" file09/global-doctor-onboarding.php
-          grep -Fq "Version: 1.2.1" file07/doctors-directory/doctors-directory.php
+          grep -Fq "Version: 1.2.2" file07/doctors-directory/doctors-directory.php
           grep -Fq "Version: 1.2.16" file08/worldwide-clinic.php
           grep -Fq "Version: 1.3.0" file26/file-26-search-discovery.php
       - uses: shivammathur/setup-php@2.37.2
@@ -144,6 +146,32 @@ jobs:
           set -euo pipefail
           /tmp/wp plugin activate sabri-profiles-doctors --path=/tmp/wordpress
           /tmp/wp eval 'if(!class_exists("SPD_Schema_Guard")||!SPD_Schema_Guard::base_ready()||!SPD_Schema_Guard::central_ready()||!SPD_Schema_Guard::future_ready()){fwrite(STDERR,"FAIL File03 DB shape\n");exit(1);} echo "PASS File03\n";' --path=/tmp/wordpress
+      - name: V12.3 runtime-installed source and schema read-only freeze smoke
+        run: |
+          set -euo pipefail
+          /tmp/wp eval-file file03/tools/f03-v123-readonly-freeze.php --path=/tmp/wordpress > /tmp/f03-v123-runtime-freeze.json
+          php -r '
+            $json = json_decode(file_get_contents("/tmp/f03-v123-runtime-freeze.json"), true);
+            if (!is_array($json) || ($json["source"] ?? "") !== "installed-wordpress-runtime"
+              || empty($json["file03"]["installed_manifest_sha256"])
+              || ($json["file03"]["declared_plugin_version"] ?? "") !== "1.2.0-rc18"
+              || ($json["file03"]["schema_base_ready"] ?? null) !== true
+              || ($json["file03"]["schema_central_ready"] ?? null) !== true
+              || ($json["file03"]["schema_future_ready"] ?? null) !== true
+              || isset($json["credentials"]) || isset($json["users"])) {
+                fwrite(STDERR, "FAIL File03 V12.3 runtime freeze read-only evidence shape\n");
+                exit(1);
+              }
+            echo "PASS File03 installed-version, schema, manifest and safe-mode read-only freeze\n";
+          '
+      - name: V12.3 approved source to installed runtime manifest parity
+        run: |
+          set -euo pipefail
+          python3 file03/tools/f03-v123-manifest-parity.py --approved-root file03 --installed-json /tmp/f03-v123-runtime-freeze.json
+      - name: D17 real MariaDB nested savepoint / rollback atomicity
+        run: |
+          set -euo pipefail
+          /tmp/wp eval-file file03/tests/wp-mariadb-nested-transaction-runtime.php --path=/tmp/wordpress
       - name: File 09 true doctor identity verification provider with synthetic CI keyring
         run: |
           set -euo pipefail
@@ -169,6 +197,10 @@ jobs:
               exit 1
             fi
           fi
+      - name: File26 D20 strict lifecycle payload contract source regression
+        run: |
+          set -euo pipefail
+          php file26/tests/file03-professional-lifecycle-payload.php
       - name: File 26 schema and canonical File03 connector collection
         run: |
           set -euo pipefail
@@ -187,6 +219,16 @@ jobs:
         run: |
           set -euo pipefail
           /tmp/wp eval '$owner=\Sabri\File26\Plugin::instance()->connectors()->get("file03-profiles");$cb=$owner["can_view"]; $invalid=array("object_id"=>"00000000-0000-4000-8000-000000000000","object_version"=>1,"entity_type"=>"doctor","payload"=>array("verified_doctor"=>true)); if(true===call_user_func($cb,$invalid,array())){fwrite(STDERR,"FAIL unknown owner ID shown\n");exit(1);} echo "PASS real-owner callback refuses missing canonical profile\n";' --path=/tmp/wordpress
+      - name: Verify actual File26 normalizer runtime contract for current owner ACL
+        run: |
+          set -euo pipefail
+          /tmp/wp eval 'if(!class_exists("\\Sabri\\File26\\Normalizer")){fwrite(STDERR,"FAIL File26 current normalizer unavailable\\n");exit(1);} $n=new \Sabri\File26\Normalizer(); if($n->normalize("Doctor  Classical-Homeopathy")!=="doctor classical-homeopathy"){fwrite(STDERR,"FAIL File26 owner search normalizer mismatch\\n");exit(1);} echo "PASS File26 production normalizer for source-body ACL\\n";' --path=/tmp/wordpress
+
+      - name: Real WordPress File03 owner full-snapshot metadata scope and negative partial test
+        run: |
+          set -euo pipefail
+          /tmp/wp eval '$owner=\Sabri\File26\Plugin::instance()->connectors()->get("file03-profiles"); if(!is_array($owner)||!is_callable($owner["list_batch"]??null)){fwrite(STDERR,"FAIL File03 connector batch unavailable\n");exit(1);} $fn=$owner["list_batch"]; $full=call_user_func($fn,"",10,array("connector"=>"file03-profiles")); if(!is_array($full)||!isset($full["items"])||!is_array($full["items"])||!array_key_exists("done",$full)){fwrite(STDERR,"FAIL File26 full scope owner batch not valid\n");exit(1);} $partial=call_user_func($fn,"",10,array("connector"=>"file03-profiles","mode"=>"partial")); if(!is_wp_error($partial)){fwrite(STDERR,"FAIL unknown partial scope accepted\n");exit(1);} $wrong=call_user_func($fn,"",10,array("connector"=>"file07-doctors")); if(!is_wp_error($wrong)){fwrite(STDERR,"FAIL wrong connector routing key accepted\n");exit(1);} echo "PASS WordPress File03 File26 full-scope and partial fail-closed\n";' --path=/tmp/wordpress
+
       - name: Summarize pinned disposable integration evidence
         if: always()
         run: |

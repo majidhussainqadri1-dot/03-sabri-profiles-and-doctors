@@ -164,12 +164,24 @@ final class SPD_Contracts {
 
 	public static function file26_list_batch( $cursor, $limit, $scope = array() ) {
 		global $wpdb;
-		unset( $scope );
+		// A degraded owner is NOT an empty successful snapshot. File26 can
+		// otherwise promote an empty shadow generation and remove public profiles.
 		if ( ! SPD_DB::tables_exist() ) {
-			return array( 'items' => array(), 'next_cursor' => '', 'done' => true, 'degraded' => true );
+			return new WP_Error( 'spd_file26_owner_schema_unavailable', 'Canonical File03 profile schema is unavailable; snapshot denied.' );
+		}
+		// File26 transports its own connector routing key within scope_json even
+		// for a full snapshot. Only that exact key is permitted; object_id or
+		// other partial/unknown filters cannot be silently treated as complete.
+		$full_scope = array() === $scope || ( is_array( $scope ) && 1 === count( $scope )
+			&& isset( $scope['connector'] ) && 'file03-profiles' === $scope['connector'] );
+		if ( ! $full_scope ) {
+			return new WP_Error( 'spd_file26_partial_scope_unverified', 'Only complete source snapshots are supported until source object scopes are proven.' );
+		}
+		if ( '' !== $cursor && ( ! is_string( $cursor ) || ! preg_match( '/^[0-9]{1,18}$/D', $cursor ) ) ) {
+			return new WP_Error( 'spd_file26_invalid_cursor', 'Invalid File03 owner cursor.' );
 		}
 		$limit = max( 1, min( 100, absint( $limit ) ) );
-		$after = absint( $cursor );
+		$after = (int) $cursor;
 		$table = SPD_DB::table( 'profiles' );
 		$wpdb->last_error = '';
 		$rows = $wpdb->get_results(
@@ -181,13 +193,22 @@ final class SPD_Contracts {
 			ARRAY_A
 		);
 		if ( $wpdb->last_error || ! is_array( $rows ) ) {
-			return array( 'items' => array(), 'next_cursor' => (string) $after, 'done' => false, 'degraded' => true );
+			return new WP_Error( 'spd_file26_owner_batch_unreadable', 'Canonical profile owner batch could not be read reliably.' );
 		}
 		$items = array();
 		$last_id = $after;
 		foreach ( $rows as $row ) {
 			$last_id = max( $last_id, absint( $row['id'] ?? 0 ) );
-			$document = self::file26_fetch_object( (string) ( $row['public_id'] ?? '' ) );
+			$document = self::file26_fetch_object( (string) ( $row['public_id'] ?? '' ), true );
+			if ( is_wp_error( $document ) ) {
+				$details = $document->get_error_data();
+				$http_status = is_array( $details ) ? absint( $details['status'] ?? 0 ) : 0;
+				// Current, deliberately private or removed profiles may be omitted.
+				// A 503, malformed provider or unknown read error must instead stop
+				// the rebuild; otherwise File26 could commit an incomplete generation.
+				if ( in_array( $http_status, array( 404, 410 ), true ) ) { continue; }
+				return new WP_Error( 'spd_file26_owner_projection_unavailable', 'Canonical profile projection could not be read reliably; source snapshot denied.' );
+			}
 			if ( is_array( $document ) && ! empty( $document ) ) { $items[] = $document; }
 		}
 		return array(
@@ -197,14 +218,45 @@ final class SPD_Contracts {
 		);
 	}
 
-	public static function file26_fetch_object( $identity ) {
+
+	/** Stable source text that File26 normalizes for the stored search body. */
+	private static function file26_search_text( array $projection ) {
+		$fields = (array) ( $projection['fields'] ?? array() );
+		$professional = (array) ( $projection['professional'] ?? array() );
+		return trim( implode( ' ', array_filter( array(
+			(string) ( $projection['display_name'] ?? '' ),
+			(string) ( $professional['professional_title'] ?? '' ),
+			(string) ( $professional['specialty'] ?? '' ),
+			(string) ( $fields['country'] ?? '' ),
+			(string) ( $fields['city'] ?? '' ),
+		) ) ) );
+	}
+
+	public static function file26_fetch_object( $identity, $strict_owner_error = false ) {
 		$projection = spd_get_search_projection( $identity );
-		if ( is_wp_error( $projection ) || ! is_array( $projection ) || empty( $projection['canonical_id'] ) || empty( $projection['canonical_url'] ) ) { return array(); }
+		// The external single-object callback retains the established empty
+		// result on non-public/error responses. Internal batch reconstruction
+		// propagates errors so transient source outages cannot be hidden.
+		if ( is_wp_error( $projection ) ) { return $strict_owner_error ? $projection : array(); }
+		if ( ! is_array( $projection ) || empty( $projection['canonical_id'] ) || empty( $projection['canonical_url'] ) ) {
+			return $strict_owner_error
+				? new WP_Error( 'spd_file26_owner_projection_invalid', 'Canonical profile projection is malformed; full snapshot denied.' )
+				: array();
+		}
 		$type = sanitize_key( (string) ( $projection['profile_type'] ?? 'member' ) );
 		$entity_type = 'founder' === $type ? 'founder' : ( 'doctor' === $type ? 'doctor' : 'member_profile' );
 		$fields = (array) ( $projection['fields'] ?? array() );
 		$professional = (array) ( $projection['professional'] ?? array() );
 		$badge = (array) ( $projection['badge'] ?? array() );
+		// F03-FUT-16: retiring or memorializing a professional does not necessarily
+		// increment the native File03 version; preserve current lifecycle in the
+		// owner index payload and never rank a retired profile as active/verified.
+		$lifecycle = strtolower( trim( (string) ( $projection['professional_lifecycle'] ?? 'active' ) ) );
+		if ( ! in_array( $lifecycle, array( 'active', 'retired', 'legacy' ), true ) ) {
+			return $strict_owner_error
+				? new WP_Error( 'spd_file26_lifecycle_unavailable', 'Current professional lifecycle cannot be validated.' )
+				: array();
+		}
 		return array(
 			'connector_slug' => 'file03-profiles',
 			'domain' => 'profiles',
@@ -216,20 +268,15 @@ final class SPD_Contracts {
 			'visibility' => 'public',
 			'title' => sanitize_text_field( (string) ( $projection['display_name'] ?? '' ) ),
 			'excerpt' => SPD_Helpers::sanitize_multiline( (string) ( $fields['bio'] ?? '' ), 600 ),
-			'search_text' => trim( implode( ' ', array_filter( array(
-				(string) ( $projection['display_name'] ?? '' ),
-				(string) ( $professional['professional_title'] ?? '' ),
-				(string) ( $professional['specialty'] ?? '' ),
-				(string) ( $fields['country'] ?? '' ),
-				(string) ( $fields['city'] ?? '' ),
-			) ) ) ),
+			'search_text' => self::file26_search_text( $projection ),
 			'canonical_url' => esc_url_raw( (string) $projection['canonical_url'] ),
 			'author_key' => 'profile:' . sanitize_text_field( (string) $projection['canonical_id'] ),
 			'country' => sanitize_text_field( (string) ( $fields['country'] ?? '' ) ),
 			'location' => sanitize_text_field( (string) ( $fields['city'] ?? '' ) ),
-			'freshness_at' => sanitize_text_field( (string) ( $projection['generated_at'] ?? gmdate( 'c' ) ) ),
+			// No generated_at as freshness_at: request-time data changes the
+			// File26 checksum for an otherwise identical immutable owner version.
 			'safety_class' => 'professional_profile',
-			'payload' => array( 'verified_doctor' => 'doctor' === $type && 'verified_doctor' === (string) ( $badge['key'] ?? '' ) && ! empty( $badge['verified'] ) ),
+			'payload' => array( 'verified_doctor' => 'active' === $lifecycle && 'doctor' === $type && 'verified_doctor' === (string) ( $badge['key'] ?? '' ) && ! empty( $badge['verified'] ), 'professional_lifecycle' => $lifecycle ),
 		);
 	}
 
@@ -245,12 +292,70 @@ final class SPD_Contracts {
 		$current = spd_get_search_projection( (string) $document['object_id'] );
 		if ( ! is_array( $current ) || is_wp_error( $current )
 			|| sanitize_text_field( (string) ( $current['canonical_id'] ?? '' ) ) !== sanitize_text_field( (string) $document['object_id'] ) ) { return false; }
+		// File26 renders persisted entity_type into search facets and doctor
+		// ranking after this owner callback. Historical/malformed index rows
+		// must never label a current member or Founder as a doctor even when
+		// the native profile version and verified_doctor flag still match.
+		$current_type = (string) ( $current['profile_type'] ?? '' );
+		if ( ! in_array( $current_type, array( 'member', 'doctor', 'founder' ), true ) ) { return false; }
+		$current_entity_type = 'doctor' === $current_type ? 'doctor' : ( 'founder' === $current_type ? 'founder' : 'member_profile' );
+		if ( $current_entity_type !== (string) ( $document['entity_type'] ?? '' ) ) { return false; }
+		// File26 serves stored fields AFTER this callback. Search-text
+		// normalization does not cover the biography, canonical URL, or every
+		// presented field. Validate each field that the index actually stores,
+		// against the current owner-approved, public-safe projection.
+		$current_fields = is_array( $current['fields'] ?? null ) ? $current['fields'] : array();
+		$display_values = array(
+			'title'         => (string) ( $current['display_name'] ?? '' ),
+			'excerpt'       => (string) ( $current_fields['bio'] ?? '' ),
+			'canonical_url' => (string) ( $current['canonical_url'] ?? '' ),
+			'country'       => (string) ( $current_fields['country'] ?? '' ),
+			'location'      => (string) ( $current_fields['city'] ?? '' ),
+		);
+		foreach ( $display_values as $field => $owner_value ) {
+			if ( ! array_key_exists( $field, $document ) ) { continue; }
+			if ( ! is_string( $document[ $field ] ) ) { return false; }
+			if ( 'excerpt' === $field ) {
+				// A standalone contract fixture may omit the full WordPress
+				// helper; actual stored excerpts require the real helper.
+				if ( ! class_exists( 'SPD_Helpers' ) ) { return false; }
+				$expected = wp_strip_all_tags( SPD_Helpers::sanitize_multiline( $owner_value, 600 ), true );
+			} elseif ( 'canonical_url' === $field ) {
+				if ( ! function_exists( 'esc_url_raw' ) ) { return false; }
+				$expected = esc_url_raw( $owner_value );
+			} else {
+				$expected = sanitize_text_field( $owner_value );
+				// File26 stores bounded location columns (191 characters).
+				if ( in_array( $field, array( 'country', 'location' ), true ) ) { $expected = substr( $expected, 0, 191 ); }
+			}
+			if ( ! is_string( $expected ) || ! hash_equals( $expected, $document[ $field ] ) ) { return false; }
+		}
+		// File09 can replace a specialty/approved title while File03's local
+		// version and the verified boolean stay unchanged. File26 will serve its
+		// persisted normalized_body AFTER this callback; compare using File26's
+		// own normalizer, never a second home-grown search-ranking algorithm.
+		if ( ! isset( $document['normalized_body'] ) || ! is_string( $document['normalized_body'] )
+			|| ! class_exists( '\\Sabri\\File26\\Normalizer' ) ) { return false; }
+		try {
+			$normalizer = new \Sabri\File26\Normalizer();
+			$current_body = $normalizer->normalize( wp_strip_all_tags( self::file26_search_text( $current ), true ) );
+			if ( ! is_string( $current_body ) || ! hash_equals( $current_body, $document['normalized_body'] ) ) { return false; }
+		} catch ( Throwable $e ) {
+			// Provider/normalizer outage can never authorize stale search text.
+			return false;
+		}
 		// File 09 can revoke a doctor badge without incrementing File 03's
 		// profile version. Search returns the saved File 26 payload, therefore
 		// stale verified-doctor status must also be denied at view time.
 		$indexed_payload = is_array( $document['payload'] ?? null ) ? $document['payload'] : array();
+		// Source-of-truth lifecycle is independent of the local profile version.
+		// Mismatched/stale index states are denied until File26 reindexes them.
+		$current_lifecycle = strtolower( trim( (string) ( $current['professional_lifecycle'] ?? 'active' ) ) );
+		$indexed_lifecycle = strtolower( trim( (string) ( $indexed_payload['professional_lifecycle'] ?? 'active' ) ) );
+		if ( ! in_array( $current_lifecycle, array( 'active', 'retired', 'legacy' ), true )
+			|| ! hash_equals( $current_lifecycle, $indexed_lifecycle ) ) { return false; }
 		$current_badge = is_array( $current['badge'] ?? null ) ? $current['badge'] : array();
-		$current_verified_doctor = 'doctor' === (string) ( $current['profile_type'] ?? '' )
+		$current_verified_doctor = 'active' === $current_lifecycle && 'doctor' === (string) ( $current['profile_type'] ?? '' )
 			&& 'verified_doctor' === (string) ( $current_badge['key'] ?? '' )
 			&& ! empty( $current_badge['verified'] );
 		// Older Founder documents may have carried the incorrect doctor flag.

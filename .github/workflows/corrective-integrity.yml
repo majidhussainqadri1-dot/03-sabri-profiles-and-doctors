@@ -14,7 +14,7 @@ jobs:
   integrity:
     if: >-
       (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/audit/')) ||
-      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'audit/'))
+      (github.event_name == 'pull_request' && (startsWith(github.head_ref, 'audit/') || startsWith(github.head_ref, 'integration/')))
     name: Corrected source integrity and architecture
     runs-on: ubuntu-latest
     steps:
@@ -23,6 +23,9 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact integrity checkout
+        run: test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha || github.sha }}'
       - name: Verify baseline ancestry, historical provenance and current candidate boundary
         env:
           BASELINE_COMMIT: e2165a9286e6c3106430aab431d9d44da707cf51
@@ -138,7 +141,7 @@ jobs:
   php-lint:
     if: >-
       (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/audit/')) ||
-      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'audit/'))
+      (github.event_name == 'pull_request' && (startsWith(github.head_ref, 'audit/') || startsWith(github.head_ref, 'integration/')))
     name: PHP lint (${{ matrix.php }})
     runs-on: ubuntu-latest
     strategy:
@@ -150,6 +153,9 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact PHP lint checkout
+        run: test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha || github.sha }}'
       - name: Set up PHP from immutable action
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
         with:

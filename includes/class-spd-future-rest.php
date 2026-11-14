@@ -79,6 +79,18 @@ final class SPD_Future_REST {
 			'/\b(what|which|recommend|suggest|best)\b.{0,45}\b(remedy|medicine|medication|drug|treatment|potency|dose)\b/ui',
 			'/\b(should i|can i|may i)\b.{0,35}\b(take|use)\b.{0,35}\b(remedy|medicine|medication|drug|dose|potency)\b/ui',
 			'/\b(treat|cure)\b.{0,30}\b(my|me|for me)\b|\b(for my|my)\b.{0,45}\b(symptom|condition|disease|pain|illness)\b/ui',
+			// D18: colloquial symptom-to-treatment requests in the ten primary
+			// supported languages also need pre-provider refusal.
+			'/\b(?:i have|i.ve got|my)\b.{0,55}\b(?:fever|pain|cough|symptom|sick|illness)\b.{0,60}\b(?:what should|what do|how can|what can)\b/ui',
+			'/مجھے.{0,30}(?:بخار|درد|کھانسی).{0,35}(?:کیا\s*کروں|کیا\s*کرنا|کیا\s*لوں)/ui',
+			'/عندي.{0,30}(?:حمى|ألم|سعال).{0,40}(?:ماذا\s*أفعل|ماذا\s*افعل|كيف\s*أتعالج)/ui',
+			'/मुझे.{0,40}(?:बुखार|दर्द|खाँसी).{0,35}(?:क्या\s*करूँ|क्या\s*करूं|क्या\s*करना)/ui',
+			'/我.{0,24}(?:发烧|疼|咳嗽).{0,30}(?:怎么办|该怎么|什么药)/u',
+			'/tengo.{0,25}(?:fiebre|dolor|tos).{0,35}(?:qué\s*hago|que\s*hago|qué\s*debo)/ui',
+			"/j['’]ai.{0,40}(?:fièvre|douleur|toux).{0,40}(?:que\s*faire|quoi\s*faire)/ui",
+			'/estou\s*com.{0,30}(?:febre|dor|tosse).{0,40}(?:o\s*que\s*faço|o\s*que\s*devo)/ui',
+			'/আমার.{0,35}(?:জ্বর|ব্যথা|কাশি).{0,30}(?:কি|কী)\s*করব/u',
+			'/ateşim\s*var.{0,35}(?:ne\s*yapmalıyım|ne\s*yapayım)/ui',
 			'/تشخیص|نسخہ|خوراک|ایمرجنسی|پوٹینسی|علاج\s*تجویز/ui',
 			'/(?:کون\s*سی|کون\s*سا|کیا|کوئی).{0,24}(?:دوا|ریمیڈی|علاج|خوراک|پوٹینسی)/ui',
 			'/(?:مجھے|میری|میرے|میرے\s*لیے).{0,60}(?:دوا|ریمیڈی|علاج|خوراک|پوٹینسی|تشخیص)/ui',
