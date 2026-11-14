@@ -300,6 +300,24 @@ final class SPD_Contracts {
 		if ( ! in_array( $current_type, array( 'member', 'doctor', 'founder' ), true ) ) { return false; }
 		$current_entity_type = 'doctor' === $current_type ? 'doctor' : ( 'founder' === $current_type ? 'founder' : 'member_profile' );
 		if ( $current_entity_type !== (string) ( $document['entity_type'] ?? '' ) ) { return false; }
+		// File26 may serve persisted title/excerpt/URL and location AFTER this
+		// callback. A matching normalized search body does not cover biography
+		// excerpts, or a forged stored link, so compare each stored display field
+		// to the current public-safe File03 projection. Missing optional fields
+		// on historical index rows cannot leak a value they do not contain.
+		$current_fields = is_array( $current['fields'] ?? null ) ? $current['fields'] : array();
+		$current_public_display = array(
+			'title'         => sanitize_text_field( (string) ( $current['display_name'] ?? '' ) ),
+			'excerpt'       => SPD_Helpers::sanitize_multiline( (string) ( $current_fields['bio'] ?? '' ), 600 ),
+			'canonical_url' => esc_url_raw( (string) ( $current['canonical_url'] ?? '' ) ),
+			'country'       => sanitize_text_field( (string) ( $current_fields['country'] ?? '' ) ),
+			'location'      => sanitize_text_field( (string) ( $current_fields['city'] ?? '' ) ),
+		);
+		foreach ( $current_public_display as $field => $expected ) {
+			if ( array_key_exists( $field, $document ) &&
+				( ! is_string( $document[ $field ] ) ||
+					! hash_equals( $expected, $document[ $field ] ) ) ) { return false; }
+		}
 		// File09 can replace a specialty/approved title while File03's local
 		// version and the verified boolean stay unchanged. File26 will serve its
 		// persisted normalized_body AFTER this callback; compare using File26's
