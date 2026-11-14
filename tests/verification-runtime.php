@@ -10,7 +10,7 @@ add_filter('sabri_doctor_verification_public_projection_v1',function($v,$uid){re
 test_assert(SPD_Verification_Adapter::is_verified(2),'Current validated File 09 projection should verify doctor.');
 test_assert(!SPD_Membership_Adapter::is_minor(2),'Current verified adult File00 age_context must not be treated as an unknown/minor account.');
 test_assert(SPD_Verification_Adapter::directory_eligible(2),'Current File00 adult and current File09 verified doctor must be directory eligible.');
-test_assert(SPD_Membership_Adapter::public_profile_age_eligible(2),'Current File00 adult age proof must allow age-gated public profile eligibility.');
+test_assert(!SPD_Membership_Adapter::public_profile_age_eligible(2),'File00 public-profile opt-in must fail closed without an independent age claim; inline membership assertions may recurse here.');
 $GLOBALS['smc_claims'][3] = array('user_id'=>3,'contract_version'=>'1.2.3','status'=>'approved','approved'=>true,'eligible'=>true,'membership_type'=>'member','guardian_verified'=>false,'age_context'=>array('known'=>false,'minor'=>false,'age_band'=>'unknown','guardian_required'=>false));
 test_assert(SPD_Membership_Adapter::is_minor(3),'Unknown File00 age must remain minor-safe.');
 test_assert(!SPD_Membership_Adapter::public_profile_age_eligible(3),'Unknown File00 age must never permit public adult-only profile.');
