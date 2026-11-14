@@ -24,12 +24,19 @@ $age_claim_factory = static function($value,$uid){
     if(6===$uid){$claim['contract_version']='1.2.0';}
     if(7===$uid){$claim['valid_until']=gmdate('c',$now-60);}
     if(8===$uid){$claim['purpose']='incorrect_scope';}
+    if(9===$uid){$claim['owner']='file26';}
+    if(10===$uid){$claim['user_id']=$uid+1;}
+    if(11===$uid){$claim['generated_at']=gmdate('c',$now-1200);}
+    if(12===$uid){$claim['guardian_verified']='yes';}
+    if(13===$uid){$claim['age']=14;}
+    if(14===$uid){$claim['date_of_birth']='2010-01-01';}
+    if(15===$uid){$claim['is_minor']='false';}
     return $claim;
 };
 add_filter('smc_profile_age_guardian_claim_v1',$age_claim_factory,10,2);
 test_assert(SPD_Membership_Adapter::public_profile_age_eligible(2),'Current owner claim must allow a verified known adult without recursively calling File00 assertions.');
-foreach(array(3,4,5,6,7,8) as $uid){
-    test_assert(!SPD_Membership_Adapter::public_profile_age_eligible($uid),'Unknown, minor, inconsistent, old, expired and wrong-purpose age claims must fail closed: '.$uid);
+foreach(array(3,4,5,6,7,8,9,10,11,12,13,14,15) as $uid){
+    test_assert(!SPD_Membership_Adapter::public_profile_age_eligible($uid),'Reject unknown/minor/contradictory/downgraded/expired/wrong-scope/foreign-owner/mismatched-subject/stale/wrong-type/private-field age claims: '.$uid);
 }
 
 $GLOBALS['smc_claims'][3] = array('user_id'=>3,'contract_version'=>'1.2.3','status'=>'approved','approved'=>true,'eligible'=>true,'membership_type'=>'member','guardian_verified'=>false,'age_context'=>array('known'=>false,'minor'=>false,'age_band'=>'unknown','guardian_required'=>false));
