@@ -116,7 +116,7 @@ final class SPD_Membership_Adapter {
 		$hard_blocked = ! empty( $raw['suspended'] ) || in_array( $status, array( 'rejected', 'suspended', 'expired', 'appeal_review', 'erasure_pending', 'invalid_application', 'erased', 'dependency_missing' ), true );
 		$eligible = ! $hard_blocked && ! empty( $raw['eligible'] );
 
-		$age = self::age_guardian_claim( $user_id );
+		$age = self::age_guardian_claim( $user_id, $raw );
 		$age_known = ! empty( $age['age_known'] );
 		$is_minor = $age_known ? ! empty( $age['is_minor'] ) : 'founder' !== $account_type;
 		$guardian_verified = ! empty( $raw['guardian_verified'] );
@@ -140,7 +140,7 @@ final class SPD_Membership_Adapter {
 			'is_minor'               => $is_minor,
 			'age_known'              => $age_known,
 			'age'                    => $age_known ? absint( $age['age'] ?? 0 ) : 0,
-			'guardian_required'      => $age_known ? $is_minor : ! $guardian_verified,
+			'guardian_required'      => $age_known ? ( array_key_exists( 'guardian_required', $age ) ? ! empty( $age['guardian_required'] ) : $is_minor ) : ! $guardian_verified,
 			'guardian_verified'      => $guardian_verified,
 			'suspended'              => $hard_blocked,
 			'email_verified'         => ! empty( $raw['email_verified'] ),
@@ -158,7 +158,29 @@ final class SPD_Membership_Adapter {
 	 * public: every non-Founder profile remains minor-safe until the current
 	 * age-assurance contract is available.
 	 */
-	private static function age_guardian_claim( $user_id ) {
+	private static function age_guardian_claim( $user_id, array $raw = array() ) {
+		// File 00 v1.2.3 already publishes privacy-minimized age_context in its
+		// current, subject-bound membership assertion. Use that authoritative
+		// field before an older optional filter; never infer adulthood from
+		// missing, malformed or contradictory age information.
+		if ( array_key_exists( 'age_context', $raw ) ) {
+			$inline = $raw['age_context'];
+			if ( ! is_array( $inline ) ) { return array( 'age_known' => false ); }
+			$known = $inline['known'] ?? null;
+			$minor = $inline['minor'] ?? null;
+			$requires_guardian = $inline['guardian_required'] ?? null;
+			$band = sanitize_key( (string) ( $inline['age_band'] ?? '' ) );
+			if ( true !== $known || ! is_bool( $minor ) || ! is_bool( $requires_guardian ) || $requires_guardian !== $minor || ( $minor ? 'minor' !== $band : 'adult' !== $band ) ) {
+				return array( 'age_known' => false );
+			}
+			return array(
+				'age_known'        => true,
+				'is_minor'         => $minor,
+				'guardian_required'=> $requires_guardian,
+				'guardian_verified'=> ! empty( $raw['guardian_verified'] ),
+			);
+		}
+
 		$user_id = absint( $user_id );
 		$claim = self::provider_call(
 			static function () use ( $user_id ) { return apply_filters( 'smc_profile_age_guardian_claim_v1', null, $user_id, SPD_CONTRACT_VERSION ); },
@@ -227,8 +249,8 @@ final class SPD_Membership_Adapter {
 	}
 
 	public static function public_profile_age_eligible( $user_id ) {
-		$claim = self::age_guardian_claim( absint( $user_id ) );
-		return ! empty( $claim['age_known'] ) && empty( $claim['is_minor'] );
+		$claims = self::claims( absint( $user_id ) );
+		return ! empty( $claims['age_known'] ) && empty( $claims['is_minor'] );
 	}
 
 	public static function guardian_verified( $user_id ) {
