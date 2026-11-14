@@ -73,4 +73,15 @@ test_assert(SPD_Verification_Adapter::status(2)==='verification_unavailable',
 test_assert(!SPD_Verification_Adapter::is_verified(2),
     'Pending professional data must never be used as a verified badge.');
 
+// P0 fail-first: a legacy unscoped age response must never overrule
+// a minor age or convert a negative age to asserted adulthood.
+test_reset_filters();
+add_filter('smc_profile_age_guardian_claim_v1',static function($value,$uid){
+    return array('user_id'=>$uid,'contract_version'=>'1.2.3',
+        'generated_at'=>gmdate('c'),'valid_until'=>gmdate('c',time()+120),
+        'age'=>14,'is_minor'=>false,'guardian_verified'=>true);
+},10,2);
+test_assert(!SPD_Membership_Adapter::public_profile_age_eligible(90),
+    'An unscoped legacy age=14/is_minor=false contradiction must never authorize an adult public profile.');
+
 echo "Verification runtime checks passed.\n";
