@@ -127,6 +127,9 @@ jobs:
         run: php tests/activator-option-persistence.php
       - name: FHIR only for current verified professional identities
         run: php tests/fhir-verified-professional-runtime.php
+      - name: File 26 owner full-snapshot fail-closed scopes and stable document
+        run: php tests/file26-owner-batch-failclosed-runtime.php
+
       - name: File 26 Founder badge and verified-doctor truth separation
         run: php tests/file26-founder-badge-separation-runtime.php
 
