@@ -101,6 +101,10 @@ $GLOBALS['projection_error'] = new WP_Error('spd_profile_unavailable', '', ['sta
 $hidden = SPD_Contracts::file26_list_batch('', 10, []);
 check(is_array($hidden) && ($hidden['items'] ?? null) === [] && ($hidden['done'] ?? false) === true, 'explicit 404 private projection must remain excluded without a false 503');
 $GLOBALS['projection_error'] = null;
+$good_profile = $GLOBALS['profile'];
+$GLOBALS['profile'] = ['canonical_id' => PROFILE_ID, 'version' => 4];
+check(err(SPD_Contracts::file26_list_batch('', 10, []), 'spd_file26_owner_projection_unavailable'), 'malformed canonical owner projection must not be silently omitted');
+$GLOBALS['profile'] = $good_profile;
 $first = SPD_Contracts::file26_fetch_object(PROFILE_ID);
 $GLOBALS['profile']['generated_at'] = '2026-11-13T14:00:00+00:00';
 $second = SPD_Contracts::file26_fetch_object(PROFILE_ID);
