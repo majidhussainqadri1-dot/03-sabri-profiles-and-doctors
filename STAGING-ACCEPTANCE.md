@@ -114,6 +114,18 @@ Before any Founder approval or live promotion, freeze staging reality: exact ins
 - [ ] Founder acceptance records exact package checksum, staging evidence and explicit promotion decision.
 - [ ] After controlled live deployment, repeat critical smoke tests and confirm deployed artifact checksum/version/DB/migration parity before calling the incident/change resolved.
 
+## V12.3 D14–D16 supplemental safety gate (not part of the original 72)
+
+These extra checks do not increase the original 72-case baseline and do not count as accepted without actual independently logged staging outcomes.
+
+- [ ] **D14 owner consent**: a generic profile operator cannot activate/deactivate federation for another owner; the eligible owner can grant and withdraw opt-in. Test current authorization, revoked operators, role switches and a second session.
+- [ ] **D14 transactional outbox**: on genuine MariaDB, deliberately fail event insertion in a safe disposable staging fixture for profile translation, field reconfirmation and future-state change; each must roll back **both** records. Healthy cases commit mutation and event once, and a current downstream consumer receives the event without duplicate effects.
+- [ ] **D15 Founder governance**: a generic File 00 profile operator cannot retire, memorialize or alter Founder future state. Only a current actor with explicit Founder-governance authority may perform allowed changes; audit and revocation receipts are required.
+- [ ] **D16 retired/legacy federation**: with a previously opted-in active profile, change the lifecycle to retired/legacy; ensure public DTO, File 17 provider, caches, search and actual client never expose active inbox/outbox transport. Restoring active state without owner consent must not silently reactivate a previously revoked opt-in.
+- [ ] **D16 uncertain future state**: when the owner future-state provider is unreachable, null, stale or malformed, federation transport is unavailable, an explicit degraded state is retained, and no HTTP dispatch takes place.
+
+For each supplemental case attach: exact GitHub SHA, installed package SHA256, actor/role, timestamp, actual DB rows before/after, provider version, HTTP response, relevant sanitized logs, expected/actual, clean-up/restore proof, independent QA approver, and retest status. These checks are in addition to the existing 72 and V12.3 QA-15..24.
+
 ## Required final staging evidence record
 
 Record separately: **Repository HEAD / Reviewed package SHA-256 / Staging installed version & checksum / DB version / central & future schema versions / Migration state / Safe Mode state / Companion contract versions / Backup restore evidence / Rollback evidence / Founder acceptance / Live verification status**.
