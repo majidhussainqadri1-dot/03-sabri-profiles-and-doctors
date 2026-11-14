@@ -1,5 +1,6 @@
 # File 03 V12.3: real disposable cross-file WordPress integration.
 # Canonical companion main pins refreshed on 2026-11-14: File00, File07 and File09.
+# File26 pinned to the unmerged, separate D20 lifecycle payload companion PR #38; do not deploy independently.
 # Does NOT deploy or alter Hostinger live/staging. File09 candidate is NOT merged.
 name: File 03 v12 Seven-Plugin Real Cross-File Integration
 
@@ -16,7 +17,7 @@ env:
   FILE07_REF: 8f9b567c08e9456daf31ebadf17b13bb307571f8
   FILE09_REF: 8f52f87a6d82fc89c6c78b7da80b474dff916d97
   FILE08_REF: d086840f7e2ac0ed328006385f064e0e2fb58cb1
-  FILE26_REF: 1b064c6ea9f81195611ed001d5457e8ced65460a
+  FILE26_REF: f654d2fdd9e00ace9acf46cce2f5fd5b8e50579e
 
 jobs:
   seven-module-disposable-wordpress:
@@ -196,6 +197,10 @@ jobs:
               exit 1
             fi
           fi
+      - name: File26 D20 strict lifecycle payload contract source regression
+        run: |
+          set -euo pipefail
+          php file26/tests/file03-professional-lifecycle-payload.php
       - name: File 26 schema and canonical File03 connector collection
         run: |
           set -euo pipefail
