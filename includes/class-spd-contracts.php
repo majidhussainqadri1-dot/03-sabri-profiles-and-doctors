@@ -224,7 +224,11 @@ final class SPD_Contracts {
 		// result on non-public/error responses. Internal batch reconstruction
 		// propagates errors so transient source outages cannot be hidden.
 		if ( is_wp_error( $projection ) ) { return $strict_owner_error ? $projection : array(); }
-		if ( ! is_array( $projection ) || empty( $projection['canonical_id'] ) || empty( $projection['canonical_url'] ) ) { return array(); }
+		if ( ! is_array( $projection ) || empty( $projection['canonical_id'] ) || empty( $projection['canonical_url'] ) ) {
+			return $strict_owner_error
+				? new WP_Error( 'spd_file26_owner_projection_invalid', 'Canonical profile projection is malformed; full snapshot denied.' )
+				: array();
+		}
 		$type = sanitize_key( (string) ( $projection['profile_type'] ?? 'member' ) );
 		$entity_type = 'founder' === $type ? 'founder' : ( 'doctor' === $type ? 'doctor' : 'member_profile' );
 		$fields = (array) ( $projection['fields'] ?? array() );
