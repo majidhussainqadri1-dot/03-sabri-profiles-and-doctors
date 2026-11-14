@@ -42,7 +42,7 @@ class SPD_Authorization {
 class SPD_Profile_Repository {
     public static function instance() { return new self(); }
     public function find_by_public_id($id): array {
-        return ['id'=>4,'public_id'=>(string)$id,'user_id'=>11,'version'=>3];
+        return ['id'=>4,'public_id'=>(string)$id,'user_id'=>11,'profile_type'=>($id === 'founder-profile' ? 'founder' : 'doctor'),'version'=>3];
     }
 }
 class FakeDb {
@@ -95,6 +95,16 @@ assert_case(is_wp_error($r) && $r->get_error_code() === 'spd_federation_owner_co
     'an operator activated federation for an unconsenting owner');
 assert_case(count($db->rows) === 0, 'denied opt-in wrote database state');
 
+// D15: a general operator must not change the Founder's official record.
+// The Founder profile is governed only by the canonical Founder authority.
+$db->reset();
+$r = SPD_Future_Profile::set_future_state(22, 'founder-profile', [
+    'professional_lifecycle'=>'legacy', 'lifecycle_reason'=>'unauthorized general moderation'
+]);
+assert_case(is_wp_error($r) && $r->get_error_code() === 'spd_founder_governance_required',
+    'ordinary profile operator changed Founder future-state lifecycle');
+assert_case(count($db->rows) === 0, 'unauthorized Founder lifecycle write occurred');
+
 // Any transaction with a failed outbox insert MUST roll back its state change.
 $db->reset(true);
 $r = SPD_Future_Profile::save_translation(11, $pid, 'en-US', 'Published title', 'Biography');
@@ -133,4 +143,4 @@ $r = SPD_Future_Profile::set_future_state(11, $pid, ['federation_opt_in'=>1]);
 assert_case(is_array($r) && !empty($r['federation_opt_in']) &&
     count($db->rows) === 2 && in_array('COMMIT', $db->queries, true),
     'owner opt-in and event not atomically committed');
-echo "PASS D14 owner-consent federation + three future-profile transactional outbox paths\n";
+echo "PASS D14/D15 owner consent, Founder governance and transactional outbox\n";
