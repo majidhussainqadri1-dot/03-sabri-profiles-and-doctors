@@ -190,7 +190,7 @@ jobs:
       - name: Verify actual File26 normalizer runtime contract for current owner ACL
         run: |
           set -euo pipefail
-          /tmp/wp eval 'if(!class_exists("\\Sabri\\File26\\Normalizer")){fwrite(STDERR,"FAIL File26 current normalizer unavailable\\n");exit(1);} $n=new \\Sabri\\File26\\Normalizer(); if($n->normalize("Doctor  Classical-Homeopathy")!=="doctor classical-homeopathy"){fwrite(STDERR,"FAIL File26 owner search normalizer mismatch\\n");exit(1);} echo "PASS File26 production normalizer for source-body ACL\\n";' --path=/tmp/wordpress
+          /tmp/wp eval 'if(!class_exists("\\Sabri\\File26\\Normalizer")){fwrite(STDERR,"FAIL File26 current normalizer unavailable\\n");exit(1);} $n=new \Sabri\File26\Normalizer(); if($n->normalize("Doctor  Classical-Homeopathy")!=="doctor classical-homeopathy"){fwrite(STDERR,"FAIL File26 owner search normalizer mismatch\\n");exit(1);} echo "PASS File26 production normalizer for source-body ACL\\n";' --path=/tmp/wordpress
 
       - name: Real WordPress File03 owner full-snapshot metadata scope and negative partial test
         run: |
