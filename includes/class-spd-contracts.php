@@ -199,7 +199,16 @@ final class SPD_Contracts {
 		$last_id = $after;
 		foreach ( $rows as $row ) {
 			$last_id = max( $last_id, absint( $row['id'] ?? 0 ) );
-			$document = self::file26_fetch_object( (string) ( $row['public_id'] ?? '' ) );
+			$document = self::file26_fetch_object( (string) ( $row['public_id'] ?? '' ), true );
+			if ( is_wp_error( $document ) ) {
+				$details = $document->get_error_data();
+				$http_status = is_array( $details ) ? absint( $details['status'] ?? 0 ) : 0;
+				// Current, deliberately private or removed profiles may be omitted.
+				// A 503, malformed provider or unknown read error must instead stop
+				// the rebuild; otherwise File26 could commit an incomplete generation.
+				if ( in_array( $http_status, array( 404, 410 ), true ) ) { continue; }
+				return new WP_Error( 'spd_file26_owner_projection_unavailable', 'Canonical profile projection could not be read reliably; source snapshot denied.' );
+			}
 			if ( is_array( $document ) && ! empty( $document ) ) { $items[] = $document; }
 		}
 		return array(
@@ -209,9 +218,13 @@ final class SPD_Contracts {
 		);
 	}
 
-	public static function file26_fetch_object( $identity ) {
+	public static function file26_fetch_object( $identity, $strict_owner_error = false ) {
 		$projection = spd_get_search_projection( $identity );
-		if ( is_wp_error( $projection ) || ! is_array( $projection ) || empty( $projection['canonical_id'] ) || empty( $projection['canonical_url'] ) ) { return array(); }
+		// The external single-object callback retains the established empty
+		// result on non-public/error responses. Internal batch reconstruction
+		// propagates errors so transient source outages cannot be hidden.
+		if ( is_wp_error( $projection ) ) { return $strict_owner_error ? $projection : array(); }
+		if ( ! is_array( $projection ) || empty( $projection['canonical_id'] ) || empty( $projection['canonical_url'] ) ) { return array(); }
 		$type = sanitize_key( (string) ( $projection['profile_type'] ?? 'member' ) );
 		$entity_type = 'founder' === $type ? 'founder' : ( 'doctor' === $type ? 'doctor' : 'member_profile' );
 		$fields = (array) ( $projection['fields'] ?? array() );
