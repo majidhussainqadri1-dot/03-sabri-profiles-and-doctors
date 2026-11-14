@@ -66,6 +66,13 @@ function err($value, string $code): bool {
 SPD_DB::$ready = false;
 check(err(SPD_Contracts::file26_list_batch('', 10, []), 'spd_file26_owner_schema_unavailable'), 'missing schema must never emit an empty completed snapshot');
 SPD_DB::$ready = true;
+// File26's actual Indexer stores the routing connector inside scope_json and
+// sends it back on EVERY full-source list_batch; it is not a partial filter.
+$GLOBALS['wpdb']->rows = [];
+$transport = SPD_Contracts::file26_list_batch('', 10, ['connector' => 'file03-profiles']);
+check(is_array($transport) && ($transport['done'] ?? null) === true, 'valid File26 connector-only routing metadata must preserve full-source snapshots');
+check(err(SPD_Contracts::file26_list_batch('', 10, ['connector' => 'file07-doctors']), 'spd_file26_partial_scope_unverified'), 'wrong connector identity must be rejected');
+check(err(SPD_Contracts::file26_list_batch('', 10, ['connector' => 'file03-profiles', 'mode' => 'partial']), 'spd_file26_partial_scope_unverified'), 'connector plus unknown partial filter must be rejected');
 check(err(SPD_Contracts::file26_list_batch('', 10, ['object_id' => PROFILE_ID]), 'spd_file26_partial_scope_unverified'), 'unsupported object scope must fail closed');
 check(err(SPD_Contracts::file26_list_batch('', 10, ['unrecognized' => 'partial']), 'spd_file26_partial_scope_unverified'), 'unknown nonempty scope must never silently become full snapshot');
 check(err(SPD_Contracts::file26_list_batch('', 10, ['mode' => 'partial']), 'spd_file26_partial_scope_unverified'), 'partial mode must not become a complete source snapshot');
