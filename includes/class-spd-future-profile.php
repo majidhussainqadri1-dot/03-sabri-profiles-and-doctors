@@ -248,7 +248,15 @@ final class SPD_Future_Profile {
 		if ( ! $viewer_id || ! SPD_Membership_Adapter::is_member_eligible( $viewer_id ) ) { return new WP_Error( 'spd_ai_login_required', __( 'Log in to ask about this doctor’s public work.', 'sabri-profiles-doctors' ), array( 'status' => 401 ) ); }
 		$question = trim( self::text( $question, 500 ) );
 		if ( strlen( $question ) < 3 ) { return new WP_Error( 'spd_ai_question_required', __( 'Enter a question about this professional’s public work.', 'sabri-profiles-doctors' ), array( 'status' => 400 ) ); }
-		if ( preg_match( '/\b(?:diagnos[a-z]*|prescrib[a-z]*|prescription(?:s)?|dosage|dose|emergency|guaranteed\s+cure|treatment\s+recommendation)\b|تشخیص|نسخہ|خوراک|ایمرجنسی|علاج\s+تجویز/ui', $question ) ) { return new WP_Error( 'spd_ai_scope_restricted', __( 'This assistant answers only about the professional’s published work; it does not diagnose, prescribe, dose or replace emergency care.', 'sabri-profiles-doctors' ), array( 'status' => 422 ) ); }
+		// The REST and direct consumers MUST enforce the same multilingual
+		// clinical boundary BEFORE calling the File16 AI provider. The provider
+		// callback filter runs too late to prevent an unsafe upstream request.
+		if ( ! class_exists( 'SPD_Future_REST', false ) ) {
+			return new WP_Error( 'spd_ai_safety_guard_unavailable', __( 'The profile-work safety guard is temporarily unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 503 ) );
+		}
+		if ( SPD_Future_REST::medical_scope_question( $question ) ) {
+			return new WP_Error( 'spd_ai_scope_restricted', __( 'This assistant answers only about the professional’s published work; it does not diagnose, prescribe, dose or replace emergency care.', 'sabri-profiles-doctors' ), array( 'status' => 422 ) );
+		}
 		$profile = SPD_Profile_Repository::instance()->find_by_public_id( (string) $public_id );
 		if ( ! $profile || ! SPD_Authorization::profile_visibility_allows( $profile, $viewer_id ) ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$claim = self::current_claim( 'sabri_file16_grounded_profile_ask_v1', $profile['user_id'], $viewer_id, 120, array( $profile['public_id'], $question ) );
