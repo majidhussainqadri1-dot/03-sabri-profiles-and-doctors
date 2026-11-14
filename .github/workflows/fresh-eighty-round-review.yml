@@ -72,6 +72,8 @@ jobs:
         run: php tests/future-federation-lifecycle-runtime.php
       - name: V12.3 future profile consent and transactional outbox negative regression
         run: php tests/future-owner-consent-outbox-runtime.php
+      - name: V12.3 File26 public display fields must match canonical owner
+        run: php tests/file26-public-display-fields-runtime.php
       - name: V12.3 File26 doctor lifecycle click-time revocation
         run: php tests/file26-lifecycle-revocation-runtime.php
       - name: V12.3 direct AI multilingual provider no-call boundary
