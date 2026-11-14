@@ -300,23 +300,33 @@ final class SPD_Contracts {
 		if ( ! in_array( $current_type, array( 'member', 'doctor', 'founder' ), true ) ) { return false; }
 		$current_entity_type = 'doctor' === $current_type ? 'doctor' : ( 'founder' === $current_type ? 'founder' : 'member_profile' );
 		if ( $current_entity_type !== (string) ( $document['entity_type'] ?? '' ) ) { return false; }
-		// File26 may serve persisted title/excerpt/URL and location AFTER this
-		// callback. A matching normalized search body does not cover biography
-		// excerpts, or a forged stored link, so compare each stored display field
-		// to the current public-safe File03 projection. Missing optional fields
-		// on historical index rows cannot leak a value they do not contain.
+		// File26 serves stored fields AFTER this callback. Search-text
+		// normalization does not cover the biography, canonical URL, or every
+		// presented field. Validate each field that the index actually stores,
+		// against the current owner-approved, public-safe projection.
 		$current_fields = is_array( $current['fields'] ?? null ) ? $current['fields'] : array();
-		$current_public_display = array(
-			'title'         => sanitize_text_field( (string) ( $current['display_name'] ?? '' ) ),
-			'excerpt'       => SPD_Helpers::sanitize_multiline( (string) ( $current_fields['bio'] ?? '' ), 600 ),
-			'canonical_url' => esc_url_raw( (string) ( $current['canonical_url'] ?? '' ) ),
-			'country'       => sanitize_text_field( (string) ( $current_fields['country'] ?? '' ) ),
-			'location'      => sanitize_text_field( (string) ( $current_fields['city'] ?? '' ) ),
+		$display_values = array(
+			'title'         => (string) ( $current['display_name'] ?? '' ),
+			'excerpt'       => (string) ( $current_fields['bio'] ?? '' ),
+			'canonical_url' => (string) ( $current['canonical_url'] ?? '' ),
+			'country'       => (string) ( $current_fields['country'] ?? '' ),
+			'location'      => (string) ( $current_fields['city'] ?? '' ),
 		);
-		foreach ( $current_public_display as $field => $expected ) {
-			if ( array_key_exists( $field, $document ) &&
-				( ! is_string( $document[ $field ] ) ||
-					! hash_equals( $expected, $document[ $field ] ) ) ) { return false; }
+		foreach ( $display_values as $field => $owner_value ) {
+			if ( ! array_key_exists( $field, $document ) ) { continue; }
+			if ( ! is_string( $document[ $field ] ) ) { return false; }
+			if ( 'excerpt' === $field ) {
+				// A standalone contract fixture may omit the full WordPress
+				// helper; actual stored excerpts require the real helper.
+				if ( ! class_exists( 'SPD_Helpers' ) ) { return false; }
+				$expected = SPD_Helpers::sanitize_multiline( $owner_value, 600 );
+			} elseif ( 'canonical_url' === $field ) {
+				if ( ! function_exists( 'esc_url_raw' ) ) { return false; }
+				$expected = esc_url_raw( $owner_value );
+			} else {
+				$expected = sanitize_text_field( $owner_value );
+			}
+			if ( ! is_string( $expected ) || ! hash_equals( $expected, $document[ $field ] ) ) { return false; }
 		}
 		// File09 can replace a specialty/approved title while File03's local
 		// version and the verified boolean stay unchanged. File26 will serve its
