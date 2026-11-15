@@ -52,6 +52,7 @@ jobs:
           php tests/authorization-runtime.php
           php tests/file26-owner-field-parity-runtime.php
           php tests/central-clinic-verification-runtime.php
+          php tests/central-professional-services-guard-runtime.php
           php tests/minor-city-read-runtime.php
           php tests/verification-runtime.php
           php tests/state-runtime.php
