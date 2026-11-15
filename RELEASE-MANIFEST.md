@@ -2,7 +2,7 @@
 
 ## Current candidate identity
 
-- Software: `1.2.0-rc18`
+- Software: `1.2.0-rc19`
 - DB schema: `1.2.0`
 - Public contract: `1.4.0`
 - Plan marker includes `SIXTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`, `SEVENTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`, `EIGHTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW` and `NINTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW`
@@ -23,6 +23,15 @@
 - Final human-readable ledger: `SEVENTH-TWENTY-ROUND-SEQUENTIAL-REVIEW-2026-08-29.md`
 
 The exact candidate SHA for any present CI/package assertion is the `github.sha` of the corresponding successful exact-head workflow run. Repository source SHA and deployed package truth remain separate.
+
+## V12.3 rc19 source-only corrected release boundary (15 Nov 2026)
+
+- New unique plugin release identity `1.2.0-rc19`; no same-version overwrite of the former rc18 package.
+- Paired File00 unique candidate `1.2.46` remains under independent draft PR #61. Both candidates must pass exact-head real WordPress cross-file tests and contain no unauthorized clinical or private-data grants.
+- File03 strict age decision only accepts File00's independent `smc_profile_age_guardian_claim_v1`, checks freshness/owner/purpose/subject/typed flags, and refuses numeric-age legacy payloads; missing provider fails closed.
+- File09 pending/under-review status is a nonverified state and does not confer approved qualifications or badge.
+- Schema and public contract unchanged: File03 DB `1.2.0`, API `1.4.0`. No production/live package or database change has been performed in this PR.
+- The 72 inherited + 24 V12.3 delta staging cases remain NOT RUN/BLOCKED rather than PASS. Hostinger installed ZIP/hash, DB/options/migration, restore/rollback, Founder acceptance and live browser tests remain unverified.
 
 ## Ninth-cycle current-companion candidate boundary
 
