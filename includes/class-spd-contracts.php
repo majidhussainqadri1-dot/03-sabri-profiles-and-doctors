@@ -197,7 +197,19 @@ final class SPD_Contracts {
 		);
 	}
 
-	public static function file26_fetch_object( $identity ) {
+	public static function file26_fetch_object( $identity, $public_id = null ) {
+		// File26 FR006 cold replay calls fetch_object(entity_type, object_id).
+		// Preserve the older File03 one-argument full list_batch consumer without
+		// allowing the requested type to be mistaken for the canonical identity.
+		$required_entity = null;
+		if ( null !== $public_id ) {
+			$required_entity = is_string( $identity ) ? sanitize_key( $identity ) : '';
+			if ( ! in_array( $required_entity, array( 'founder', 'doctor', 'member_profile' ), true ) ) {
+				return array();
+			}
+			$identity = $public_id;
+		}
+		if ( ! is_string( $identity ) && ! is_int( $identity ) ) { return array(); }
 		$projection = spd_get_search_projection( $identity );
 		if ( is_wp_error( $projection ) || ! is_array( $projection ) || empty( $projection['canonical_id'] ) || empty( $projection['canonical_url'] ) ) { return array(); }
 		$type = sanitize_key( (string) ( $projection['profile_type'] ?? 'member' ) );
@@ -205,7 +217,7 @@ final class SPD_Contracts {
 		$fields = (array) ( $projection['fields'] ?? array() );
 		$professional = (array) ( $projection['professional'] ?? array() );
 		$badge = (array) ( $projection['badge'] ?? array() );
-		return array(
+		$document = array(
 			'connector_slug' => 'file03-profiles',
 			'domain' => 'profiles',
 			'object_id' => sanitize_text_field( (string) $projection['canonical_id'] ),
@@ -231,6 +243,10 @@ final class SPD_Contracts {
 			'safety_class' => 'professional_profile',
 			'payload' => array( 'verified_doctor' => 'doctor' === $type && 'verified_doctor' === (string) ( $badge['key'] ?? '' ) && ! empty( $badge['verified'] ) ),
 		);
+		if ( null !== $required_entity && $document['entity_type'] !== $required_entity ) {
+			return array(); // Never attest another canonical entity type.
+		}
+		return $document;
 	}
 
 	public static function file26_can_view( $document, $audience = array() ) {
