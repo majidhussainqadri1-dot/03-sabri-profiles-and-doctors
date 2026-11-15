@@ -56,6 +56,10 @@ test_assert(($minor_view['fields']['country']??'')==='Pakistan','Non-sensitive c
 $own_view=$repo->public_dto(2,2);
 test_assert(!is_wp_error($own_view) && ($own_view['fields']['city']??'')==='Synthetic Test City',
     'The profile owner may see their own city in private editor/preview.');
+$GLOBALS['smc_claims'][2]['age_context']=array('known'=>false,'minor'=>false,'guardian_required'=>false,'age_band'=>'unknown');
+$unknown_view=$repo->public_dto(2,3);
+test_assert(!is_wp_error($unknown_view) && !array_key_exists('city',(array)($unknown_view['fields']??array())),
+    'Unknown File00 age must remain minor-safe at read time, even for previously published member city.');
 $GLOBALS['smc_claims'][2]['age_context']=array('known'=>true,'minor'=>false,'guardian_required'=>false,'age_band'=>'adult');
 $adult_view=$repo->public_dto(2,3);
 test_assert(!is_wp_error($adult_view) && ($adult_view['fields']['city']??'')==='Synthetic Test City',
