@@ -68,6 +68,7 @@ final class SPD_Plugin {
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );
 		add_action( 'init', array( 'SPD_Contracts', 'register' ), 50 );
+		add_action( 'profile_update', array( 'SPD_File26_Identity_Name_Sync', 'on_profile_update' ), 30, 2 );
 		add_filter( 'smc_public_profile_opt_in', array( 'SPD_Contracts', 'file00_public_profile_opt_in' ), 10, 3 );
 		add_filter( 'sabri_shell_navigation_destinations', array( $this, 'shell_navigation' ) );
 		add_filter( 'sabri_shell_route_contexts', array( $this, 'shell_contexts' ) );
