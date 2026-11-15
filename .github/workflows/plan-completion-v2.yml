@@ -44,8 +44,10 @@ jobs:
       - name: Full plugin bootstrap composition
         run: php tests/bootstrap-load.php
       - name: Authorization behavior
-        run: php tests/authorization-runtime.php
+        run: |
+          php tests/authorization-runtime.php
           php tests/minor-city-read-runtime.php
+          php tests/file26-owner-field-parity-runtime.php
       - name: Verification behavior
         run: php tests/verification-runtime.php
       - name: State and current-contract behavior
