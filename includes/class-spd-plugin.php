@@ -288,7 +288,14 @@ final class SPD_Plugin {
 		}
 		$revised = $profile;
 		$revised['version'] = $next_version;
-		$repo->purge_profile_cache( $revised );
+		// The native DB transaction already committed. A later optional
+		// File26 consumer exception must never retroactively make the
+		// canonical WordPress profile_update appear to have failed.
+		try {
+			$repo->purge_profile_cache( $revised );
+		} catch ( Throwable $error ) {
+			$this->file26_identity_sync_error( 'post_commit_search_invalidation_failed', $user_id );
+		}
 	}
 
 	private function file26_identity_sync_error( $code, $user_id ) {
@@ -298,10 +305,15 @@ final class SPD_Plugin {
 			'at' => SPD_Helpers::now(),
 		);
 		update_option( 'spd_file26_identity_sync_error', $record, false );
-		do_action( 'sabri_file24_profile_identity_sync_failure', array_merge(
-			array( 'owner' => 'file03', 'source' => 'file00' ),
-			$record
-		) );
+		try {
+			do_action( 'sabri_file24_profile_identity_sync_failure', array_merge(
+				array( 'owner' => 'file03', 'source' => 'file00' ),
+				$record
+			) );
+		} catch ( Throwable $ignored ) {
+			// Optional assurance outage cannot turn a committed identity
+			// update into a second, misleading application failure.
+		}
 	}
 
 	public function file26_search_projection( $current, $identity ) {
