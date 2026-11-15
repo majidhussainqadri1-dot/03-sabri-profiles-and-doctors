@@ -239,7 +239,10 @@ final class SPD_Contracts {
 			'author_key' => 'profile:' . sanitize_text_field( (string) $projection['canonical_id'] ),
 			'country' => sanitize_text_field( (string) ( $fields['country'] ?? '' ) ),
 			'location' => sanitize_text_field( (string) ( $fields['city'] ?? '' ) ),
-			'freshness_at' => sanitize_text_field( (string) ( $projection['generated_at'] ?? gmdate( 'c' ) ) ),
+			// generated_at is the time of this READ, not a native source
+			// mutation. File26 records an independent indexed_at/freshness
+			// timestamp and excludes it from owner-version checksums unless
+			// the owner supplies a genuinely immutable event timestamp.
 			'safety_class' => 'professional_profile',
 			'payload' => array( 'verified_doctor' => 'doctor' === $type && 'verified_doctor' === (string) ( $badge['key'] ?? '' ) && ! empty( $badge['verified'] ) ),
 		);
