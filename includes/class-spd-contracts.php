@@ -256,6 +256,35 @@ final class SPD_Contracts {
 		// Older Founder documents may have carried the incorrect doctor flag.
 		// The revalidation must cover every entity type, not just doctor rows.
 		if ( ! empty( $indexed_payload['verified_doctor'] ) !== $current_verified_doctor ) { return false; }
+		// File26 returns a *stored* search document after this owner callback.
+		// A File00 display-name correction (or a current privacy-minimized
+		// projection) can change indexable fields WITHOUT incrementing File03's
+		// native profile version. Version + doctor badge alone are insufficient:
+		// a stale title/location/excerpt would still be exposed by File26.
+		$visible_fields = is_array( $current['fields'] ?? null ) ? $current['fields'] : array();
+		$current_type = strtolower( (string) ( $current['profile_type'] ?? '' ) );
+		$current_entity_type = 'founder' === $current_type ? 'founder' : ( 'doctor' === $current_type ? 'doctor' : 'member_profile' );
+		$expected = array(
+			'entity_type' => $current_entity_type,
+			'title'       => sanitize_text_field( (string) ( $current['display_name'] ?? '' ) ),
+			'country'     => substr( sanitize_text_field( (string) ( $visible_fields['country'] ?? '' ) ), 0, 191 ),
+			'location'    => substr( sanitize_text_field( (string) ( $visible_fields['city'] ?? '' ) ), 0, 191 ),
+		);
+		if ( class_exists( 'SPD_Helpers' ) && method_exists( 'SPD_Helpers', 'sanitize_multiline' ) ) {
+			$expected['excerpt'] = sanitize_text_field( SPD_Helpers::sanitize_multiline( (string) ( $visible_fields['bio'] ?? '' ), 600 ) );
+		}
+		foreach ( $expected as $key => $fresh_value ) {
+			// Existing synthetic/version-only integrations lack the optional
+			// indexed presentation fields; actual File26 DB rows include them.
+			if ( ! array_key_exists( $key, $document ) ) { continue; }
+			if ( ! is_scalar( $document[ $key ] ) || ! hash_equals(
+				(string) $fresh_value,
+				sanitize_text_field( (string) $document[ $key ] )
+			) ) { return false; }
+		}
+		if ( array_key_exists( 'canonical_url', $document )
+			&& ( ! is_string( $document['canonical_url'] ) || ! hash_equals( (string) ( $current['canonical_url'] ?? '' ), $document['canonical_url'] ) )
+		) { return false; }
 		$current_version = $current['version'] ?? null;
 		return ( is_int( $current_version ) || is_string( $current_version ) )
 			&& (bool) preg_match( '/^[1-9][0-9]*$/D', (string) $current_version )

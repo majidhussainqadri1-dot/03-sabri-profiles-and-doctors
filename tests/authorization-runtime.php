@@ -10,7 +10,7 @@ $GLOBALS['smc_claims'][1]=$base(1);$GLOBALS['smc_claims'][1]['account_class']='f
 $GLOBALS['smc_claims'][2]=$base(2);
 $GLOBALS['smc_claims'][3]=$base(3);
 $GLOBALS['smc_claims'][4]=$base(4);$GLOBALS['caps'][4]['smc_review_verification']=true;
-add_filter('smc_profile_age_guardian_claim_v1',function($v,$id){if(2===$id)return array('user_id'=>2,'age'=>35,'is_minor'=>false,'guardian_verified'=>true,'contract_version'=>'1.2.0','generated_at'=>gmdate('c'),'valid_until'=>gmdate('c',time()+600));return null;},10,2);
+add_filter('smc_profile_age_guardian_claim_v1',function($v,$id){if(2===$id)return array('owner'=>'file00','purpose'=>'public_profile_age_assurance','user_id'=>2,'known'=>true,'age_band'=>'adult','is_minor'=>false,'guardian_required'=>false,'guardian_verified'=>true,'contract_version'=>'1.2.3','generated_at'=>gmdate('c'),'valid_until'=>gmdate('c',time()+120));return null;},10,2);
 test_assert(SPD_Membership_Adapter::public_profile_age_eligible(2),'Adult age contract should allow public eligibility.');
 test_assert(SPD_Membership_Adapter::is_minor(3),'Unknown ordinary age must remain minor-safe.');
 test_assert(!SPD_Authorization::audience_allows('private',2,4),'Moderator must not bypass private audience.');

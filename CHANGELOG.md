@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0-rc19 — V12.3 File00/09 source compatibility, 15 November 2026
+
+- New unique File03 candidate version; do not overwrite the previously reviewed rc18 package under the same header.
+- File00 `age_context` is validated from its current member assertion for normal membership reads; the independent `smc_profile_age_guardian_claim_v1` contract is used only in the nonrecursive profile-opt-in callback. Reject incorrect source, purpose, subject, contract/freshness and typed adult/minor flags, legacy numeric ages, private DOB or inconsistent minors.
+- File09 current pending/under-review status is displayed as nonverified with zero approved professional fields or badge; verified states continue to require final reviewer authority and fresh scoped evidence.
+- Updates exact cross-file WordPress 7.0.1/PHP 8.3/MariaDB 11.4 tests, including real adult, minor, unknown and erasure-lock paths against File00 candidate `1.2.46`.
+- File03 DB schema remains `1.2.0` and public contract stays `1.4.0`; File00 DB `1.4.5` unchanged. No clinical authority, duplicate owner record or external-data copying introduced.
+- This is only a source candidate (draft PRs #43 and File00 #61). Staging 72 baseline + 24 V12.3 delta cases, actual deployment, restore/rollback, independent review and Live Verification have **not** been completed. Production status: **NO-GO**.
+
+
 ## 1.2.0-rc18 — tenth current-main twenty-round evidence correction
 
 A fresh exact-main audit on `6ed5c0ee5b518a62d961a0d12378adc2960871e7` completed 20/20 rounds against current plans and companion heads. Rounds 01–19 were clean. R20 corrected stale post-merge wording and added a permanent release-truth gate. Runtime code, package bytes, DB schema `1.2.0`, and public contract `1.4.0` are unchanged. GitHub repository evidence does not establish staging/live deployment.

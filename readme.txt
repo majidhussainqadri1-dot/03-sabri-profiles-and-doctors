@@ -4,7 +4,7 @@ Tags: profiles, doctors, privacy, founder, timeline, personal-site, credentials,
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.2.0-rc18
+Stable tag: 1.2.0-rc19
 License: GPLv2 or later
 
 Canonical Founder, member and doctor profile domain for the Sabri Social Homeopathy Platform.
@@ -13,7 +13,7 @@ Canonical Founder, member and doctor profile domain for the Sabri Social Homeopa
 
 File 03 owns stable public profile identity, presentation fields, field visibility, profile media references, slug history, reporting, privacy-bounded delegation, approved presentation translations, freshness attestations, governed professional lifecycle state and profile timeline slots. File 00 remains membership/identity authority; File 09 remains doctor-verification/credential authority; File 07/26 own directory/search discovery and ranking; File 08 owns clinic, appointment and review truth; File 21 and media/learning modules own timeline/knowledge content; File 16 owns AI execution; File 17 owns communication transport; File 20 owns the application/PWA shell; File 24 owns assurance governance; File 25 owns platform-wide visual components; federation transport remains an external approved owner.
 
-1.2.0-rc18 is the repository candidate identity for the ninth cross-file twenty-round corrective review. The fresh exact-companion audit found that current File 08 owner facts are emitted on `wca_outbox_event`, while File 03 previously listened only to legacy/generic aliases. File 03 now consumes the current versioned File 08 outbox contract as cache/reconciliation invalidation only, preserving File 08 clinic/appointment truth. DB schema remains 1.2.0 and public contract remains 1.4.0.
+1.2.0-rc18 was the earlier repository candidate for the ninth cross-file corrective review; rc19 now carries the source-only V12.3 File00 age/guardian and File09 status compatibility corrections. The fresh exact-companion audit found that current File 08 owner facts are emitted on `wca_outbox_event`, while File 03 previously listened only to legacy/generic aliases. File 03 now consumes the current versioned File 08 outbox contract as cache/reconciliation invalidation only, preserving File 08 clinic/appointment truth. DB schema remains 1.2.0 and public contract remains 1.4.0.
 
 No paid/pro/premium or donor-advantage gate exists in File 03. No patient chart, raw identity evidence, automatic doctor verification, cure guarantee or AI diagnosis/prescription is introduced. Missing, stale, malformed or unavailable canonical providers fail closed or degrade only the affected feature.
 
@@ -29,6 +29,13 @@ This remains a repository candidate. Source and automated-QA evidence are separa
 6. Do not promote to live until Founder approval and exact package/deployment parity are recorded.
 
 == Changelog ==
+
+= 1.2.0-rc19 =
+* Unique V12.3 source release identity, superseding the prior rc18 source package without changing DB schema 1.2.0 or public contract 1.4.0.
+* Strict consumption of File00 purpose-bound adult/minor age assurance; rejects outdated or contradictory numeric-age assertions and preserves minor privacy.
+* Accepts current File09 pending/under-review projection without displaying unverified credentials or badge; updates exact owner integration tests.
+* No staging/live release is asserted; the independent File00 1.2.46 candidate must be reviewed with this plugin and deployment parity must be proven.
+
 
 = 1.2.0-rc18 =
 * Ninth cross-file twenty-round corrective review against the amended File 03 plan, central plan and current exact companion repository contracts.

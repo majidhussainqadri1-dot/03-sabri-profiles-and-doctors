@@ -20,7 +20,7 @@ lock=json.loads(read('RELEASE-LOCK.json'))
 
 checks=[
 ('R01 exact starting main freeze', '6ed5c0ee5b518a62d961a0d12378adc2960871e7' in ledger),
-('R02 candidate identity unchanged', 'Version: 1.2.0-rc18' in main and lock.get('current_repository_candidate')=='1.2.0-rc18'),
+('R02 current candidate identity advanced after historical cycle', 'Version: 1.2.0-rc19' in main and lock.get('current_repository_candidate')=='1.2.0-rc19'),
 ('R03 DB/public contract unchanged', "define( 'SPD_DB_VERSION', '1.2.0' );" in main and "define( 'SPD_CONTRACT_VERSION', '1.4.0' );" in main),
 ('R04 exact companion inventory', all(v in ledger for v in lock['tenth_twenty_round_current_companion_heads'].values())),
 ('R05 File19 current delta re-audited', '04078025b643ab7696e4cb4e37826bf152defa18' in ledger and 'c2881b12fc7e91c050782f7b17bda00d1d69b2f2' in ledger),
