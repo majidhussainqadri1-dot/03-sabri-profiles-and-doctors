@@ -251,8 +251,18 @@ final class SPD_Central_Profile {
 		if ( ! $profile ) { return new WP_Error( 'spd_profile_unavailable', __( 'This profile is unavailable.', 'sabri-profiles-doctors' ), array( 'status' => 404 ) ); }
 		$dto['extended'] = self::public_extended_fields( $profile, $viewer_id );
 		$dto['credential_card'] = self::credential_card( (array) $dto['professional'] );
-		$dto['clinic'] = self::clinic_projection( $profile['user_id'], $viewer_id ) ?: (array) $dto['clinic'];
-		$dto['reviews'] = 'doctor' === $dto['profile_type'] ? self::review_projection( $profile['user_id'], $viewer_id ) : array();
+		// File08 owns clinic/appointment/review truth, but its current projection
+		// cannot elevate an unverified or revoked File09 doctor identity. The
+		// primary public DTO has already checked current File00 + File09 status:
+		// never reintroduce service CTAs through the central personal-site path.
+		$badge = is_array( $dto['badge'] ?? null ) ? $dto['badge'] : array();
+		$verified_doctor = 'doctor' === (string) ( $dto['profile_type'] ?? '' )
+			&& 'verified_doctor' === (string) ( $badge['key'] ?? '' )
+			&& ! empty( $badge['verified'] );
+		$dto['clinic'] = $verified_doctor
+			? ( self::clinic_projection( $profile['user_id'], $viewer_id ) ?: (array) $dto['clinic'] )
+			: array();
+		$dto['reviews'] = $verified_doctor ? self::review_projection( $profile['user_id'], $viewer_id ) : array();
 		$dto['organizations'] = self::organization_projection( $profile['user_id'], $viewer_id );
 		$dto['share'] = array(
 			'short_url' => self::short_url( $profile ),
