@@ -32,6 +32,8 @@ function spd_get_search_projection($identity){return PUBLIC_ID===$identity?$GLOB
 require_once __DIR__.'/../includes/class-spd-contracts.php';
 function check(bool $condition,string $name){if(!$condition){fwrite(STDERR,"FAIL: ".$name."\n");exit(1);}}
 $indexed=SPD_Contracts::file26_fetch_object(PUBLIC_ID);
+check(!array_key_exists('freshness_at',$indexed),
+    'Owner profile version cannot use per-request generated_at as a persistent File26 document checksum');
 $native=SPD_Contracts::file26_fetch_object('member_profile',PUBLIC_ID);
 check(is_array($native) && ($native['object_id']??'')===PUBLIC_ID
     && ($native['title']??'')==='Old Public Name',
