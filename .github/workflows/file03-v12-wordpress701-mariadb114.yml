@@ -93,6 +93,14 @@ jobs:
           set -euo pipefail
           /tmp/wp eval 'global $wpdb; foreach(array("spd_safe_mode","spd_migration_cursor") as $key){$v=get_option($key,null);$raw=$wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name=%s",$key));echo wp_json_encode(array("key"=>$key,"exists"=>null!==$v,"type"=>gettype($v),"value"=>$v,"raw_db"=>$raw))."\\n";}' --path=/tmp/wordpress
 
+      - name: Prove File00 public name change produces monotonic File03 source revision and durable outbox
+        env:
+          FILE03_CI_EPHEMERAL_DB: yes
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/wp eval-file "$GITHUB_WORKSPACE/file03/tests/file03-file00-rename-wordpress-mysql.php" --path=/tmp/wordpress
+
       - name: Re-enter plugin and check safe idempotent repair
         run: |
           set -euo pipefail
