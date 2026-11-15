@@ -66,6 +66,12 @@ final class SPD_Outbox_Dispatcher {
 
 			try {
 				do_action( 'spd_outbox_event_v1', $row['event_name'], $payload, $row );
+				// File00 name changes carry a committed File03 projection version.
+				// A thrown/missing File26 consumer must not be acknowledged as delivered.
+				$search_ack = SPD_File26_Identity_Name_Sync::deliver_file26( $row['event_name'], $payload, $row );
+				if ( is_wp_error( $search_ack ) ) {
+					throw new RuntimeException( 'file26:' . $search_ack->get_error_code() );
+				}
 				do_action( 'sabri_platform_event', $row['event_name'], $payload, array( 'owner' => 'file03', 'event_uuid' => $row['event_uuid'] ) );
 				$file19 = SPD_Cross_File_Events::deliver_file19_notification( $row['event_name'], $payload, $row );
 				if ( is_wp_error( $file19 ) ) {
