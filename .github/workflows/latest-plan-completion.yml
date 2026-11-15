@@ -50,6 +50,7 @@ jobs:
           python3 tests/forty-round-review.py
           php tests/bootstrap-load.php
           php tests/authorization-runtime.php
+          php tests/minor-city-read-runtime.php
           php tests/verification-runtime.php
           php tests/state-runtime.php
           php tests/timeline-runtime.php
