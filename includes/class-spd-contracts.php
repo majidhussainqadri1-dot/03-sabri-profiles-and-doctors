@@ -164,12 +164,23 @@ final class SPD_Contracts {
 
 	public static function file26_list_batch( $cursor, $limit, $scope = array() ) {
 		global $wpdb;
-		unset( $scope );
+		// 'done=true' must mean a COMPLETE, verifiable native owner snapshot.
+		// A missing source schema, malformed cursor, or unsupported single-item
+		// scope cannot be disguised as a successful empty owner population.
 		if ( ! SPD_DB::tables_exist() ) {
-			return array( 'items' => array(), 'next_cursor' => '', 'done' => true, 'degraded' => true );
+			return new WP_Error( 'spd_file26_owner_schema_unavailable', 'File 03 source schema is unavailable; search reindex must fail closed.' );
 		}
-		$limit = max( 1, min( 100, absint( $limit ) ) );
-		$after = absint( $cursor );
+		if ( ! is_int( $limit ) || $limit < 1 || $limit > 100 ) {
+			return new WP_Error( 'spd_file26_owner_batch_limit', 'Canonical profile owner batch limit must be an integer within 1..100.' );
+		}
+		if ( '' !== $cursor && ( ! is_string( $cursor ) || ! preg_match( '/^[1-9][0-9]{0,17}$/D', $cursor ) ) ) {
+			return new WP_Error( 'spd_file26_owner_batch_cursor', 'Canonical profile cursor is invalid.' );
+		}
+		if ( ! is_array( $scope ) || array_diff_key( $scope, array( 'connector' => true ) )
+			|| ( isset( $scope['connector'] ) && 'file03-profiles' !== $scope['connector'] ) ) {
+			return new WP_Error( 'spd_file26_owner_partial_scope_unavailable', 'File 03 requires an explicit complete owner snapshot; unsupported scope denied.' );
+		}
+		$after = '' === $cursor ? 0 : (int) $cursor;
 		$table = SPD_DB::table( 'profiles' );
 		$wpdb->last_error = '';
 		$rows = $wpdb->get_results(
@@ -181,7 +192,7 @@ final class SPD_Contracts {
 			ARRAY_A
 		);
 		if ( $wpdb->last_error || ! is_array( $rows ) ) {
-			return array( 'items' => array(), 'next_cursor' => (string) $after, 'done' => false, 'degraded' => true );
+			return new WP_Error( 'spd_file26_owner_batch_read_failed', 'File 03 source query failed; cannot certify a complete index generation.' );
 		}
 		$items = array();
 		$last_id = $after;
@@ -239,7 +250,9 @@ final class SPD_Contracts {
 			'author_key' => 'profile:' . sanitize_text_field( (string) $projection['canonical_id'] ),
 			'country' => sanitize_text_field( (string) ( $fields['country'] ?? '' ) ),
 			'location' => sanitize_text_field( (string) ( $fields['city'] ?? '' ) ),
-			'freshness_at' => sanitize_text_field( (string) ( $projection['generated_at'] ?? gmdate( 'c' ) ) ),
+			// No request-time generated_at/freshness_at: File26 excludes its
+			// own indexing timestamp from version identity only when the
+			// canonical owner does not advertise a volatile source date.
 			'safety_class' => 'professional_profile',
 			'payload' => array( 'verified_doctor' => 'doctor' === $type && 'verified_doctor' === (string) ( $badge['key'] ?? '' ) && ! empty( $badge['verified'] ) ),
 		);
