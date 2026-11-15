@@ -112,6 +112,7 @@ jobs:
         run: |
           php tests/bootstrap-load.php
           php tests/authorization-runtime.php
+          php tests/minor-city-read-runtime.php
           php tests/security-unit.php
           php tests/state-runtime.php
           php tests/verification-runtime.php
