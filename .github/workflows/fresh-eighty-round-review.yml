@@ -108,6 +108,8 @@ jobs:
           python3 tests/latest-plan-review-2.py
       - name: Existing forty-round regression
         run: python3 tests/forty-round-review.py
+      - name: Source-only Live/Staging truth template guard
+        run: python3 tests/reality-freeze-template-guard.py
       - name: Runtime composition and security smoke
         run: |
           php tests/bootstrap-load.php
