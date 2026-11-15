@@ -12,6 +12,7 @@ class SPD_Profile_Repository {
     public static $row;
     public function find_by_user_id($user_id,$ensure=false){ return self::$row; }
     public function find_by_public_id($public_id){ return self::$row; }
+    public function completeness($profile,$claims,$professional){ return 0; }
 }
 $GLOBALS['wpdb']=(object)array('last_error'=>'');
 $GLOBALS['users'][2]=array('display_name'=>'Member');
