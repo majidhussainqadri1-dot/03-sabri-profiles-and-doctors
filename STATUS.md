@@ -1,9 +1,9 @@
-# File 03 Status — 1.2.0-rc18
+# File 03 Status — 1.2.0-rc19 (Source Candidate; Production NO-GO)
 
 | Status | Evidence / decision |
 |---|---|
 | Specified | File 03 amended plan + central governing plan + `FUTURE-SUPERSET-18.md` |
-| Repository identity | Plugin `1.2.0-rc18` · DB schema `1.2.0` · public contract `1.4.0` |
+| Repository identity | Plugin `1.2.0-rc19` · DB schema `1.2.0` · public contract `1.4.0` |
 | Coded | Repository-owned File 03 scope plus Future Superset 18 and retained corrective hardening through the ninth current-companion twenty-round cycle |
 | Ninth 20-round source audit | **20/20 completed; defect-bearing rounds 04, 07, 20; all corrections applied; exact-head CI/package gates required and verified before merge** |
 | Ninth-cycle starting main freeze | `695329cced81a1b2ee5c59e3b4a92c9809a2564b` |
@@ -29,8 +29,8 @@
 | Automated review gate | `.github/workflows/fresh-eighty-round-review.yml` runs retained historical/fresh/sequential gates plus seventh-cycle, R20, eighth-cycle and ninth-cycle closure assertions |
 | Exact package gate | Same exact-HEAD workflow builds twice, verifies deterministic ZIP/checksum/SBOM and source/package runtime parity, then uploads the exact artifact |
 | PHP compatibility gate | Corrective Integrity covers PHP 8.1, 8.3 and 8.4 plus source-integrity/security checks |
-| Contract decision | DB remains `1.2.0`; public contract remains `1.4.0`; rc18 is a source/release-candidate identity advance for the current File 08 event-contract correction, not a DB/public-contract version advance |
-| Historical release inventories/checksums | Historical provenance only; not current rc18 package truth |
+| Contract decision | DB remains `1.2.0`; public contract remains `1.4.0`; rc19 is a distinct source/release-candidate identity for V12.3 File00 age/guardian + File09 status contract corrections, not a DB/public-contract version advance |
+| Historical release inventories/checksums | Historical provenance only; not current rc19 package truth |
 | Staging-Accepted | **Pending / unverified** |
 | Live-Deployed | **Unverified** |
 | Live DB / migration | **Unverified** |
@@ -49,3 +49,12 @@ Repository and CI evidence do not establish Hostinger staging or live state. Ext
 ## Tenth current-main audit
 
 Starting exact main freeze: `6ed5c0ee5b518a62d961a0d12378adc2960871e7`. Fresh result: **20/20 reviewed**; clean rounds `01–19`; defect-bearing round `20` only. R20 corrects stale post-merge release wording and adds a permanent exact-head regression gate. No runtime, DB-schema, migration, or public-contract change is implied. Current HEAD truth is resolved from the GitHub `main` ref plus matching workflows rather than embedded as a self-referential claim.
+
+## V12.3 release-identity and live truth (15 November 2026)
+
+- File03 corrected source PR #43: unmerged draft, version `1.2.0-rc19`, DB `1.2.0`, public API `1.4.0`.
+- File00 owner PR #61: unmerged draft, unique plugin `1.2.46`, DB `1.4.5`, membership contract `1.2.3`.
+- Source coverage is not operational acceptance: inherited 72 + V12.3 delta 24 = 96 staging cases, no verified Staging PASS receipts. New plan deltas may add tests.
+- Live WordPress connection `site_disconnected`; WPVibe HTTP 530. This does not prove root cause; deployed package, DB/options, migration/logs, owner dependencies and checksum parity remain UNVERIFIED.
+- Promotion requires unique versions, exact SHA and deterministic artifact, independent review, staging all-mandatory PASS, verified restore and rollback, Founder sign-off, controlled deploy and actual Live re-test.
+- **Repository HEAD / Deployed Version / DB Version / Migration State / Live Verification:** main SHA to be re-read / UNKNOWN / UNKNOWN / UNKNOWN / NOT EXECUTED.
