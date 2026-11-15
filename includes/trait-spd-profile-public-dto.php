@@ -67,8 +67,13 @@ trait SPD_Profile_Public_DTO {
 			'clinic'           => $this->normalize_clinic( $clinic_raw, $user_id ),
 			'completeness'     => $viewer_id === $user_id ? $this->completeness( $profile, $claims, $professional ) : null,
 		);
+		// Revalidate minor status at READ time. A previously adult profile may
+		// retain an old 'public' city audience after DOB correction, appeal or
+		// policy change. Non-owners must never see that stored location.
+		$is_minor = ! empty( $claims['is_minor'] );
 		foreach ( array( 'bio', 'country', 'city', 'languages', 'studied_books' ) as $key ) {
 			$field = $profile['fields'][ $key ] ?? array( 'audience' => 'private' );
+			if ( $is_minor && 'city' === $key && $viewer_id !== $user_id ) { continue; }
 			if ( SPD_Authorization::audience_allows( $field['audience'], $user_id, $viewer_id ) ) {
 				$dto['fields'][ $key ] = (string) ( $profile[ $key ] ?? '' );
 			}
@@ -81,7 +86,6 @@ trait SPD_Profile_Public_DTO {
 				}
 			}
 		}
-		$is_minor = ! empty( $claims['is_minor'] );
 		foreach ( array( 'phone', 'email', 'whatsapp' ) as $key ) {
 			$field = $profile['fields'][ $key ] ?? array( 'audience' => 'private' );
 			if ( $is_minor ) { continue; }
