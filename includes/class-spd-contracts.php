@@ -250,7 +250,9 @@ final class SPD_Contracts {
 			'author_key' => 'profile:' . sanitize_text_field( (string) $projection['canonical_id'] ),
 			'country' => sanitize_text_field( (string) ( $fields['country'] ?? '' ) ),
 			'location' => sanitize_text_field( (string) ( $fields['city'] ?? '' ) ),
-			'freshness_at' => sanitize_text_field( (string) ( $projection['generated_at'] ?? gmdate( 'c' ) ) ),
+			// No request-time generated_at/freshness_at: File26 excludes its
+			// own indexing timestamp from version identity only when the
+			// canonical owner does not advertise a volatile source date.
 			'safety_class' => 'professional_profile',
 			'payload' => array( 'verified_doctor' => 'doctor' === $type && 'verified_doctor' === (string) ( $badge['key'] ?? '' ) && ! empty( $badge['verified'] ) ),
 		);
