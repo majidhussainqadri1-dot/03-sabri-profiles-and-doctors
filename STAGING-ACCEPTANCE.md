@@ -1,10 +1,12 @@
-# File 03 — Staging Acceptance Matrix for 1.2.0-rc18 (Master Plan v12)
+# File 03 — Staging Acceptance Matrix for 1.2.0-rc19 (Inherited Master Plan v12 cases)
 
 **Status:** checklist only. No staging acceptance, live deployment or operational claim is made by this document.
 
 The new repository-only WP7.0.1/MariaDB11.4 smoke and exact-head File26/FHIR regressions are **not** substitutes for these unchecked staging acceptance receipts. Confirm source-to-installed checksum parity first.
 
 Before any Founder approval or live promotion, freeze staging reality: exact installed File 03 package/version/checksum, active companion versions/contracts, DB/schema versions, migration cursor/failure state, Safe Mode state, scheduled workers, relevant configuration and fresh runtime logs. Compare the installed artifact with the exact reviewed GitHub candidate; a repository-green result is not deployment parity.
+
+**V12.3 addition:** This 72-item inherited checklist is not sufficient alone; also complete the 24 unique cases recorded in `V12.3-DELTA-ACCEPTANCE-2026-11-14.md`. No real staging case is marked PASS by a GitHub source build. The actual installed rc19 ZIP, File00 1.2.46 companion, DB/migration, backup restore, rollback, RTL/WCAG/browser and Founder acceptance must all be independently evidenced.
 
 ## A. Install / upgrade / schema / routes
 
