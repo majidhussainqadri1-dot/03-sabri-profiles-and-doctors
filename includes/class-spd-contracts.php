@@ -262,7 +262,7 @@ final class SPD_Contracts {
 		// native profile version. Version + doctor badge alone are insufficient:
 		// a stale title/location/excerpt would still be exposed by File26.
 		$visible_fields = is_array( $current['fields'] ?? null ) ? $current['fields'] : array();
-		$current_type = sanitize_key( (string) ( $current['profile_type'] ?? '' ) );
+		$current_type = strtolower( (string) ( $current['profile_type'] ?? '' ) );
 		$current_entity_type = 'founder' === $current_type ? 'founder' : ( 'doctor' === $current_type ? 'doctor' : 'member_profile' );
 		$expected = array(
 			'entity_type' => $current_entity_type,
