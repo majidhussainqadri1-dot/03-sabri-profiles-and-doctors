@@ -108,6 +108,8 @@ jobs:
           python3 tests/latest-plan-review-2.py
       - name: Existing forty-round regression
         run: python3 tests/forty-round-review.py
+      - name: Prevent false-green folded PHP source regression commands
+        run: python3 tests/ci-php-shell-command-guard.py
       - name: Source-only Live/Staging truth template guard
         run: python3 tests/reality-freeze-template-guard.py
       - name: Runtime composition and security smoke
