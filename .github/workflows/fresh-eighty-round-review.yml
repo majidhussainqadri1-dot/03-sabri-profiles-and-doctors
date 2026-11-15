@@ -130,6 +130,8 @@ jobs:
         run: |
           php tests/file26-document-version-runtime.php
           php tests/file26-owner-field-parity-runtime.php
+      - name: File 00 approved display-name transition advances a monotonic File 03 public search version
+        run: php tests/file26-file00-display-name-monotonic-runtime.php
       - name: File 09 current doctor badge and File 26 index revocation
         run: php tests/file26-doctor-badge-revocation-runtime.php
       - name: File 03 real WordPress option persistence semantics
