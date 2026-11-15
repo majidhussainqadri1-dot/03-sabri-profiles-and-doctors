@@ -118,7 +118,6 @@ $GLOBALS['force_event_failure'] = false;
 SPD_Schema_Guard::$ready = false;
 $plugin->file26_versioned_file00_name_change( 12, (object) array( 'display_name' => 'New Approved Name' ) );
 f03_name_check( 15 === $GLOBALS['profile_version'] &&
-	' schema_unverified' !== $GLOBALS['options']['spd_file26_identity_sync_error']['code'] &&
 	'schema_unverified' === $GLOBALS['options']['spd_file26_identity_sync_error']['code'],
 	'Unverified schema fails closed and raises an explicit reconcile alarm' );
 SPD_Schema_Guard::$ready = true;
