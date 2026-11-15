@@ -72,6 +72,7 @@ final class SPD_Plugin {
 		add_filter( 'sabri_shell_navigation_destinations', array( $this, 'shell_navigation' ) );
 		add_filter( 'sabri_shell_route_contexts', array( $this, 'shell_contexts' ) );
 		add_filter( 'sabri_file26_profile_search_projection_v1', array( $this, 'file26_search_projection' ), 10, 2 );
+		add_action( 'profile_update', array( $this, 'file26_versioned_file00_name_change' ), 30, 2 );
 		add_filter( 'sabri_file08_profile_delegation_claim_v1', array( $this, 'file08_delegation_claim' ), 10, 4 );
 		add_filter( 'rest_post_dispatch', array( $this, 'rest_no_store' ), 100, 3 );
 	}
@@ -204,6 +205,103 @@ final class SPD_Plugin {
 		$contexts['file03_public_profile'] = array( 'pattern' => '^/profile/', 'layout' => 'public-profile', 'owner' => 'file03' );
 		$contexts['file03_account_profile'] = array( 'pattern' => '^/account/profile/', 'layout' => 'private-application', 'owner' => 'file03' );
 		return $contexts;
+	}
+
+	/**
+	 * File03↔File00↔File26: WordPress fires profile_update after committing
+	 * the current canonical user's display_name. File03 cannot claim that a
+	 * changed File00 public name is the same immutable search event as its
+	 * older File03 profile version: a new monotonic File03 projection revision
+	 * must be committed with its own outbox event.
+	 *
+	 * Never alter File00 identity, duplicate a user table, silently repair a
+	 * failed migration, or read/write a profile before the schema is ready.
+	 */
+	public function file26_versioned_file00_name_change( $user_id, $old_user_data ) {
+		global $wpdb;
+		$user_id = absint( $user_id );
+		if ( $user_id < 1 || ! is_object( $old_user_data ) ||
+			! isset( $old_user_data->display_name ) || ! function_exists( 'get_userdata' ) ) {
+			return;
+		}
+		$current_user = get_userdata( $user_id );
+		if ( ! is_object( $current_user ) || ! isset( $current_user->display_name ) ) {
+			return;
+		}
+		$old_name = sanitize_text_field( (string) $old_user_data->display_name );
+		$new_name = sanitize_text_field( (string) $current_user->display_name );
+		if ( hash_equals( $old_name, $new_name ) ) {
+			return; // No change to public owner name; do not invent an event.
+		}
+		if ( ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_Schema_Guard::base_ready() ) {
+			$this->file26_identity_sync_error( 'schema_unverified', $user_id );
+			return;
+		}
+		$repo = SPD_Profile_Repository::instance();
+		$profile = $repo->find_by_user_id( $user_id, false );
+		if ( ! is_array( $profile ) || empty( $profile['id'] ) || empty( $profile['public_id'] ) ||
+			! empty( $profile['_fields_read_failed'] ) || 'active' !== ( $profile['state'] ?? '' ) ) {
+			// File00 users need not have an approved public File03 profile.
+			// Never manufacture an active index or widen private membership.
+			if ( is_wp_error( $profile ) ) { $this->file26_identity_sync_error( 'profile_read_unavailable', $user_id ); }
+			return;
+		}
+		$prior_version = absint( $profile['version'] ?? 0 );
+		if ( $prior_version < 1 || $prior_version >= PHP_INT_MAX - 1 ) {
+			$this->file26_identity_sync_error( 'version_invalid', $user_id );
+			return;
+		}
+		$next_version = $prior_version + 1;
+		$updated = SPD_DB::transaction( static function () use ( $wpdb, $repo, $profile, $user_id, $prior_version, $next_version ) {
+			$table = SPD_DB::table( 'profiles' );
+			$wpdb->last_error = '';
+			$incremented = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$table} SET version=version+1,updated_at=%s WHERE id=%d AND user_id=%d AND version=%d AND state='active'",
+					SPD_Helpers::now(),
+					absint( $profile['id'] ),
+					$user_id,
+					$prior_version
+				)
+			);
+			if ( 1 !== (int) $incremented || '' !== (string) $wpdb->last_error ) {
+				return new WP_Error( 'spd_file26_identity_version_cas', 'Source projection revision could not be advanced atomically.' );
+			}
+			$event = $repo->event(
+				'PublicProfileUpdated.v1',
+				'profile',
+				(string) $profile['public_id'],
+				array(
+					'user_id' => $user_id,
+					'previous_version' => $prior_version,
+					'version' => $next_version,
+					'changed_fields' => array( 'file00_public_display_name' ),
+					'canonical_owner' => 'file03',
+					'identity_owner' => 'file00',
+				)
+			);
+			return is_wp_error( $event ) ? $event : true;
+		} );
+		if ( is_wp_error( $updated ) || true !== $updated ) {
+			$this->file26_identity_sync_error( 'version_event_transaction_failed', $user_id );
+			return;
+		}
+		$revised = $profile;
+		$revised['version'] = $next_version;
+		$repo->purge_profile_cache( $revised );
+	}
+
+	private function file26_identity_sync_error( $code, $user_id ) {
+		$record = array(
+			'code' => sanitize_key( (string) $code ),
+			'identity_hash' => hash( 'sha256', (string) absint( $user_id ) ),
+			'at' => SPD_Helpers::now(),
+		);
+		update_option( 'spd_file26_identity_sync_error', $record, false );
+		do_action( 'sabri_file24_profile_identity_sync_failure', array_merge(
+			array( 'owner' => 'file03', 'source' => 'file00' ),
+			$record
+		) );
 	}
 
 	public function file26_search_projection( $current, $identity ) {
