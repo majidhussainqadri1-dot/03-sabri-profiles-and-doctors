@@ -1,6 +1,6 @@
 # File 03 — Latest Governing Plan Traceability
 
-Candidate: `1.2.0-rc18`  
+Candidate: `1.2.0-rc19`  
 Plan: `SSH-F03-PLAN-2026-v1.0 + 2026-08-07 central addendum + FUTURE-SUPERSET-18 + sixth/seventh/eighth/ninth/tenth twenty-round corrective closure`  
 Contract: `1.4.0`  
 Base DB schema: `1.2.0`  
@@ -120,3 +120,9 @@ Hostinger fresh install/upgrade, real File 00/08/09/20/21/25/26 contracts, brows
 - Current File 19 HEAD `04078025b643ab7696e4cb4e37826bf152defa18` was re-audited after it advanced: the delta from the previously reviewed source lineage changes only `STATUS.md` and `RELEASE-SHA256.txt`; runtime source/schema remain rooted at `c2881b12fc7e91c050782f7b17bda00d1d69b2f2`.
 - Current Files 00, 01, 02, 04, 07, 08, 09, 17, 19, 20, 21, 22, 23, 24, 25 and 26 contracts were checked without copying companion truth.
 - Fresh rounds 01–19 were clean. R20 corrected stale post-merge repository wording and added a permanent release-truth regression gate. Runtime, schema and public contract are unchanged.
+
+## V12.3 additional cross-file source evidence (15 November 2026)
+
+The historic 55-identifier source traceability remains a mapping, not a claim that each feature has passed real-world browser acceptance. File03 PR #43 advances to unique `rc19` and File00 owner PR #61 to unique `1.2.46`, preserving DB/API declarations. The V12.3 delta ledger records 24 additional cases beyond the inherited 72 staging cases. The actual File00 contract and File03 consumer were tested with a disposable WordPress MariaDB adult, minor, unknown-age, erasure-lock and missing-account matrix; a contradictory legacy numeric age claim was first reproduced failing, then rejected. Current File09 pending/under-review credentials remain nonverified.
+
+**Approval boundary:** These are Source and CI facts, not Hostinger Staging or Live installation facts; next independent QA must freeze installed ZIP and version, WordPress options/DB/migration, provider contract versions, screenshots and logs; 96 acceptance receipts and human Founder sign-off remain required. No Live claim is made.
