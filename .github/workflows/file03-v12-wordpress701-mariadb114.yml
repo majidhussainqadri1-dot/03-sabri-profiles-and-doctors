@@ -96,4 +96,4 @@ jobs:
       - name: Re-enter plugin and check safe idempotent repair
         run: |
           set -euo pipefail
-          /tmp/wp eval 'wp_set_current_user(1); $repair=SPD_Activator::repair_owned_resources(); if(is_wp_error($repair)||!SPD_Schema_Guard::base_ready()||!SPD_Schema_Guard::central_ready()||!SPD_Schema_Guard::future_ready()){fwrite(STDERR,"FAIL File03 repair/schema\n");exit(1);} $manifest=SPD_Contracts::manifest(); if(($manifest["contract_version"]??"")!==SPD_CONTRACT_VERSION){exit(1);} echo "PASS File03 repeat request, safe repair, canonical contract\n";' --path=/tmp/wordpress
+          /tmp/wp eval 'global $wpdb; wp_set_current_user(1); $wpdb->last_error=""; $repair=SPD_Activator::repair_owned_resources(); if(is_wp_error($repair)||$wpdb->last_error||!SPD_Schema_Guard::base_ready()||!SPD_Schema_Guard::central_ready()||!SPD_Schema_Guard::future_ready()){fwrite(STDERR,"FAIL File03 repair/schema or dbDelta SQL error\n");exit(1);} $manifest=SPD_Contracts::manifest(); if(($manifest["contract_version"]??"")!==SPD_CONTRACT_VERSION){exit(1);} echo "PASS File03 repeat request, safe repair, clean dbDelta, canonical contract\n";' --path=/tmp/wordpress
