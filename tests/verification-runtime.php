@@ -13,9 +13,9 @@ test_assert(!SPD_Membership_Adapter::is_minor(2),'Current verified adult File00 
 test_assert(SPD_Verification_Adapter::directory_eligible(2),'Current File00 adult and current File09 verified doctor must be directory eligible.');
 test_assert(!SPD_Membership_Adapter::public_profile_age_eligible(2),'File00 public-profile opt-in must fail closed without an independent age claim; inline membership assertions may recurse here.');
 
-$age_claim_factory = static function($value,$uid){
+$age_claim_factory = static function($value,$uid,$consumer_contract=''){
     $now=time();
-    $claim=array('owner'=>'file00','purpose'=>'public_profile_age_assurance','contract_version'=>'1.2.3','user_id'=>$uid,
+    $claim=array('owner'=>'file00','purpose'=>'public_profile_age_assurance','consumer'=>'file03','consumer_contract'=>$consumer_contract,'contract_version'=>'1.2.3','user_id'=>$uid,
         'generated_at'=>gmdate('c',$now),'valid_until'=>gmdate('c',$now+120),
         'known'=>true,'age_band'=>'adult','is_minor'=>false,'guardian_required'=>false,'guardian_verified'=>true);
     if(3===$uid){$claim['known']=false;$claim['age_band']='unknown';}
@@ -31,11 +31,12 @@ $age_claim_factory = static function($value,$uid){
     if(13===$uid){$claim['age']=14;}
     if(14===$uid){$claim['date_of_birth']='2010-01-01';}
     if(15===$uid){$claim['is_minor']='false';}
+    if(16===$uid){$claim['consumer_contract']='1.3.9';}
     return $claim;
 };
-add_filter('smc_profile_age_guardian_claim_v1',$age_claim_factory,10,2);
+add_filter('smc_profile_age_guardian_claim_v1',$age_claim_factory,10,3);
 test_assert(SPD_Membership_Adapter::public_profile_age_eligible(2),'Current owner claim must allow a verified known adult without recursively calling File00 assertions.');
-foreach(array(3,4,5,6,7,8,9,10,11,12,13,14,15) as $uid){
+foreach(array(3,4,5,6,7,8,9,10,11,12,13,14,15,16) as $uid){
     test_assert(!SPD_Membership_Adapter::public_profile_age_eligible($uid),'Reject unknown/minor/contradictory/downgraded/expired/wrong-scope/foreign-owner/mismatched-subject/stale/wrong-type/private-field age claims: '.$uid);
 }
 
@@ -83,11 +84,11 @@ test_assert(!SPD_Verification_Adapter::is_verified(2),
 // P0 fail-first: a legacy unscoped age response must never overrule
 // a minor age or convert a negative age to asserted adulthood.
 test_reset_filters();
-add_filter('smc_profile_age_guardian_claim_v1',static function($value,$uid){
+add_filter('smc_profile_age_guardian_claim_v1',static function($value,$uid,$consumer_contract=''){
     return array('user_id'=>$uid,'contract_version'=>'1.2.3',
         'generated_at'=>gmdate('c'),'valid_until'=>gmdate('c',time()+120),
         'age'=>14,'is_minor'=>false,'guardian_verified'=>true);
-},10,2);
+},10,3);
 test_assert(!SPD_Membership_Adapter::public_profile_age_eligible(90),
     'An unscoped legacy age=14/is_minor=false contradiction must never authorize an adult public profile.');
 
