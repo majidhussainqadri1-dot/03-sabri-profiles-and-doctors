@@ -46,6 +46,8 @@ foreach ( array( 'adult' => $adult, 'minor' => $minor, 'unknown' => $unknown ) a
 		&& (int) ( $claim['user_id'] ?? 0 ) === $id
 		&& 'file00' === ( $claim['owner'] ?? '' )
 		&& 'public_profile_age_assurance' === ( $claim['purpose'] ?? '' )
+		&& 'file03' === ( $claim['consumer'] ?? '' )
+		&& SPD_CONTRACT_VERSION === ( $claim['consumer_contract'] ?? '' )
 		&& ! array_key_exists( 'age', $claim )
 		&& ! array_key_exists( 'date_of_birth', $claim )
 		&& ! array_key_exists( 'dob', $claim ),
@@ -62,6 +64,9 @@ foreach ( array( 'adult' => $adult, 'minor' => $minor, 'unknown' => $unknown ) a
 		$kind . ' File03 inline current-age decision' );
 }
 update_user_meta( $adult, '_smc_privacy_erasure_lock', array( 'locked_at' => gmdate( 'c' ) ) );
+$unsupported = apply_filters( 'smc_profile_age_guardian_claim_v1', null, $adult, '1.3.9' );
+$fail( is_array( $unsupported ) && false === ( $unsupported['known'] ?? null )
+	&& '' === ( $unsupported['consumer_contract'] ?? 'missing' ), 'unsupported consumer contract fails closed' );
 $fail( ! SPD_Membership_Adapter::public_profile_age_eligible( $adult ), 'owner erasure lock revokes adult eligibility' );
 $fail( ! SPD_Membership_Adapter::public_profile_age_eligible( 999999999 ), 'missing WordPress user is denied' );
 echo "PASS real WordPress File00/File03 V12.3 age-contract acceptance\n";
