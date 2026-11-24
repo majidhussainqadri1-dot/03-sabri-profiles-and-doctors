@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 env:
-  FILE00_REF: d0396030402fdf566bf658f141db5fa7a79e52c3
+  FILE00_REF: 28b1d912fb4817a05b53b499f4a1e1e7ca233c91
   FILE00_VERSION: '1.2.47'
   FILE03_VERSION: '1.2.0-rc19'
   FILE03_DB_VERSION: '1.2.0'
