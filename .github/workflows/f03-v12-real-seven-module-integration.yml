@@ -86,7 +86,7 @@ jobs:
             test "$(git -C "file$n" rev-parse HEAD)" = "${!variable}"
           done
           grep -Fq "Version: 1.2.0-rc19" file03/sabri-profiles-doctors.php
-          grep -Fq "Version: 1.2.46" file00/source/sabri-membership-core/sabri-membership-core.php
+          grep -Fq "Version: 1.2.47" file00/source/sabri-membership-core/sabri-membership-core.php
           grep -Fq "Version: 1.3.4" file02/sabri-authentication.php
           grep -Fq "Version: 1.3.0" file09/global-doctor-onboarding.php
           grep -Fq "Version: 1.2.2" file07/doctors-directory/doctors-directory.php
