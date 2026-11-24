@@ -209,6 +209,8 @@ final class SPD_Membership_Adapter {
 		// profile opt-in. Never infer adulthood from legacy numeric ages.
 		if ( 'file00' !== ( $claim['owner'] ?? '' )
 			|| 'public_profile_age_assurance' !== ( $claim['purpose'] ?? '' )
+			|| 'file03' !== ( $claim['consumer'] ?? '' )
+			|| ! hash_equals( SPD_CONTRACT_VERSION, (string) ( $claim['consumer_contract'] ?? '' ) )
 			|| version_compare( (string) ( $claim['contract_version'] ?? '' ), '1.2.3', '<' )
 			|| true !== ( $claim['known'] ?? null )
 			|| ! is_bool( $claim['is_minor'] ?? null )
