@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "record_type": "unpopulated_live_staging_reality_freeze_template",
+  "captured_at_utc": null,
+  "capture_operator": null,
+  "governing_master_plan": "V12.3",
+  "source_only_candidate": {
+    "file03_plugin_version": "1.2.0-rc19",
+    "file03_public_contract": "1.4.0",
+    "file03_source_db_schema": "1.2.0",
+    "file00_plugin_version": "1.2.46",
+    "file00_membership_contract": "1.2.3",
+    "file00_source_db_schema": "1.4.5",
+    "note": "Source declarations and PR versions are NOT evidence of what is actually installed."
+  },
+  "live": {
+    "installed_file03_version": null,
+    "installed_file03_package_sha256": null,
+    "installed_file03_source_tree_sha256": null,
+    "installed_file00_version": null,
+    "installed_file00_package_sha256": null,
+    "wordpress_version": null,
+    "php_version": null,
+    "db_runtime_version": null,
+    "file03_db_schema_version_actual": null,
+    "file00_db_schema_version_actual": null,
+    "migration_state_actual": null,
+    "safe_mode_state_actual": null,
+    "relevant_schema_columns_and_indexes_verified": false,
+    "relevant_runtime_logs_sanitized_and_reviewed": false,
+    "owner_dependencies_versions_verified": false,
+    "actual_package_source_parity_verified": false,
+    "independent_capture_evidence_id": null,
+    "browser_retest_completed": false,
+    "operational_live_verification_status": "NOT_EXECUTED"
+  },
+  "staging": {
+    "installed_file03_version": null,
+    "installed_file03_package_sha256": null,
+    "installed_file00_version": null,
+    "installed_file00_package_sha256": null,
+    "actual_db_schema_and_migrations_verified": false,
+    "accepted_inherited_cases": 0,
+    "accepted_v12_3_delta_cases": 0,
+    "required_inherited_cases": 72,
+    "required_v12_3_delta_cases": 24,
+    "backup_restore_drill_verified": false,
+    "predecessor_rollback_drill_verified": false,
+    "independent_reviewer_approved": false,
+    "founder_signoff_hash_and_timestamp": null
+  },
+  "defect_disposition": {
+    "source_issue_families_discovered": 10,
+    "source_issue_families_corrected_in_draft": 9,
+    "cross_owner_issues_unresolved": 1,
+    "staging_verified_corrections": 0,
+    "live_verified_corrections": 0,
+    "unresolved_cross_owner_issue": "File26 Issue 41: File00 display-name change requires monotonic source-event sequence and governed reindex."
+  },
+  "production_release_decision": "NO-GO",
+  "parity_audit_required_if_repo_differs_from_deployed": true,
+  "evidence_limitations": [
+    "This file is a blank operator template, never a current installed-state capture.",
+    "Do not populate personal patient data, passwords, private DOB or raw identity evidence.",
+    "A source GitHub HEAD, test or CI artifact cannot substitute for installed Live files.",
+    "Do not assert Resolved before actual deployment, DB/schema proof and real Live retest."
+  ]
+}

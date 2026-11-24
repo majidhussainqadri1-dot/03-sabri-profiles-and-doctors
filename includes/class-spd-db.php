@@ -39,7 +39,11 @@ final class SPD_DB {
 			version bigint(20) unsigned NOT NULL DEFAULT 1,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
-			PRIMARY KEY (id), UNIQUE KEY user_id (user_id), UNIQUE KEY public_id (public_id), KEY slug (slug), KEY state_type (state,profile_type)
+			PRIMARY KEY  (id),
+			UNIQUE KEY user_id (user_id),
+			UNIQUE KEY public_id (public_id),
+			KEY slug (slug),
+			KEY state_type (state,profile_type)
 		) {$c};";
 		$sql[] = "CREATE TABLE {$fields} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -52,7 +56,9 @@ final class SPD_DB {
 			version bigint(20) unsigned NOT NULL DEFAULT 1,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
-			PRIMARY KEY (id), UNIQUE KEY profile_field (profile_id,field_key), KEY audience_state (audience,state)
+			PRIMARY KEY  (id),
+			UNIQUE KEY profile_field (profile_id,field_key),
+			KEY audience_state (audience,state)
 		) {$c};";
 		$sql[] = "CREATE TABLE {$slugs} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -60,7 +66,9 @@ final class SPD_DB {
 			slug varchar(200) NOT NULL,
 			is_current tinyint(1) unsigned NOT NULL DEFAULT 0,
 			created_at datetime NOT NULL,
-			PRIMARY KEY (id), UNIQUE KEY slug (slug), KEY profile_current (profile_id,is_current)
+			PRIMARY KEY  (id),
+			UNIQUE KEY slug (slug),
+			KEY profile_current (profile_id,is_current)
 		) {$c};";
 		$sql[] = "CREATE TABLE {$media} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -76,7 +84,10 @@ final class SPD_DB {
 			version bigint(20) unsigned NOT NULL DEFAULT 1,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
-			PRIMARY KEY (id), UNIQUE KEY profile_purpose (profile_id,purpose), KEY attachment_id (attachment_id), KEY state (state)
+			PRIMARY KEY  (id),
+			UNIQUE KEY profile_purpose (profile_id,purpose),
+			KEY attachment_id (attachment_id),
+			KEY state (state)
 		) {$c};";
 		$sql[] = "CREATE TABLE {$reports} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -93,7 +104,11 @@ final class SPD_DB {
 			version bigint(20) unsigned NOT NULL DEFAULT 1,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
-			PRIMARY KEY (id), UNIQUE KEY report_uuid (report_uuid), UNIQUE KEY reporter_dedupe (reporter_user_id,dedupe_hash), KEY profile_status (profile_id,status), KEY reporter_created (reporter_user_id,created_at)
+			PRIMARY KEY  (id),
+			UNIQUE KEY report_uuid (report_uuid),
+			UNIQUE KEY reporter_dedupe (reporter_user_id,dedupe_hash),
+			KEY profile_status (profile_id,status),
+			KEY reporter_created (reporter_user_id,created_at)
 		) {$c};";
 		$sql[] = "CREATE TABLE {$events} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -110,7 +125,11 @@ final class SPD_DB {
 			last_error_code varchar(80) NOT NULL DEFAULT '',
 			created_at datetime NOT NULL,
 			delivered_at datetime NULL,
-			PRIMARY KEY (id), UNIQUE KEY event_uuid (event_uuid), KEY delivery (status,available_at), KEY lease (status,lease_expires), KEY aggregate (aggregate_type,aggregate_id)
+			PRIMARY KEY  (id),
+			UNIQUE KEY event_uuid (event_uuid),
+			KEY delivery (status,available_at),
+			KEY lease (status,lease_expires),
+			KEY aggregate (aggregate_type,aggregate_id)
 		) {$c};";
 		$sql[] = "CREATE TABLE {$idempotency} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -123,7 +142,9 @@ final class SPD_DB {
 			expires_at datetime NOT NULL,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
-			PRIMARY KEY (id), UNIQUE KEY actor_command_key (actor_id,command,idempotency_key), KEY expiry (expires_at)
+			PRIMARY KEY  (id),
+			UNIQUE KEY actor_command_key (actor_id,command,idempotency_key),
+			KEY expiry (expires_at)
 		) {$c};";
 		$sql[] = "CREATE TABLE {$deletions} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -139,7 +160,10 @@ final class SPD_DB {
 			last_error_code varchar(80) NOT NULL DEFAULT '',
 			created_at datetime NOT NULL,
 			completed_at datetime NULL,
-			PRIMARY KEY (id), UNIQUE KEY deletion_uuid (deletion_uuid), UNIQUE KEY attachment_purpose (attachment_id,purpose), KEY delivery (status,available_at)
+			PRIMARY KEY  (id),
+			UNIQUE KEY deletion_uuid (deletion_uuid),
+			UNIQUE KEY attachment_purpose (attachment_id,purpose),
+			KEY delivery (status,available_at)
 		) {$c};";
 		$sql[] = "CREATE TABLE {$migration_failures} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -150,7 +174,9 @@ final class SPD_DB {
 			status varchar(20) NOT NULL DEFAULT 'retry',
 			next_attempt_at datetime NOT NULL,
 			last_attempt_at datetime NOT NULL,
-			PRIMARY KEY (id), UNIQUE KEY user_id (user_id), KEY retry (status,next_attempt_at)
+			PRIMARY KEY  (id),
+			UNIQUE KEY user_id (user_id),
+			KEY retry (status,next_attempt_at)
 		) {$c};";
 		$sql[] = "CREATE TABLE {$professional_submissions} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -164,9 +190,18 @@ final class SPD_DB {
 			version bigint(20) unsigned NOT NULL DEFAULT 1,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
-			PRIMARY KEY (id), UNIQUE KEY submission_uuid (submission_uuid), KEY profile_state (profile_id,status), KEY submitter (submitted_by,created_at)
+			PRIMARY KEY  (id),
+			UNIQUE KEY submission_uuid (submission_uuid),
+			KEY profile_state (profile_id,status),
+			KEY submitter (submitted_by,created_at)
 		) {$c};";
-		foreach ( $sql as $statement ) { dbDelta( $statement ); }
+		foreach ( $sql as $statement ) {
+			$wpdb->last_error = '';
+			dbDelta( $statement );
+			if ( $wpdb->last_error ) {
+				return new WP_Error( 'spd_dbdelta_failed', __( 'A File 03 database schema statement failed during installation or repair.', 'sabri-profiles-doctors' ) );
+			}
+		}
 		if ( ! class_exists( 'SPD_Schema_Guard' ) || ! SPD_Schema_Guard::base_ready() ) {
 			return new WP_Error( 'spd_schema_install_failed', __( 'One or more File 03 database tables, required columns, or integrity indexes could not be installed or upgraded.', 'sabri-profiles-doctors' ) );
 		}

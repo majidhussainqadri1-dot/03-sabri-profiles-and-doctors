@@ -26,7 +26,7 @@ def gate(name, ok):
     checks.append(name)
 
 file08_events=('ClinicActivated.v1','ClinicBranchChanged.v1','ClinicAvailabilityChanged.v1','ClinicServiceChanged.v1','AppointmentRequested.v1','AppointmentConfirmed.v1','AppointmentDeclined.v1','AppointmentRescheduleProposed.v1','AppointmentCheckedIn.v1','AppointmentCompleted.v1','AppointmentCancelled.v1','AppointmentNoShow.v1','AppointmentChanged.v1')
-gate('R01 rc18 exact source identity', 'Version: 1.2.0-rc18' in main and "define( 'SPD_VERSION', '1.2.0-rc18' );" in main)
+gate('R01 current source identity rc19 preserving ninth-cycle rc18 history', 'Version: 1.2.0-rc19' in main and "define( 'SPD_VERSION', '1.2.0-rc19' );" in main)
 gate('R02 ninth plan lineage', 'NINTH-TWENTY-ROUND-SEQUENTIAL-CORRECTIVE-REVIEW' in main)
 gate('R03 File 08 exact event contract', "FILE08_EVENT_CONTRACT_MIN = '1.0.0'" in bridge and "FILE08_EVENT_CONTRACT_MAX_EXCLUSIVE = '2.0.0'" in bridge)
 gate('R04 File 08 canonical outbox hook', "add_action( 'wca_outbox_event'" in bridge)
@@ -45,7 +45,7 @@ gate('R16 File 21 owner projection preserved', 'spd_file21_timeline_items_adapte
 gate('R17 File 26 owner connector preserved', 'sabri_file26_owner_connector_adapters' in main and 'file26_owner_connector_adapters' in contracts)
 gate('R18 fresh exact-head CI includes ninth gate', 'python3 tests/ninth-twenty-round-sequential.py' in workflow and 'php tests/file08-outbox-runtime.php' in workflow)
 gate('R19 latest-plan CI includes ninth gate', 'python3 tests/ninth-twenty-round-sequential.py' in latest_workflow)
-gate('R20 repository truth boundary synchronized', '1.2.0-rc18' in trace and '1.2.0-rc18' in status and '1.2.0-rc18' in manifest and 'Total reviewed: **20/20**' in ledger and '`04, 07, 20`' in ledger and lock.get('current_repository_candidate') == '1.2.0-rc18' and lock.get('ninth_twenty_round_source_audit_completed') is True and lock.get('ninth_twenty_round_exact_head_ci_verified') is True and lock.get('production_authorized') is False and lock.get('staging_authorized') is False and lock.get('deployed_version_verified') is False)
+gate('R20 repository truth boundary synchronized', '1.2.0-rc19' in trace and '1.2.0-rc19' in status and '1.2.0-rc19' in manifest and 'Total reviewed: **20/20**' in ledger and '`04, 07, 20`' in ledger and lock.get('current_repository_candidate') == '1.2.0-rc19' and lock.get('ninth_twenty_round_source_audit_completed') is True and lock.get('ninth_twenty_round_exact_head_ci_verified') is True and lock.get('production_authorized') is False and lock.get('staging_authorized') is False and lock.get('deployed_version_verified') is False)
 
 print('File 03 ninth sequential review: PASS 20/20')
 for i,name in enumerate(checks,1): print(f'{i:02d} GREEN — {name}')
