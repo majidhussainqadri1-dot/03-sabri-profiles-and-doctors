@@ -32,12 +32,25 @@ function spd_get_search_projection($identity){return PUBLIC_ID===$identity?$GLOB
 require_once __DIR__.'/../includes/class-spd-contracts.php';
 function check(bool $condition,string $name){if(!$condition){fwrite(STDERR,"FAIL: ".$name."\n");exit(1);}}
 $indexed=SPD_Contracts::file26_fetch_object(PUBLIC_ID);
+$native=SPD_Contracts::file26_fetch_object('member_profile',PUBLIC_ID);
+check(is_array($native) && ($native['object_id']??'')===PUBLIC_ID
+    && ($native['title']??'')==='Old Public Name',
+    'Two-argument File26 fetch_object validates member_profile against actual File03 canonical ID');
+check([]===SPD_Contracts::file26_fetch_object('doctor',PUBLIC_ID),
+    'Wrong File26 entity type cannot convert a native member into a verified doctor');
+check([]===SPD_Contracts::file26_fetch_object('member_profile','missing-person'),
+    'Unknown canonical profile cannot be attested by a borrowed public index');
+check([]===SPD_Contracts::file26_fetch_object('bogus',PUBLIC_ID),
+    'Unknown File26 entity types never receive owner acceptance');
 check(($indexed['title']??'')==='Old Public Name' && ($indexed['location']??'')==='Previous Public City','Fixture: File26 indexed earlier File00 name and File03 public city.');
 check(SPD_Contracts::file26_can_view($indexed)===true,'Current saved index is viewable while owner data has not changed.');
 $GLOBALS['current_f03']['display_name']='New Approved Public Name';
 check($GLOBALS['current_f03']['version']===14,'Fixture: File00 name change leaves File03 native version unchanged.');
 check(SPD_Contracts::file26_can_view($indexed)===false,'D07: old File00 display name is still exposed by File26 indexed title.');
 $fresh=SPD_Contracts::file26_fetch_object(PUBLIC_ID);
+$typed_fresh=SPD_Contracts::file26_fetch_object('member_profile',PUBLIC_ID);
+check(is_array($typed_fresh) && ($typed_fresh['title']??'')==='New Approved Public Name',
+    'Typed native owner fetch never returns older File00 approved display name');
 check(SPD_Contracts::file26_can_view($fresh)===true,'Reindexed current owner title must be viewable.');
 $GLOBALS['current_f03']['fields']['city']='';
 check(SPD_Contracts::file26_can_view($fresh)===false,'D07: previous public location remains in File26 after owner projection becomes privacy-redacted.');
